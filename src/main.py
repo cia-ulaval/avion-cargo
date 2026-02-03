@@ -53,7 +53,7 @@ def open_camera_try(width=640, height=480, test_frames=3, timeout=0.1):
         if arr is None:
             picam2.stop()
             raise RuntimeError("Picamera2 returned no frame")
-        logging.info("Camera opened via Picamera2")
+        logging.info("PiCamera opened via Picamera2")
         return ("picamera2", picam2)
     except Exception as e:
         logging.debug("Picamera2 not usable: %s", e)
@@ -86,7 +86,7 @@ def open_camera_try(width=640, height=480, test_frames=3, timeout=0.1):
                     break
                 time.sleep(timeout)
             if ok:
-                logging.info("Camera opened via OpenCV device=%s backend=%s", str(dev), backend)
+                logging.info("PiCamera opened via OpenCV device=%s backend=%s", str(dev), backend)
                 return ("opencv", cap)
             try:
                 cap.release()
@@ -129,7 +129,7 @@ def mjpeg_server_thread(host, port, jpeg_quality=80, max_w=800):
         logging.error("Flask non installé. pip install flask pour MJPEG.")
         return
     app = Flask(__name__)
-    HTML = "<html><body><h3>ArUco Camera</h3><img src='/video_feed'></body></html>"
+    HTML = "<html><body><h3>ArUco PiCamera</h3><img src='/video_feed'></body></html>"
 
     def gen():
         while True:
