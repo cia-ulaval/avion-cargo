@@ -1,6 +1,7 @@
 from interface_waiter import Interface
 from movements import Movements
 
+
 class Controller:
 
     def __init__(self, waiter):
