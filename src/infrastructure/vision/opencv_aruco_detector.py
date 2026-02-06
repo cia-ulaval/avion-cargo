@@ -5,7 +5,7 @@ import cv2
 import numpy as np
 
 from domain.marker_detector import MarkerDetector
-from domain.models import LandingTarget
+from domain.models import TargetedMarker
 
 
 @dataclass(frozen=True, slots=True)
@@ -24,9 +24,7 @@ class OpenCVArucoDetector(MarkerDetector):
             params.cornerRefinementMethod = cv2.aruco.CORNER_REFINE_SUBPIX
         self._detector = cv2.aruco.ArucoDetector(self._dict, params)
 
-    def detect(
-        self, frame: np.ndarray, target: LandingTarget
-    ) -> List[Tuple[int, np.ndarray]]:
+    def detect(self, frame: np.ndarray, target: TargetedMarker) -> List[Tuple[int, np.ndarray]]:
         corners, ids, _ = self._detector.detectMarkers(frame)
         if ids is None or len(ids) == 0:
             return []
