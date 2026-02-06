@@ -88,18 +88,14 @@ class OpenCVGridBoardCameraCalibrationEngine(CameraCalibrationEngine):
         if not hasattr(cv2.aruco, dict_name):
             raise RuntimeError(f"OpenCV does not provide {dict_name}")
 
-        self._dictionary = cv2.aruco.getPredefinedDictionary(
-            getattr(cv2.aruco, dict_name)
-        )
+        self._dictionary = cv2.aruco.getPredefinedDictionary(getattr(cv2.aruco, dict_name))
         self._board = cv2.aruco.GridBoard(
             (board.markers_x, board.markers_y),
             board.marker_length_m,
             board.marker_separation_m,
             self._dictionary,
         )
-        self._detector = cv2.aruco.ArucoDetector(
-            self._dictionary, _make_detector_params()
-        )
+        self._detector = cv2.aruco.ArucoDetector(self._dictionary, _make_detector_params())
 
     def _flags_and_initial_k(self) -> Tuple[int, float, Optional[np.ndarray]]:
         flags = 0
@@ -191,9 +187,5 @@ class OpenCVGridBoardCameraCalibrationEngine(CameraCalibrationEngine):
             camera_matrix=camera_matrix,
             camera_distortion_matrix=dist_coeffs,
             avg_reprojection_error=rep_error,
-            aspect_ratio=(
-                float(self._cfg.fix_aspect_ratio)
-                if self._cfg.fix_aspect_ratio is not None
-                else None
-            ),
+            aspect_ratio=(float(self._cfg.fix_aspect_ratio) if self._cfg.fix_aspect_ratio is not None else None),
         )

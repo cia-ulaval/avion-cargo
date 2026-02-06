@@ -1,7 +1,3 @@
-# domain/models.py
-
-from __future__ import annotations
-
 from dataclasses import dataclass
 from datetime import datetime
 from typing import Optional
@@ -37,22 +33,16 @@ class CalibrationData:
         d = np.asarray(self.dist_coeffs)
 
         if k.shape != (3, 3):
-            raise InvalidCalibrationError(
-                f"camera_matrix must be shape (3,3), got {k.shape}"
-            )
+            raise InvalidCalibrationError(f"camera_matrix must be shape (3,3), got {k.shape}")
         if k.dtype.kind not in ("f", "i"):
-            raise InvalidCalibrationError(
-                f"camera_matrix must be numeric, got {k.dtype}"
-            )
+            raise InvalidCalibrationError(f"camera_matrix must be numeric, got {k.dtype}")
 
         if d.ndim == 2 and d.shape[0] == 1:
             pass  # ok: (1,N)
         elif d.ndim == 1:
             pass  # ok: (N,)
         else:
-            raise InvalidCalibrationError(
-                f"dist_coeffs must be shape (N,) or (1,N), got {d.shape}"
-            )
+            raise InvalidCalibrationError(f"dist_coeffs must be shape (N,) or (1,N), got {d.shape}")
 
         # Basic sanity checks
         if not np.all(np.isfinite(k)):
@@ -62,7 +52,7 @@ class CalibrationData:
 
 
 @dataclass(frozen=True, slots=True)
-class LandingTarget:
+class TargetedMarker:
     """Defines which marker/target we want to track and its real size."""
 
     marker_id: Optional[int]  # None => accept any marker (first detected)
@@ -73,9 +63,7 @@ class LandingTarget:
             raise ValueError("marker_id must be >= 0 or None")
 
         if not np.isfinite(self.marker_length_m) or self.marker_length_m <= 0.0:
-            raise InvalidMarkerLengthError(
-                f"marker_length_m must be > 0, got {self.marker_length_m}"
-            )
+            raise InvalidMarkerLengthError(f"marker_length_m must be > 0, got {self.marker_length_m}")
 
 
 @dataclass(frozen=True, slots=True)

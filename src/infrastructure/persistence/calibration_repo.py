@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from pathlib import Path
 
 import numpy as np
@@ -15,6 +13,4 @@ class CalibrationRepository:
     def load_npz(self, path: Path) -> CalibrationData:
         path = Path(path)
         data = np.load(path)
-        return CalibrationData(
-            camera_matrix=data["camera_matrix"], dist_coeffs=data["dist_coeffs"]
-        )
+        return CalibrationData(camera_matrix=data["camera_matrix"], dist_coeffs=data["dist_coeffs"])

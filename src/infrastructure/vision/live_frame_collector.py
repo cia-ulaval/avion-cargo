@@ -7,19 +7,20 @@ import cv2
 import numpy as np
 
 from domain.camera import Camera
+from domain.frame_collector import FrameCollector
 from domain.marker_detector import MarkerDetector
-from domain.models import LandingTarget
+from domain.models import TargetedMarker
 
 
 @dataclass(slots=True)
-class LiveCaptureConfig:
+class LiveFrameCollectorConfig:
     window_name: str = "calibration"
     waitkey_ms: int = 10
     show_overlays: bool = True
     headless: bool = False
 
 
-class LiveFrameCollector:
+class LiveFrameCollector(FrameCollector):
     """
     UI helper:
       - Shows live video
@@ -34,8 +35,8 @@ class LiveFrameCollector:
         self,
         camera: Camera,
         detector: MarkerDetector,
-        target: LandingTarget,
-        cfg: LiveCaptureConfig,
+        target: TargetedMarker,
+        cfg: LiveFrameCollectorConfig,
     ):
         self.camera = camera
         self.detector = detector
@@ -68,9 +69,7 @@ class LiveFrameCollector:
 
             if self.cfg.show_overlays:
                 msg = f"Captures: {len(frames)} | 'c' capture | ESC finish"
-                cv2.putText(
-                    vis, msg, (10, 22), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 0, 0), 2
-                )
+                cv2.putText(vis, msg, (10, 22), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 0, 0), 2)
 
             if not self.cfg.headless:
                 cv2.imshow(self.cfg.window_name, vis)
