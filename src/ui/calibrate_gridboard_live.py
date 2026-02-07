@@ -1,12 +1,9 @@
 import argparse
 
-from application.camera_calibrator import CameraCalibrator, CameraCalibrationParameters
+from application.camera_calibrator import CameraCalibrationParameters, CameraCalibrator
 from domain.models import TargetedMarker
 from infrastructure.camera.opencv_capture_adapter import OpenCVCaptureAdapter
-
-from infrastructure.vision.opencv_gridboard_calibration_engine import (
-    GridBoardCalibrationConfig,
-    GridBoardSpec)
+from infrastructure.vision.opencv_gridboard_calibration_engine import GridBoardCalibrationConfig, GridBoardSpec
 
 
 def build_camera(args):

@@ -9,9 +9,7 @@ from .pose_estimator_port import PoseEstimatorPort
 
 
 class OpenCVPoseEstimator(PoseEstimatorPort):
-    def estimate_pose(
-        self, corners: np.ndarray, marker_length_m: float, calib: CalibrationData
-    ) -> Pose3D:
+    def estimate_pose(self, corners: np.ndarray, marker_length_m: float, calib: CalibrationData) -> Pose3D:
         if corners.ndim == 2:
             corners_in = corners.reshape(1, 1, 4, 2)
         elif corners.ndim == 3:

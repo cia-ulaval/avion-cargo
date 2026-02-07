@@ -9,7 +9,5 @@ from domain.models import CalibrationData, Pose3D
 
 class PoseEstimatorPort(ABC):
     @abstractmethod
-    def estimate_pose(
-        self, corners: np.ndarray, marker_length_m: float, calib: CalibrationData
-    ) -> Pose3D:
+    def estimate_pose(self, corners: np.ndarray, marker_length_m: float, calib: CalibrationData) -> Pose3D:
         """Estimate pose from detected corners."""
