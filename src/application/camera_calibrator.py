@@ -4,7 +4,8 @@ from domain.camera import Camera
 from domain.camera_calibration_engine import CameraCalibrationEngine
 from domain.frame_collector import FrameCollector
 from domain.models import CalibrationReport, TargetedMarker
-from infrastructure.vision.live_frame_collector import LiveFrameCollectorConfig, LiveFrameCollector
+from infrastructure.persistence.calibration_repo import CalibrationRepository
+from infrastructure.vision.live_frame_collector import LiveFrameCollector, LiveFrameCollectorConfig
 from infrastructure.vision.opencv_aruco_detector import (
     OpenCVArucoDetector,
     OpenCVArucoDetectorConfig,
@@ -29,13 +30,18 @@ class CameraCalibrator:
         self,
         frame_collector: FrameCollector,
         camera_calibration_engine: CameraCalibrationEngine,
+        calibration_repository: CalibrationRepository,
     ):
         self.frame_collector = frame_collector
         self.calibration_engine = camera_calibration_engine
+        self.calibration_repository = calibration_repository
 
     def calibrate(self) -> CalibrationReport:
         collected_frames = self.frame_collector.collect()
         calibration_report = self.calibration_engine.calibrate_from_frames(collected_frames)
+        self.calibration_repository.save_npz(
+            calibration_report,
+        )
         return calibration_report
 
     @staticmethod
@@ -61,4 +67,6 @@ class CameraCalibrator:
             calibration_params.board_specifications, calibration_params.board_calibration_config
         )
 
-        return CameraCalibrator(live_frame_collector, calibration_engine)
+        calibration_repository = CalibrationRepository()
+
+        return CameraCalibrator(live_frame_collector, calibration_engine, calibration_repository)

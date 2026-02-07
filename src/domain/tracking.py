@@ -1,7 +1,3 @@
-# domain/tracking.py
-
-from __future__ import annotations
-
 from dataclasses import dataclass
 from enum import Enum, auto
 from typing import Optional
@@ -26,9 +22,7 @@ class TrackingResult:
         return TrackingResult(status=TrackingStatus.NOT_FOUND)
 
     @staticmethod
-    def detected(
-        pose: Pose3D, marker_id: int, confidence: Optional[float] = None
-    ) -> "TrackingResult":
+    def detected(pose: Pose3D, marker_id: int, confidence: Optional[float] = None) -> "TrackingResult":
         return TrackingResult(
             status=TrackingStatus.DETECTED,
             pose=pose,

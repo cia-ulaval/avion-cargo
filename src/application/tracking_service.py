@@ -1,15 +1,10 @@
-# application/tracking_service.py
-
-from __future__ import annotations
-
 from dataclasses import dataclass
-from typing import Optional
 
 import numpy as np
 
 from domain.camera import Camera
 from domain.marker_detector import MarkerDetector
-from domain.models import CalibrationData, LandingTarget, Pose3D
+from domain.models import CalibrationData, Pose3D, TargetedMarker
 from domain.tracking import TrackingResult, TrackingStatus
 from infrastructure.vision.pose_estimator_port import PoseEstimatorPort
 
@@ -28,7 +23,7 @@ class TrackingService:
     camera: Camera
     detector: MarkerDetector
     pose_estimator: PoseEstimatorPort
-    target: LandingTarget
+    target: TargetedMarker
     calibration: CalibrationData
 
     def track_once(self) -> TrackingResult:
@@ -79,9 +74,7 @@ class TrackingService:
         """
         frame = self.camera.get_frame()
 
-        overridden_target = LandingTarget(
-            marker_id=marker_id, marker_length_m=self.target.marker_length_m
-        )
+        overridden_target = TargetedMarker(marker_id=marker_id, marker_length_m=self.target.marker_length_m)
         detections = self.detector.detect(frame, overridden_target)
         if not detections:
             return TrackingResult.not_found()
