@@ -7,13 +7,12 @@ from domain.camera import Camera
 
 
 @dataclass(slots=True)
-class OpenCVCaptureAdapter(Camera):
+class OpenCVCamera(Camera):
     """
     Camera adapter using OpenCV VideoCapture.
 
     source:
       - int (0,1,2...) for webcams
-      - str path for video files (mp4, avi, ...)
     """
 
     source: int | str = 0

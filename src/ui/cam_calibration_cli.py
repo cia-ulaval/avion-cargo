@@ -74,7 +74,7 @@ def main(
 
     camera_calibrator = CameraCalibrator.create(camera, camera_calibration_params)
 
-    logger.info(f"Starting calibration...")
+    logger.info("Starting calibration...")
     calibration_report, calibration_filepath = camera_calibrator.calibrate()
 
     logger.success(f"Calibration finished: calibration report saved to {calibration_filepath}")

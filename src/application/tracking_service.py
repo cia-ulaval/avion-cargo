@@ -4,8 +4,8 @@ import numpy as np
 
 from domain.camera import Camera
 from domain.marker_detector import MarkerDetector
-from domain.models import CalibrationData, Pose3D, TargetedMarker
-from domain.tracking import TrackingResult, TrackingStatus
+from domain.models import CalibrationData, TargetedMarker
+from domain.tracking import TrackingResult
 from infrastructure.vision.pose_estimator_port import PoseEstimatorPort
 
 
