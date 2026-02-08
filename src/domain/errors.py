@@ -1,7 +1,3 @@
-# domain/errors.py
-import numpy as np
-
-
 class DomainError(Exception):
     """Base class for domain-level errors."""
 
