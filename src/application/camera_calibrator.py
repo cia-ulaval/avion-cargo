@@ -1,4 +1,6 @@
 from dataclasses import dataclass
+from pathlib import Path
+from typing import Tuple
 
 from domain.camera import Camera
 from domain.camera_calibration_engine import CameraCalibrationEngine
@@ -36,13 +38,11 @@ class CameraCalibrator:
         self.calibration_engine = camera_calibration_engine
         self.calibration_repository = calibration_repository
 
-    def calibrate(self) -> CalibrationReport:
+    def calibrate(self) -> Tuple[CalibrationReport, Path]:
         collected_frames = self.frame_collector.collect()
         calibration_report = self.calibration_engine.calibrate_from_frames(collected_frames)
-        self.calibration_repository.save_npz(
-            calibration_report,
-        )
-        return calibration_report
+        saved_report_filepath = self.calibration_repository.save_report(calibration_report)
+        return calibration_report, saved_report_filepath
 
     @staticmethod
     def create(camera: Camera, calibration_params: CameraCalibrationParameters) -> "CameraCalibrator":
