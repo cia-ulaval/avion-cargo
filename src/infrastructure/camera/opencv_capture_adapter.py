@@ -55,3 +55,7 @@ class OpenCVCamera(Camera):
             frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
 
         return frame
+
+
+class OpenCVCaptureAdapter:
+    pass

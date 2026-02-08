@@ -4,7 +4,7 @@ from loguru import logger
 from application.camera_calibrator import CameraCalibrationParameters, CameraCalibrator
 from domain.camera import Camera
 from domain.models import TargetedMarker
-from infrastructure.camera.opencv_capture_adapter import OpenCVCaptureAdapter
+from infrastructure.camera.opencv_capture_adapter import OpenCVCamera
 from infrastructure.vision.opencv_gridboard_calibration_engine import GridBoardCalibrationConfig, GridBoardSpec
 
 
@@ -14,7 +14,7 @@ def build_camera(*, picam: bool, cam_id: int, width: int, height: int, fps: int)
 
         return PiCameraAdapter(width=width, height=height, fps=fps, rgb=False)
 
-    return OpenCVCaptureAdapter(source=cam_id, width=width, height=height, fps=fps, rgb=False)
+    return OpenCVCamera(source=cam_id, width=width, height=height, fps=fps, rgb=False)
 
 
 @click.command(context_settings={"help_option_names": ["-h", "--help"]})
