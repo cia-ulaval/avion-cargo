@@ -25,7 +25,7 @@ class PiCameraAdapter(Camera):
 
     def __make_controls(self, fps: int) -> Dict[str, Any]:
         frame_duration = int(NUMBER_OF_MILLISECONDS_IN_ONE_SECOND / fps)
-        controls = {"FrameDurationsLimits": (frame_duration, frame_duration)}
+        controls = {"FrameDurationLimits": (frame_duration, frame_duration)}
         return controls
 
     def open(self) -> None:
