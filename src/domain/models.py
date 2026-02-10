@@ -1,10 +1,10 @@
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Optional
+from typing import Any, Optional
 
 import numpy as np
-
-from .errors import InvalidCalibrationError, InvalidMarkerLengthError, InvalidPoseError
+from errors import InvalidCalibrationError, InvalidMarkerLengthError, InvalidPoseError
+from tabulate import tabulate
 
 
 @dataclass(frozen=True, slots=True)
@@ -81,3 +81,71 @@ class CalibrationReport:
 
     def get_camera_distortion_matrix(self) -> np.ndarray:
         return self.camera_distortion_matrix
+
+    @staticmethod
+    def _format_matrix(
+        m: np.ndarray,
+        float_fmt: str = ".6f",
+        table_fmt: str = "rounded_outline",
+    ) -> str:
+        arr = np.asarray(m)
+        if arr.ndim == 1:
+            arr = arr.reshape(1, -1)
+
+        rows: list[list[Any]] = []
+        for r in arr:
+            rows.append([float(x) if np.isfinite(x) else x for x in r])
+
+        return tabulate(
+            rows,
+            tablefmt=table_fmt,
+            floatfmt=float_fmt,
+            colalign=("right",) * (arr.shape[1] if arr.ndim == 2 else 1),
+        )
+
+    @staticmethod
+    def _fmt_float(v: Any, ndigits: int = 6) -> str:
+        if v is None:
+            return "—"
+        try:
+            fv = float(v)
+        except ValueError:
+            return str(v)
+        if not np.isfinite(fv):
+            return str(v)
+        return f"{fv:.{ndigits}f}"
+
+    @staticmethod
+    def _fmt_int(v: Any) -> str:
+        if v is None:
+            return "—"
+        try:
+            return f"{int(v)}"
+        except ValueError:
+            return str(v)
+
+    def show(self) -> None:
+        date_str = self.calibration_date.strftime("%Y-%m-%d %H:%M:%S")
+        resolution = f"{self._fmt_int(self.image_width)}×{self._fmt_int(self.image_height)}"
+        reproj = self._fmt_float(self.avg_reprojection_error, ndigits=6)
+        aspect = "—" if self.aspect_ratio is None else self._fmt_float(self.aspect_ratio, ndigits=6)
+
+        summary_rows = [
+            ("Calibration date", date_str),
+            ("Image size", resolution),
+            ("Average reprojection error", reproj),
+            ("Aspect ratio", aspect),
+        ]
+
+        print("\n" + tabulate(summary_rows, tablefmt="rounded_outline"))
+        print()
+
+        print("Camera matrix (K)")
+        print(self._format_matrix(self.camera_matrix, float_fmt=".6f"))
+        print()
+
+        d = np.asarray(self.camera_distortion_matrix)
+        d_flat = d.reshape(-1)
+        print("Distortion coefficients (D)")
+        print(self._format_matrix(d_flat, float_fmt=".8f"))
+        print()

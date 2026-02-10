@@ -2,7 +2,6 @@ import cv2
 import numpy as np
 
 from domain.models import CalibrationData, Pose3D
-
 from domain.pose_estimator import PoseEstimator
 
 
