@@ -78,6 +78,7 @@ def main(
     calibration_report, calibration_filepath = camera_calibrator.calibrate()
 
     logger.success(f"Calibration finished: calibration report saved to {calibration_filepath}")
+    calibration_report.show()
 
 
 if __name__ == "__main__":
