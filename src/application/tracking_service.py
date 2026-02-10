@@ -6,8 +6,8 @@ import numpy as np
 from domain.camera import Camera
 from domain.marker_detector import MarkerDetector
 from domain.models import CalibrationData, TargetedMarker
-from domain.tracking import TrackingResult
 from domain.pose_estimator import PoseEstimator
+from domain.tracking import TrackingResult
 
 
 @dataclass(slots=True)
