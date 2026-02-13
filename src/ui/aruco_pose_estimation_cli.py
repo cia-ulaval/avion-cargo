@@ -4,12 +4,16 @@ import click
 from loguru import logger
 
 from application.tracking_service import TrackingService
-from domain.camera import Camera
+from domain.camera import Camera, LastestFrameBuffer
+from domain.content_diffuser import ContentDiffuser
 from domain.models import TargetedMarker
 from infrastructure.camera.opencv_capture_adapter import OpenCVCamera
+from infrastructure.communication.webrtc_content_diffuser import WebRTCContentDiffuser, WebRTCConfig
 from infrastructure.persistence.calibration_repo import CalibrationRepository
 from infrastructure.vision.opencv_aruco_detector import OpenCVArucoDetector, OpenCVArucoDetectorConfig
 from infrastructure.vision.opencv_pose_estimator import OpenCVPoseEstimator
+from infrastructure.vision.processor.aruco_axis_adding_processor import ArucoAxisAddingProcessor
+from infrastructure.vision.threaded_pipeline import ThreadedPipeline
 
 
 def build_camera(*, picam: bool, cam_id: int, width: int, height: int, fps: int) -> Camera:
@@ -19,6 +23,13 @@ def build_camera(*, picam: bool, cam_id: int, width: int, height: int, fps: int)
         return PiCameraAdapter(width=width, height=height, fps=fps, rgb=False)
 
     return OpenCVCamera(source=cam_id, width=width, height=height, fps=fps, rgb=False)
+
+def track_and_send_data(tracker:TrackingService, sender:ContentDiffuser):
+    frame, trk_res = tracker.track_once()
+    sender.diffuse_data({"tracking_result": {
+        "x": trk_res.pose.x, "y": trk_res.pose.y, "z": trk_res.pose.z,
+    }})
+    logger.info(trk_res.pose)
 
 
 @click.command(context_settings={"help_option_names": ["-h", "--help"]})
@@ -36,7 +47,7 @@ def build_camera(*, picam: bool, cam_id: int, width: int, height: int, fps: int)
 @logger.catch()
 def main(calibration_file, marker_length, dictionary_id, marker_id, cam_id, width, height, fps, picam):
 
-    target_marker = TargetedMarker(marker_id, marker_length)
+    target_marker = TargetedMarker(None, marker_length)
     camera = build_camera(picam=picam, cam_id=cam_id, width=width, height=height, fps=fps)
     pose_estimator = OpenCVPoseEstimator()
     calibration_data = CalibrationRepository().load_report(Path(calibration_file))
@@ -50,9 +61,16 @@ def main(calibration_file, marker_length, dictionary_id, marker_id, cam_id, widt
         calibration=calibration_data,
     )
 
-    while True:
-        frame, track_result = tracker.track_once()
-        logger.info(f"res: {track_result}")
+    buffer = LastestFrameBuffer()
+    webrtc = WebRTCContentDiffuser(buffer, WebRTCConfig(port=8080, stream_fps=30))
+    #frame_processor = ArucoAxisAddingProcessor()
+    pipeline = ThreadedPipeline(camera=camera, frame_processor=tracker.track_once, frame_buffer=buffer)
+
+    pipeline.start()
+
+    webrtc.diffuse_video()
+
+    pipeline.stop()
 
 
 if __name__ == "__main__":

@@ -1,7 +1,7 @@
 import click
 from loguru import logger
 
-from application.camera_calibrator import CameraCalibrationParameters, CameraCalibrator
+from application.camera_calibration_service import CameraCalibrationParameters, CameraCalibrationService
 from domain.camera import Camera
 from domain.models import TargetedMarker
 from infrastructure.camera.opencv_capture_adapter import OpenCVCamera
@@ -72,7 +72,7 @@ def main(
         dictionary_id=dictionary_id,
     )
 
-    camera_calibrator = CameraCalibrator.create(camera, camera_calibration_params)
+    camera_calibrator = CameraCalibrationService.create(camera, camera_calibration_params)
 
     logger.info("Starting calibration...")
     calibration_report, calibration_filepath = camera_calibrator.calibrate()
