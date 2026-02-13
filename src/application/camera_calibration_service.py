@@ -27,7 +27,7 @@ class CameraCalibrationParameters:
     dictionary_id: int
 
 
-class CameraCalibrator:
+class CameraCalibrationService:
     def __init__(
         self,
         frame_collector: FrameCollector,
@@ -45,7 +45,7 @@ class CameraCalibrator:
         return calibration_report, saved_report_filepath
 
     @staticmethod
-    def create(camera: Camera, calibration_params: CameraCalibrationParameters) -> "CameraCalibrator":
+    def create(camera: Camera, calibration_params: CameraCalibrationParameters) -> "CameraCalibrationService":
         detector_config = OpenCVArucoDetectorConfig(
             dictionary_id=calibration_params.dictionary_id, corner_refinement=True
         )
@@ -69,4 +69,4 @@ class CameraCalibrator:
 
         calibration_repository = CalibrationRepository()
 
-        return CameraCalibrator(live_frame_collector, calibration_engine, calibration_repository)
+        return CameraCalibrationService(live_frame_collector, calibration_engine, calibration_repository)
