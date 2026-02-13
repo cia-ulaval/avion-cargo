@@ -5,5 +5,5 @@ import numpy as np
 
 class FrameProcessor(ABC):
     @abstractmethod
-    def apply(self, frame: np.ndarray) -> np.ndarray:
+    def apply(self, frame: np.ndarray) -> tuple[np.ndarray, dict]:
         raise NotImplementedError()

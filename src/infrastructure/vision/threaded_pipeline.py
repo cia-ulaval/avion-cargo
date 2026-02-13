@@ -1,12 +1,15 @@
 from threading import Thread
-from typing import Optional
+from typing import Optional, Callable, Tuple
 import time
+
+import numpy as np
+
 from domain.camera import Camera, LastestFrameBuffer
-from domain.frame_processor import FrameProcessor
+from domain.tracking import TrackingResult
 
 
 class ThreadedPipeline:
-    def __init__(self, camera: Camera, frame_processor: FrameProcessor, frame_buffer: LastestFrameBuffer) -> None:
+    def __init__(self, camera: Camera, frame_processor: Callable[[], Tuple[np.ndarray, TrackingResult]], frame_buffer: LastestFrameBuffer) -> None:
         self._camera = camera
         self._frame_processor = frame_processor
         self._frame_buffer = frame_buffer
@@ -29,10 +32,8 @@ class ThreadedPipeline:
         waiting_period = 1.0/max(1, self._camera.get_fps())
         while self._running:
             start_time = time.time()
-            frame = self._camera.get_frame()
-            vis, frame = self._frame_processor.apply(frame)
-            self._frame_buffer.set(vis, frame)
-
+            vis, tracking_result = self._frame_processor()
+            self._frame_buffer.set(vis, {"tracking_result": tracking_result})
             dt = time.time() - start_time
             if dt < waiting_period:
                 time.sleep(waiting_period - dt)
