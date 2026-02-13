@@ -1,0 +1,51 @@
+[project]
+name = "autolander"
+version = "0.1.0"
+description = ""
+authors = [
+    {name = "Bertrand Awenze",email = "beawe@ulaval.ca"}
+]
+readme = "README.md"
+requires-python = ">=3.11,<3.14"
+dependencies = [
+    "loguru (>=0.7.3,<0.8.0)",
+    "numpy (>=2.4.1,<3.0.0)",
+    "opencv-python (>=4.13.0.90,<5.0.0.0)",
+    "click (>=8.3.1,<9.0.0)",
+    "picamera2 (>=0.3.33,<0.4.0)",
+    "reportlab (>=4.4.9,<5.0.0)",
+    "opencv-contrib-python (>=4.13.0.92,<5.0.0.0)",
+    "tabulate (>=0.9.0,<0.10.0)",
+]
+
+[tool.poetry]
+packages = [{include = "*", from = "src"}]
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^9.0.2"
+pytest-sugar = "^1.1.1"
+pytest-cov = "^7.0.0"
+black = "^26.1.0"
+flake8 = "^7.3.0"
+isort = "^7.0.0"
+
+[tool.black]
+line-length = 120
+target-version = ["py312"]
+skip-string-normalization = false
+
+[tool.isort]
+profile = "black"
+line_length = 120
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.poetry.scripts]
+calibrate_camera = "ui.cam_calibration_cli:main"
+estimate_pose = "ui.aruco_pose_estimation_cli:main"
+fmt = "script:run_code_formatting"
+fmt-check = "script:run_code_format_checking"
+clean = "script:clean_project"
+
