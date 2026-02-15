@@ -21,10 +21,11 @@ calib_path = Path(
 detector_config = OpenCVArucoDetectorConfig(dictionary_id=cv2.aruco.DICT_ARUCO_ORIGINAL)
 tracking_service = TrackingService.create(camera, target, calib_path, detector_config)
 
-pipeline = ThreadedPipeline(camera=camera, frame_processor=tracking_service.track_once, frame_buffer=buf)
-pipeline.start()
 
 webrtc = WebRTCContentDiffuser(buf, WebRTCConfig(port=8080, stream_fps=30))
+pipeline = ThreadedPipeline(camera=camera, frame_processor=tracking_service.track_once, frame_buffer=buf, com_channel=webrtc.diffuse_data)
+pipeline.start()
+
 webrtc.diffuse_video()  # bloque, ctrl-c pour arrêter
 
 pipeline.stop()

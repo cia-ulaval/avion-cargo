@@ -9,6 +9,7 @@ from aiohttp import web
 from aiortc import RTCPeerConnection, RTCSessionDescription
 from aiortc.mediastreams import VideoStreamTrack
 from av import VideoFrame
+from loguru import logger
 
 from domain.camera import LastestFrameBuffer
 from domain.content_diffuser import ContentDiffuser
@@ -136,7 +137,7 @@ class _BufferVideoTrack(VideoStreamTrack):
 class WebRTCConfig:
     host: str = "0.0.0.0"
     port: int = 8080
-    stream_fps: int = 20
+    stream_fps: int = 30
 
 
 class WebRTCContentDiffuser(ContentDiffuser):
@@ -210,6 +211,7 @@ class WebRTCContentDiffuser(ContentDiffuser):
 
         # vidéo depuis buffer
         pc.addTrack(_BufferVideoTrack(self._buf, target_fps=self._cfg.stream_fps))
+
 
         answer = await pc.createAnswer()
         await pc.setLocalDescription(answer)

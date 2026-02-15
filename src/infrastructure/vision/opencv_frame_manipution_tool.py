@@ -72,7 +72,6 @@ class FrameManipulationTool:
     ) -> np.ndarray:
         """
         Draw ArUco detected markers on frame.
-        Note: cv2.aruco.drawDetectedMarkers ignores custom color in many OpenCV builds.
         """
         out = frame.copy() if copy else frame
         if len(corners) == 0:
