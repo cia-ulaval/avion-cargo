@@ -11,6 +11,7 @@ from domain.pose_estimator import PoseEstimator
 from domain.tracking import TrackingResult
 from infrastructure.persistence.calibration_repo import CalibrationRepository
 from infrastructure.vision.opencv_aruco_detector import OpenCVArucoDetector, OpenCVArucoDetectorConfig
+from infrastructure.vision.opencv_frame_manipution_tool import FrameManipulationTool
 from infrastructure.vision.opencv_pose_estimator import OpenCVPoseEstimator
 
 
@@ -47,11 +48,15 @@ class TrackingService:
             return frame, TrackingResult.not_found()
 
         marker_id, corners = detections[0]
-        pose = self.pose_estimator.estimate_pose(
+        pose, rotation_vectors, translation_vectors = self.pose_estimator.estimate_pose(
             corners=corners,
             marker_length_m=self.target.marker_length_m,
             calib=self.calibration,
         )
+
+        FrameManipulationTool.draw_detected_markers(frame, [corners], np.array([[marker_id]], dtype=np.int32))
+        FrameManipulationTool.draw_axes_for_poses(frame, self.calibration.camera_matrix, self.calibration.dist_coeffs, rotation_vectors, translation_vectors)
+
         return frame, TrackingResult.detected(pose=pose, marker_id=marker_id)
 
     @staticmethod

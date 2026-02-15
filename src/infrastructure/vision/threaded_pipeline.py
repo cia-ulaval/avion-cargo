@@ -1,6 +1,6 @@
 import time
 from threading import Thread
-from typing import Callable, Optional, Tuple
+from typing import Callable, Optional, Tuple, Any
 
 import numpy as np
 from loguru import logger
@@ -15,12 +15,14 @@ class ThreadedPipeline:
         camera: Camera,
         frame_processor: Callable[[], Tuple[np.ndarray, TrackingResult]],
         frame_buffer: LastestFrameBuffer,
+        com_channel:Optional[Callable[[dict[str, Any]], None]] = None,
     ) -> None:
         self._camera = camera
         self._frame_processor = frame_processor
         self._frame_buffer = frame_buffer
         self._running = False
         self._thread: Optional[Thread] = None
+        self._com_channel = com_channel
 
     def start(self) -> None:
         self._camera.open()
@@ -36,11 +38,14 @@ class ThreadedPipeline:
 
     def _loop(self) -> None:
         waiting_period = 1.0 / max(1, self._camera.get_fps())
+        i = 0
         while self._running:
             start_time = time.time()
             vis, tracking_result = self._frame_processor()
             self._frame_buffer.set(vis, {"tracking_result": tracking_result})
-            logger.info(tracking_result.pose)
+            self._com_channel({"tracking_result": i})
             dt = time.time() - start_time
             if dt < waiting_period:
                 time.sleep(waiting_period - dt)
+
+            i += 1
