@@ -13,7 +13,6 @@ from av import VideoFrame
 from domain.camera import LastestFrameBuffer
 from domain.content_diffuser import ContentDiffuser
 
-
 INDEX_HTML = """<!doctype html>
 <html>
 <head>
@@ -104,6 +103,7 @@ class _BufferVideoTrack(VideoStreamTrack):
     Track aiortc: lit la dernière frame dans LastestFrameBuffer.
     IMPORTANT: aucun OpenCV ici, seulement lecture buffer + pacing.
     """
+
     def __init__(self, frame_buffer: LastestFrameBuffer, target_fps: int, fallback_hw=(480, 640)):
         super().__init__()
         self._buf = frame_buffer
@@ -145,6 +145,7 @@ class WebRTCContentDiffuser(ContentDiffuser):
     - diffuse_video(): démarre un serveur aiohttp + aiortc (bloquant, "script style")
     - diffuse_data(): envoie via DataChannel (thread-safe)
     """
+
     def __init__(self, frame_buffer: LastestFrameBuffer, config: WebRTCConfig = WebRTCConfig()):
         self._buf = frame_buffer
         self._cfg = config
