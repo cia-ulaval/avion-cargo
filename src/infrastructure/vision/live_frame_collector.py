@@ -69,7 +69,7 @@ class LiveFrameCollector(FrameCollector):
 
             if self.cfg.show_overlays:
                 msg = f"Captures: {len(frames)} | 'c' capture | ESC finish"
-                cv2.putText(vis, msg, (10, 22), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 0, 0), 2)
+                cv2.putText(vis, msg, (10, 22), cv2.FONT_HERSHEY_TRIPLEX, 0.5, (255, 0, 0), 1)
 
             if not self.cfg.headless:
                 cv2.imshow(self.cfg.window_name, vis)
