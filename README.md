@@ -123,7 +123,26 @@ calibrate_camera --help
 
 ---
 
-### 4. Notes
+### 4. Maintenance de la base de code
+
+Les outils [black][black-python-tool-url], [flake8][flake8-python-tool-url] et [isort][isort-python-tool-url] ont été ajoutés au projet pour permettre de maintenir propre la base de code sur ce dépôt. 
+
+#### 4.1. Appliquer le formatage de style dans le projet 
+
+```shell
+poetry run fmt
+```
+
+#### 4.2. Vérifier le formatage de style
+
+```shell
+poetry run fmt-check # ou
+flake8 . # exécuter à la racine du projet
+```
+
+
+
+### 5. Notes
 
 Le code ayant été conçu spécifiquement pour fonctionner sur Raspberry Pi, son comportement sur d’autres plateformes
 n’a pas été testé de manière rigoureuse.
@@ -160,4 +179,6 @@ n’a pas été testé de manière rigoureuse.
 
 [python-installation-url]: https://www.python.org/downloads/
 [poetry-installation-url]: https://python-poetry.org/docs/#installation
-```
+[black-python-tool-url]: https://github.com/psf/black
+[flake8-python-tool-url]: https://flake8.pycqa.org/en/latest/user/
+[isort-python-tool-url]: https://pycqa.github.io/isort/
