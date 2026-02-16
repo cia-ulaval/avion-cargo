@@ -20,14 +20,15 @@ class VehicleInterface:
             "last_signal_gpio": 0,
         }
 
+    #Étape 1 ici connect to vehicle
     def connect_to_vehicle(self, connection_string='/dev/serial0', baud=921600, timeout=5):
         print("\n--- Connexion UART (PyMavlink) ---")
         try:
-            self.master = mavutil.mavlink_connection(connection_string, baud=baud)
+            self.vehicle = mavutil.mavlink_connection(connection_string, baud=baud)
             print("Attente du Heartbeat...")
-            self.master.wait_heartbeat(timeout=timeout)
+            self.vehicle.wait_heartbeat(timeout=timeout)
             self.stats["last_heartbeat"] = time.time()
-            print(f"Connecté ! (System ID: {self.master.target_system})")
+            print(f"Connecté ! (System ID: {self.vehicle.target_system})")
         except Exception as e:
             print(f"Erreur de connexion : {e}")
 
@@ -39,9 +40,9 @@ class VehicleInterface:
         return self.stats
 
     def update_metrics(self):
-        if not self.master: return
+        if not self.vehicle: return
 
-        msg = self.master.recv_match(blocking=False)
+        msg = self.vehicle.recv_match(blocking=False)
         while msg:
             msg_type = msg.get_type()
             
@@ -64,8 +65,10 @@ class VehicleInterface:
             elif msg_type == 'POSITION_TARGET_LOCAL_NED':
                 print(f"\n[ACK] Cible validée -> N:{msg.x:.2f}m, E:{msg.y:.2f}m")
 
-            msg = self.master.recv_match(blocking=False)
+            msg = self.vehicle.recv_match(blocking=False)
 
+    #étape 3: bouger le drône selon les distances récupérées par la caméra
+    #x c'est horizontal et y vertical. Les distances sont en mètres
     def move_target_distance(self,distance_x, distance_y, distance_alt):
         angle_x = math.atan2(distance_y,distance_alt)
         angle_y = math.atan2(distance_x,distance_alt)
@@ -76,8 +79,8 @@ class VehicleInterface:
     #angles en radiants!!!
     #Et angle x c'est devant arrière et y c'est droite gauche
     def move_target_angle(self, angle_x, angle_y, distance):
-        if not self.master: return
-        self.master.mav.landing_target_send(
+        if not self.vehicle: return
+        self.vehicle.mav.landing_target_send(
             0,  
             0,  
             mavutil.mavlink.MAV_FRAME_BODY_NED,  
@@ -88,5 +91,6 @@ class VehicleInterface:
             1   
         )
 
+    #Etape 2: si le véhicle est conencté seulement, on active l'analyse de cam et le drop seulement si c'est vrai
     def get_vehicle_should_drop(self):
         return time.time()- self.stats["last_signal_gpio"] <1 
