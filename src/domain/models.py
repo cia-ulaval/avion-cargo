@@ -3,8 +3,9 @@ from datetime import datetime
 from typing import Any, Optional
 
 import numpy as np
-from domain.errors import InvalidCalibrationError, InvalidMarkerLengthError, InvalidPoseError
 from tabulate import tabulate
+
+from domain.errors import InvalidCalibrationError, InvalidMarkerLengthError, InvalidPoseError
 
 
 @dataclass(frozen=True, slots=True)

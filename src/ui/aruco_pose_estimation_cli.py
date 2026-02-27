@@ -51,7 +51,7 @@ def main(calibration_file, marker_length, dictionary_id, marker_id, cam_id, widt
     )
 
     while True:
-        frame, track_result= tracker.track_once()
+        frame, track_result = tracker.track_once()
         logger.info(f"res: {track_result}")
 
 
