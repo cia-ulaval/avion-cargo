@@ -1,7 +1,7 @@
 import click
 from loguru import logger
 
-from application.camera_calibrator import CameraCalibrationParameters, CameraCalibrator
+from application.camera_calibration_service import CameraCalibrationParameters, CameraCalibrator
 from domain.camera import Camera
 from domain.models import TargetedMarker
 from infrastructure.camera.opencv_capture_adapter import OpenCVCamera
