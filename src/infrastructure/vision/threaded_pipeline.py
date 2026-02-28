@@ -41,8 +41,8 @@ class ThreadedPipeline:
         i = 0
         while self._running:
             start_time = time.time()
-            vis, tracking_result = self._frame_processor()
-            self._frame_buffer.set(vis, {"tracking_result": tracking_result})
+            vis = self._frame_processor()
+            self._frame_buffer.set(vis, {"tracking_result": i})
             self._com_channel({"tracking_result": i})
             dt = time.time() - start_time
             if dt < waiting_period:
