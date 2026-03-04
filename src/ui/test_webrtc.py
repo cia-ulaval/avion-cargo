@@ -23,7 +23,9 @@ detector_config = OpenCVArucoDetectorConfig(dictionary_id=cv2.aruco.DICT_ARUCO_O
 
 
 webrtc = WebRTCContentDiffuser(buf, WebRTCConfig(port=8080, stream_fps=30))
-pipeline = ThreadedPipeline(camera=camera, frame_processor=camera.get_frame, frame_buffer=buf, com_channel=webrtc.diffuse_data)
+pipeline = ThreadedPipeline(
+    camera=camera, frame_processor=camera.get_frame, frame_buffer=buf, com_channel=webrtc.diffuse_data
+)
 pipeline.start()
 
 webrtc.diffuse_video()  # bloque, ctrl-c pour arrêter

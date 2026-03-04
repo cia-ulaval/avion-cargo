@@ -1,7 +1,9 @@
-import time
-from pymavlink import mavutil
 import math
+import time
+
 from gpiozero import DigitalInputDevice
+from pymavlink import mavutil
+
 
 class VehicleInterface:
     def __init__(self):
@@ -20,8 +22,8 @@ class VehicleInterface:
             "last_signal_gpio": 0,
         }
 
-    #Étape 1 ici connect to vehicle
-    def connect_to_vehicle(self, connection_string='/dev/serial0', baud=921600, timeout=5):
+    # Étape 1 ici connect to vehicle
+    def connect_to_vehicle(self, connection_string="/dev/serial0", baud=921600, timeout=5):
         print("\n--- Connexion UART (PyMavlink) ---")
         try:
             self.vehicle = mavutil.mavlink_connection(connection_string, baud=baud)
@@ -40,57 +42,50 @@ class VehicleInterface:
         return self.stats
 
     def update_metrics(self):
-        if not self.vehicle: return
+        if not self.vehicle:
+            return
 
         msg = self.vehicle.recv_match(blocking=False)
         while msg:
             msg_type = msg.get_type()
-            
-            if msg_type == 'HEARTBEAT':
+
+            if msg_type == "HEARTBEAT":
                 self.stats["mode"] = mavutil.mode_string_v10(msg)
                 self.stats["armed"] = (msg.base_mode & mavutil.mavlink.MAV_MODE_FLAG_SAFETY_ARMED) != 0
                 self.stats["last_heartbeat"] = time.time()
-            
-            elif msg_type == 'VFR_HUD':
+
+            elif msg_type == "VFR_HUD":
                 self.stats["alt"] = msg.alt
                 self.stats["groundspeed"] = msg.groundspeed
-            
-            elif msg_type == 'SYS_STATUS':
-                self.stats["battery_voltage"] = msg.voltage_battery / 1000.0 
+
+            elif msg_type == "SYS_STATUS":
+                self.stats["battery_voltage"] = msg.voltage_battery / 1000.0
                 self.stats["battery_remaining"] = msg.battery_remaining
-            
-            elif msg_type == 'GPS_RAW_INT':
+
+            elif msg_type == "GPS_RAW_INT":
                 self.stats["gps_fix"] = msg.fix_type
 
-            elif msg_type == 'POSITION_TARGET_LOCAL_NED':
+            elif msg_type == "POSITION_TARGET_LOCAL_NED":
                 print(f"\n[ACK] Cible validée -> N:{msg.x:.2f}m, E:{msg.y:.2f}m")
 
             msg = self.vehicle.recv_match(blocking=False)
 
-    #étape 3: bouger le drône selon les distances récupérées par la caméra
-    #x c'est horizontal et y vertical. Les distances sont en mètres
-    def move_target_distance(self,distance_x, distance_y, distance_alt):
-        angle_x = math.atan2(distance_y,distance_alt)
-        angle_y = math.atan2(distance_x,distance_alt)
-        distance = (distance_x**2 + distance_y**2 + distance_alt**2) ** (1/2)
+    # étape 3: bouger le drône selon les distances récupérées par la caméra
+    # x c'est horizontal et y vertical. Les distances sont en mètres
+    def move_target_distance(self, distance_x, distance_y, distance_alt):
+        angle_x = math.atan2(distance_y, distance_alt)
+        angle_y = math.atan2(distance_x, distance_alt)
+        distance = (distance_x**2 + distance_y**2 + distance_alt**2) ** (1 / 2)
 
         self.move_target_angle(angle_x, angle_y, distance)
 
-    #angles en radiants!!!
-    #Et angle x c'est devant arrière et y c'est droite gauche
+    # angles en radiants!!!
+    # Et angle x c'est devant arrière et y c'est droite gauche
     def move_target_angle(self, angle_x, angle_y, distance):
-        if not self.vehicle: return
-        self.vehicle.mav.landing_target_send(
-            0,  
-            0,  
-            mavutil.mavlink.MAV_FRAME_BODY_NED,  
-            angle_x,  
-            angle_y,  
-            distance,  
-            1,  
-            1   
-        )
+        if not self.vehicle:
+            return
+        self.vehicle.mav.landing_target_send(0, 0, mavutil.mavlink.MAV_FRAME_BODY_NED, angle_x, angle_y, distance, 1, 1)
 
-    #Etape 2: si le véhicle est conencté seulement, on active l'analyse de cam et le drop seulement si c'est vrai
+    # Etape 2: si le véhicle est conencté seulement, on active l'analyse de cam et le drop seulement si c'est vrai
     def get_vehicle_should_drop(self):
-        return time.time()- self.stats["last_signal_gpio"] <1 
+        return time.time() - self.stats["last_signal_gpio"] < 1
