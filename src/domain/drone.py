@@ -36,7 +36,7 @@ class DroneMode(str, Enum):
         return cls(s) if s in cls._value2member_map_ else cls.UNKNOWN
 
 
-@dataclass(frozen=True, slots=True)
+@dataclass(slots=True)
 class DroneStatus:
     mode: DroneMode
     alt_m: float
@@ -65,14 +65,13 @@ class Drone(ABC):
         raise NotImplementedError()
 
     @abstractmethod
-    def get_status(self) -> dict[str, Any]:
+    def get_status(self) -> DroneStatus:
         raise NotImplementedError()
 
     @abstractmethod
-    def move(self, position: Pose3D):
+    def move_to(self, position: Pose3D):
         raise NotImplementedError()
 
-    @staticmethod
     @abstractmethod
-    def create(**args) -> "Drone":
+    def land(self):
         raise NotImplementedError()
