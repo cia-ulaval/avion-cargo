@@ -48,7 +48,7 @@ requires = ["poetry-core>=2.0.0,<3.0.0"]
 build-backend = "poetry.core.masonry.api"
 
 [tool.poetry.scripts]
-calibrate_camera = "ui.cam_calibration_cli:main"
+calibrate_camera = "ui.camera_calibration_cli:main"
 estimate_pose = "ui.aruco_pose_estimation_cli:main"
 fmt = "script:run_code_formatting"
 fmt-check = "script:run_code_format_checking"
