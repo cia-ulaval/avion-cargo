@@ -19,3 +19,4 @@ def clean_project():
     logger.info("Start cleaning project")
     project_cleaner.clean()
     logger.success("Project cleaned")
+
