@@ -12,7 +12,6 @@ from infrastructure.communication.webrtc_content_diffuser import WebRTCConfig, W
 from infrastructure.persistence.calibration_repo import CalibrationRepository
 from infrastructure.vision.opencv_aruco_detector import OpenCVArucoDetector, OpenCVArucoDetectorConfig
 from infrastructure.vision.opencv_pose_estimator import OpenCVPoseEstimator
-from infrastructure.vision.processor.aruco_axis_adding_processor import ArucoAxisAddingProcessor
 from infrastructure.vision.threaded_pipeline import ThreadedPipeline
 
 
