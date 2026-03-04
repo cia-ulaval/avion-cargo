@@ -1,6 +1,6 @@
 import time
 from threading import Thread
-from typing import Callable, Optional, Tuple, Any
+from typing import Any, Callable, Optional, Tuple
 
 import numpy as np
 from loguru import logger
@@ -15,7 +15,7 @@ class ThreadedPipeline:
         camera: Camera,
         frame_processor: Callable[[], Tuple[np.ndarray, TrackingResult]],
         frame_buffer: LastestFrameBuffer,
-        com_channel:Optional[Callable[[dict[str, Any]], None]] = None,
+        com_channel: Optional[Callable[[dict[str, Any]], None]] = None,
     ) -> None:
         self._camera = camera
         self._frame_processor = frame_processor

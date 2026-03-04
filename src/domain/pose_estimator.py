@@ -8,7 +8,9 @@ from domain.models import CalibrationData, Pose3D
 
 class PoseEstimator(ABC):
     @abstractmethod
-    def estimate_pose(self, corners: np.ndarray, marker_length_m: float, calib: CalibrationData) -> Tuple[Pose3D, np.ndarray, np.ndarray]:
+    def estimate_pose(
+        self, corners: np.ndarray, marker_length_m: float, calib: CalibrationData
+    ) -> Tuple[Pose3D, np.ndarray, np.ndarray]:
         """
         Estimate pose from detected corners.
         :param corners: detected corners (numpy array)

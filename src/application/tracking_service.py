@@ -55,7 +55,9 @@ class TrackingService:
         )
 
         FrameManipulationTool.draw_detected_markers(frame, [corners], np.array([[marker_id]], dtype=np.int32))
-        FrameManipulationTool.draw_axes_for_poses(frame, self.calibration.camera_matrix, self.calibration.dist_coeffs, rotation_vectors, translation_vectors)
+        FrameManipulationTool.draw_axes_for_poses(
+            frame, self.calibration.camera_matrix, self.calibration.dist_coeffs, rotation_vectors, translation_vectors
+        )
 
         return frame, TrackingResult.detected(pose=pose, marker_id=marker_id)
 

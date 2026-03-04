@@ -1,6 +1,8 @@
-import time
 import threading
+import time
+
 import vehicle_interface
+
 
 class DroneApp:
     def __init__(self):
@@ -10,19 +12,19 @@ class DroneApp:
 
     def control_loop(self):
         print("Boucle démarrée")
-        
+
         while self.running:
             start = time.time()
-            #sécurité pour être sur qu'il a un vehicule
-            if(self.vehicle.vehicle is not None and self.vehicle.get_vehicle_should_drop()): 
+            # sécurité pour être sur qu'il a un vehicule
+            if self.vehicle.vehicle is not None and self.vehicle.get_vehicle_should_drop():
                 # Récupérer les stat Caméra ici
                 distance_x = 0
                 distance_y = 0
-                distance_alt = 0            
+                distance_alt = 0
 
                 self.vehicle.move_target_distance(distance_x, distance_y, distance_alt)
             elapsed = time.time() - start
-            sleep_time = max(0, 0.05 - elapsed) #0.05 à changer pour changer le nb de hz
+            sleep_time = max(0, 0.05 - elapsed)  # 0.05 à changer pour changer le nb de hz
             time.sleep(sleep_time)
         print("Boucle stoppée")
 

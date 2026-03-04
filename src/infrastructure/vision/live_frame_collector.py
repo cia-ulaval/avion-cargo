@@ -8,7 +8,8 @@ from domain.camera import Camera
 from domain.frame_collector import FrameCollector
 from domain.marker_detector import MarkerDetector
 from domain.models import TargetedMarker
-from infrastructure.vision.opencv_frame_manipution_tool import FrameManipulationTool, Color
+from infrastructure.vision.opencv_frame_manipution_tool import Color, FrameManipulationTool
+
 
 @dataclass(slots=True)
 class LiveFrameCollectorConfig:

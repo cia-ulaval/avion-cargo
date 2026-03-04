@@ -212,7 +212,6 @@ class WebRTCContentDiffuser(ContentDiffuser):
         # vidéo depuis buffer
         pc.addTrack(_BufferVideoTrack(self._buf, target_fps=self._cfg.stream_fps))
 
-
         answer = await pc.createAnswer()
         await pc.setLocalDescription(answer)
 
