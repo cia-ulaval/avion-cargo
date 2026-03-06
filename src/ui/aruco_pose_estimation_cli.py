@@ -44,7 +44,7 @@ def track_and_send_data(tracker: TrackingService, sender: ContentDiffuser):
 @click.option(
     "-d", "dictionary_id", required=True, default=16, show_default=True, type=int, help="Dictionary id (0..16)"
 )
-@click.option("-mid", "marker_id", default=None, show_default=True, type=int, help="Marker id (0..16)")
+@click.option("-mid", "id", default=None, show_default=True, type=int, help="Marker id (0..16)")
 @click.option("--picam", is_flag=True, help="Use PiCamera2 (Raspberry Pi)")
 @click.option("--cam-id", default=0, show_default=True, type=int, help="Webcam id. Not necessary if using Picamera2.")
 @click.option("--width", default=640, show_default=True, type=int)

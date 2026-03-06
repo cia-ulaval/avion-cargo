@@ -33,7 +33,7 @@ class OpenCVArucoDetector(MarkerDetector):
         results: List[Tuple[int, np.ndarray]] = []
 
         for marker_id, c in zip(ids_flat, corners):
-            if target.marker_id is None or marker_id == target.marker_id:
+            if target.id is None or marker_id == target.id:
                 results.append((int(marker_id), c))
 
         return results

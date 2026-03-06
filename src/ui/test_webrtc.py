@@ -14,7 +14,7 @@ from infrastructure.vision.threaded_pipeline import ThreadedPipeline
 buf = LastestFrameBuffer()
 camera = OpenCVCamera()
 frame_processor = ArucoAxisAddingProcessor()
-target = TargetedMarker(marker_id=None, marker_length_m=0.181)
+target = TargetedMarker(id=None, length=0.181)
 calib_path = Path(
     "/home/bertrand-awz/Documents/avionCargo/autolander/calibration_results/calibration_2026-02-07_21-45-24.npz"
  )
