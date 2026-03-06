@@ -13,19 +13,11 @@ from infrastructure.persistence.calibration_repo import CalibrationRepository
 from infrastructure.vision.opencv_aruco_detector import OpenCVArucoDetector, OpenCVArucoDetectorConfig
 from infrastructure.vision.opencv_pose_estimator import OpenCVPoseEstimator
 from infrastructure.vision.threaded_pipeline import ThreadedPipeline
-
-
-def build_camera(*, picam: bool, cam_id: int, width: int, height: int, fps: int) -> Camera:
-    if picam:
-        from infrastructure.camera.picamera_adapter import PiCameraAdapter
-
-        return PiCameraAdapter(width=width, height=height, fps=fps, rgb=False)
-
-    return OpenCVCamera(source=cam_id, width=width, height=height, fps=fps, rgb=False)
+from ui.common_functions import build_camera
 
 
 def track_and_send_data(tracker: TrackingService, sender: ContentDiffuser):
-    frame, trk_res = tracker.track_once()
+    frame, trk_res = tracker.track_target()
     sender.diffuse_data(
         {
             "tracking_result": {
@@ -53,7 +45,7 @@ def track_and_send_data(tracker: TrackingService, sender: ContentDiffuser):
 @logger.catch()
 def main(calibration_file, marker_length, dictionary_id, marker_id, cam_id, width, height, fps, picam):
 
-    target_marker = TargetedMarker(None, marker_length)
+    target_marker = TargetedMarker(marker_id, marker_length, dictionary_id)
     camera = build_camera(picam=picam, cam_id=cam_id, width=width, height=height, fps=fps)
     pose_estimator = OpenCVPoseEstimator()
     calibration_data = CalibrationRepository().load_report(Path(calibration_file))
@@ -70,7 +62,7 @@ def main(calibration_file, marker_length, dictionary_id, marker_id, cam_id, widt
     buffer = LastestFrameBuffer()
     webrtc = WebRTCContentDiffuser(buffer, WebRTCConfig(port=8080, stream_fps=30))
     # frame_processor = ArucoAxisAddingProcessor()
-    pipeline = ThreadedPipeline(camera=camera, frame_processor=tracker.track_once, frame_buffer=buffer)
+    pipeline = ThreadedPipeline(camera=camera, frame_processor=tracker.track_target, frame_buffer=buffer)
 
     pipeline.start()
 

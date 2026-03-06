@@ -19,7 +19,7 @@ class CalibrationRepository:
         file_path = f"{self.calibration_filename}_{file_created_datetime}{self.calibration_file_extension}"
         file_path = self.default_calibration_filedir / file_path
 
-        np.savez(file_path, camera_matrix=calib.camera_matrix, camera_distortion_matrix=calib.camera_distortion_matrix)
+        np.savez(file_path, camera_width= calib.image_width, camera_height = calib.image_height, camera_matrix=calib.camera_matrix, camera_distortion_matrix=calib.camera_distortion_matrix)
         return file_path
 
     def load_report(self, file_path: Path) -> CalibrationData:
@@ -28,4 +28,7 @@ class CalibrationRepository:
 
         file_path = Path(file_path)
         data = np.load(file_path)
-        return CalibrationData(camera_matrix=data["camera_matrix"], dist_coeffs=data["camera_distortion_matrix"])
+        return CalibrationData(camera_matrix=data["camera_matrix"],
+                               dist_coeffs=data["camera_distortion_matrix"],
+                               camera_height=data["camera_height"],
+                               camera_width=data["camera_width"])

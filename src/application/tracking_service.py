@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Tuple
+from typing import Tuple, Optional
 
 import numpy as np
 
@@ -32,7 +32,7 @@ class TrackingService:
     target: TargetedMarker
     calibration: CalibrationData
 
-    def track_once(self) -> Tuple[np.ndarray, TrackingResult]:
+    def track_target(self) -> Tuple[np.ndarray, TrackingResult]:
         """
         Capture one frame, detect markers, estimate pose for the first matching marker.
         Returns a TrackingResult (DETECTED / NOT_FOUND).
@@ -65,17 +65,20 @@ class TrackingService:
     def create(
         camera: Camera,
         target: TargetedMarker,
-        calibration_data_pathfile: Path,
         detector_config: OpenCVArucoDetectorConfig,
+        calibration: Optional[CalibrationData, Path] = None,
     ) -> "TrackingService":
         detector = OpenCVArucoDetector(detector_config)
         pose_estimator = OpenCVPoseEstimator()
-        calibration_data = CalibrationRepository().load_report(calibration_data_pathfile)
+        if isinstance(calibration, CalibrationData):
+            calib = calibration
+        else:
+            calib = CalibrationRepository().load_report(calibration)
 
         return TrackingService(
             camera=camera,
             detector=detector,
             pose_estimator=pose_estimator,
             target=target,
-            calibration=calibration_data,
+            calibration=calib,
         )

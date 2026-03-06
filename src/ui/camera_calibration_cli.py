@@ -2,19 +2,10 @@ import click
 from loguru import logger
 
 from application.camera_calibration_service import CameraCalibrationParameters, CameraCalibrationService
-from domain.camera import Camera
+
 from domain.models import TargetedMarker
-from infrastructure.camera.opencv_capture_adapter import OpenCVCamera
+
 from infrastructure.vision.opencv_gridboard_calibration_engine import GridBoardCalibrationConfig, GridBoardSpec
-
-
-def build_camera(*, picam: bool, cam_id: int, width: int, height: int, fps: int) -> Camera:
-    if picam:
-        from infrastructure.camera.picamera_adapter import PiCameraAdapter
-
-        return PiCameraAdapter(width=width, height=height, fps=fps, rgb=False)
-
-    return OpenCVCamera(source=cam_id, width=width, height=height, fps=fps, rgb=False)
 
 
 @click.command(context_settings={"help_option_names": ["-h", "--help"]})
