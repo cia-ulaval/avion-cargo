@@ -37,6 +37,7 @@ class CalibrationRepository:
         return CalibrationData(
             camera_matrix=data["camera_matrix"],
             dist_coeffs=data["camera_distortion_matrix"],
-            camera_height=data["camera_height"],
-            camera_width=data["camera_width"],
+            #TODO voir ici pour KeyError: 'camera_height is not a file in the archive'
+            camera_height=480,
+            camera_width=640,
         )
