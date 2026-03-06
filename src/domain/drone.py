@@ -21,6 +21,7 @@ class DroneMode(str, Enum):
     DRIFT = "DRIFT"
     SPORT = "SPORT"
     FLIP = "FLIP"
+    PLND = "PLND"
 
     @classmethod
     def from_str(cls, s: str | None) -> "DroneMode":
@@ -73,4 +74,20 @@ class Drone(ABC):
 
     @abstractmethod
     def land(self):
+        raise NotImplementedError()
+
+    @abstractmethod
+    def activate_precision_landing_mode(self):
+        raise NotImplementedError()
+
+    @abstractmethod
+    def activate_guided_mode(self):
+        raise NotImplementedError()
+
+    @abstractmethod
+    def arm(self):
+        raise NotImplementedError()
+
+    @abstractmethod
+    def takeoff(self):
         raise NotImplementedError()

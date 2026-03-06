@@ -11,7 +11,7 @@ from aiortc.mediastreams import VideoStreamTrack
 from av import VideoFrame
 
 from domain.camera import LastestFrameBuffer
-from domain.content_diffuser import ContentDiffuser
+from domain.content_diffuser import ContentStreamer
 
 INDEX_HTML = """<!doctype html>
 <html>
@@ -139,7 +139,7 @@ class WebRTCConfig:
     stream_fps: int = 30
 
 
-class WebRTCContentDiffuser(ContentDiffuser):
+class WebRTCContentStreamer(ContentStreamer):
     """
     Implémentation WebRTC qui réutilise ton LastestFrameBuffer.
     - diffuse_video(): démarre un serveur aiohttp + aiortc (bloquant, "script style")
@@ -155,14 +155,14 @@ class WebRTCContentDiffuser(ContentDiffuser):
 
         self._loop: Optional[asyncio.AbstractEventLoop] = None
 
-    def diffuse_data(self, data: Dict[str, Any]) -> None:
+    def send_data(self, data: Dict[str, Any]) -> None:
         # Peut être appelé depuis ton thread pipeline
         if self._loop is None:
             return
         payload = json.dumps(data, separators=(",", ":"), ensure_ascii=False)
         self._loop.call_soon_threadsafe(self._send_telemetry_now, payload)
 
-    def diffuse_video(self) -> None:
+    def stream_video(self) -> None:
         """
         Mode "script": bloque le thread courant (comme web.run_app).
         Le pipeline caméra tourne dans son thread séparé.

@@ -2,12 +2,12 @@ from abc import ABC, abstractmethod
 from typing import Any, Dict
 
 
-class ContentDiffuser(ABC):
+class ContentStreamer(ABC):
 
     @abstractmethod
-    def diffuse_video(self) -> None:
+    def stream_video(self) -> None:
         raise NotImplementedError()
 
     @abstractmethod
-    def diffuse_data(self, data: Dict[str, Any]) -> None:
+    def send_data(self, data: Dict[str, Any]) -> None:
         raise NotImplementedError()

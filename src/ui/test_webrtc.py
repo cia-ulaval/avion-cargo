@@ -6,7 +6,7 @@ from application.tracking_service import TrackingService
 from domain.camera import LastestFrameBuffer
 from domain.models import TargetedMarker
 from infrastructure.camera.opencv_capture_adapter import OpenCVCamera
-from infrastructure.communication.webrtc_content_diffuser import WebRTCConfig, WebRTCContentDiffuser
+from infrastructure.communication.webrtc_content_diffuser import WebRTCConfig, WebRTCContentStreamer
 from infrastructure.vision.opencv_aruco_detector import OpenCVArucoDetectorConfig
 from infrastructure.vision.processor.aruco_axis_adding_processor import ArucoAxisAddingProcessor
 from infrastructure.vision.threaded_pipeline import ThreadedPipeline
@@ -22,12 +22,12 @@ detector_config = OpenCVArucoDetectorConfig(dictionary_id=cv2.aruco.DICT_ARUCO_O
 tracking_service = TrackingService.create(camera, target, calib_path, detector_config)
 
 
-webrtc = WebRTCContentDiffuser(buf, WebRTCConfig(port=8080, stream_fps=30))
+webrtc = WebRTCContentStreamer(buf, WebRTCConfig(port=8080, stream_fps=30))
 pipeline = ThreadedPipeline(
-    camera=camera, frame_processor=tracking_service.track_target, frame_buffer=buf, com_channel=webrtc.diffuse_data
+    camera=camera, frame_processor=tracking_service.track_target, frame_buffer=buf, com_channel=webrtc.send_data
 )
 pipeline.start()
 
-webrtc.diffuse_video()  # bloque, ctrl-c pour arrêter
+webrtc.stream_video()  # bloque, ctrl-c pour arrêter
 
 pipeline.stop()
