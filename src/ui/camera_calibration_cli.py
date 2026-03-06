@@ -66,8 +66,9 @@ def main(
             fix_principal_point=pc,
         ),
         target=TargetedMarker(
-            marker_id=None,
-            marker_length_m=marker_length,
+            id=None,
+            length=marker_length,
+            dictionary=dictionary_id
         ),
         dictionary_id=dictionary_id,
     )

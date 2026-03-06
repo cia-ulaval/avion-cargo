@@ -50,7 +50,7 @@ class TrackingService:
         marker_id, corners = detections[0]
         pose, rotation_vectors, translation_vectors = self.pose_estimator.estimate_pose(
             corners=corners,
-            marker_length_m=self.target.marker_length_m,
+            marker_length_m=self.target.length,
             calib=self.calibration,
         )
 
