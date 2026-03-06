@@ -5,9 +5,9 @@ from loguru import logger
 
 from application.tracking_service import TrackingService
 from domain.camera import LastestFrameBuffer
-from domain.content_diffuser import ContentDiffuser
+from domain.content_diffuser import ContentStreamer
 from domain.models import TargetedMarker
-from infrastructure.communication.webrtc_content_diffuser import WebRTCConfig, WebRTCContentDiffuser
+from infrastructure.communication.webrtc_content_diffuser import WebRTCConfig, WebRTCContentStreamer
 from infrastructure.persistence.calibration_repo import CalibrationRepository
 from infrastructure.vision.opencv_aruco_detector import OpenCVArucoDetector, OpenCVArucoDetectorConfig
 from infrastructure.vision.opencv_pose_estimator import OpenCVPoseEstimator
@@ -15,9 +15,9 @@ from infrastructure.vision.threaded_pipeline import ThreadedPipeline
 from ui.common_functions import build_camera
 
 
-def track_and_send_data(tracker: TrackingService, sender: ContentDiffuser):
+def track_and_send_data(tracker: TrackingService, sender: ContentStreamer):
     frame, trk_res = tracker.track_target()
-    sender.diffuse_data(
+    sender.send_data(
         {
             "tracking_result": {
                 "x": trk_res.pose.x,
@@ -59,13 +59,13 @@ def main(calibration_file, marker_length, dictionary_id, marker_id, cam_id, widt
     )
 
     buffer = LastestFrameBuffer()
-    webrtc = WebRTCContentDiffuser(buffer, WebRTCConfig(port=8080, stream_fps=30))
+    webrtc = WebRTCContentStreamer(buffer, WebRTCConfig(port=8080, stream_fps=30))
     # frame_processor = ArucoAxisAddingProcessor()
     pipeline = ThreadedPipeline(camera=camera, frame_processor=tracker.track_target, frame_buffer=buffer)
 
     pipeline.start()
 
-    webrtc.diffuse_video()
+    webrtc.stream_video()
 
     pipeline.stop()
 
