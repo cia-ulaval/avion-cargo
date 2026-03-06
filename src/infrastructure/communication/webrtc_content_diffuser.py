@@ -9,7 +9,6 @@ from aiohttp import web
 from aiortc import RTCPeerConnection, RTCSessionDescription
 from aiortc.mediastreams import VideoStreamTrack
 from av import VideoFrame
-from loguru import logger
 
 from domain.camera import LastestFrameBuffer
 from domain.content_diffuser import ContentDiffuser

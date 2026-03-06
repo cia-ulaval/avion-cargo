@@ -34,7 +34,7 @@ class StreamingConfiguration:
 class DroneConnectionConfiguration:
     use_serial: bool
     address: str
-    port: Optional[int]         # peut être null
+    port: Optional[int]  # peut être null
     baud_rate: int
 
 
@@ -44,4 +44,3 @@ class AutolanderConfiguration:
     camera_config: CameraConfiguration
     streaming_config: StreamingConfiguration
     drone_connection_config: DroneConnectionConfiguration
-

@@ -3,10 +3,15 @@ from pathlib import Path
 from typing import Any, Optional
 
 from domain.models import TargetedMarker
+from infrastructure.persistence.configuration_models import (
+    AutolanderConfiguration,
+    CameraConfiguration,
+    DroneConnectionConfiguration,
+    StreamingConfiguration,
+    StreamingDataConfiguration,
+    StreamingVideoConfiguration,
+)
 from utils.validators.configuration_validator import ConfigurationValidator
-
-from infrastructure.persistence.configuration_models import AutolanderConfiguration, CameraConfiguration, \
-    StreamingConfiguration, StreamingDataConfiguration, StreamingVideoConfiguration, DroneConnectionConfiguration
 
 
 class AutolanderConfigurationReader:

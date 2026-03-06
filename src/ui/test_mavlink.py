@@ -4,8 +4,8 @@ import time
 
 from domain.models import Pose3D
 from infrastructure.communication.drone_mavlink_connector import (
-    DroneMavlinkUDP,
     DroneMavlinkSerial,
+    DroneMavlinkUDP,
     MavlinkConnectionParams,
 )
 

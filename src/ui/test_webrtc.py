@@ -17,7 +17,7 @@ frame_processor = ArucoAxisAddingProcessor()
 target = TargetedMarker(id=None, length=0.181)
 calib_path = Path(
     "/home/bertrand-awz/Documents/avionCargo/autolander/calibration_results/calibration_2026-02-07_21-45-24.npz"
- )
+)
 detector_config = OpenCVArucoDetectorConfig(dictionary_id=cv2.aruco.DICT_ARUCO_ORIGINAL)
 tracking_service = TrackingService.create(camera, target, calib_path, detector_config)
 

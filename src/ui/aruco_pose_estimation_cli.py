@@ -4,10 +4,9 @@ import click
 from loguru import logger
 
 from application.tracking_service import TrackingService
-from domain.camera import Camera, LastestFrameBuffer
+from domain.camera import LastestFrameBuffer
 from domain.content_diffuser import ContentDiffuser
 from domain.models import TargetedMarker
-from infrastructure.camera.opencv_capture_adapter import OpenCVCamera
 from infrastructure.communication.webrtc_content_diffuser import WebRTCConfig, WebRTCContentDiffuser
 from infrastructure.persistence.calibration_repo import CalibrationRepository
 from infrastructure.vision.opencv_aruco_detector import OpenCVArucoDetector, OpenCVArucoDetectorConfig

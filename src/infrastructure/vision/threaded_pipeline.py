@@ -4,7 +4,6 @@ from threading import Thread
 from typing import Any, Callable, Optional, Tuple
 
 import numpy as np
-from loguru import logger
 
 from domain.camera import Camera, LastestFrameBuffer
 from domain.tracking import TrackingResult
@@ -45,9 +44,9 @@ class ThreadedPipeline:
             vis, tracking_result = self._frame_processor()
             self._frame_buffer.set(vis, asdict(tracking_result))
 
-            if self._com_channel: self._com_channel(asdict(tracking_result))
+            if self._com_channel:
+                self._com_channel(asdict(tracking_result))
 
             dt = time.time() - start_time
             if dt < waiting_period:
                 time.sleep(waiting_period - dt)
-
