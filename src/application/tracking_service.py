@@ -1,12 +1,12 @@
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Tuple, Optional
+from typing import Optional, Tuple
 
 import numpy as np
 
 from domain.camera import Camera
 from domain.marker_detector import MarkerDetector
-from domain.models import CalibrationData, Pose3D, TargetedMarker
+from domain.models import CalibrationData, TargetedMarker
 from domain.pose_estimator import PoseEstimator
 from domain.tracking import TrackingResult
 from infrastructure.persistence.calibration_repo import CalibrationRepository

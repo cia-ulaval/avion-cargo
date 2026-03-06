@@ -33,7 +33,7 @@ class DroneMavlinkBase(Drone):
             armed=False,
             last_heartbeat_s=0.0,
             last_signal_gpio_s=0.0,
-            alt_m = 0.0
+            alt_m=0.0,
         )
 
     # --------- helpers GPIO (optionnel) ---------
@@ -69,9 +69,7 @@ class DroneMavlinkBase(Drone):
 
         angle_x = math.atan2(position.y, position.z)
         angle_y = math.atan2(position.x, position.z)
-        distance = math.sqrt((position.x * position.x) +
-                             (position.y * position.y) +
-                             (position.z * position.z))
+        distance = math.sqrt((position.x * position.x) + (position.y * position.y) + (position.z * position.z))
 
         self._conn.mav.landing_target_send(
             0,  # time_usec
@@ -104,9 +102,9 @@ class DroneMavlinkBase(Drone):
         self._require_connected()
         msg = self._conn.recv_match(blocking=False)
         while msg:
-            message_type:str = msg.get_type()
+            message_type: str = msg.get_type()
 
-            if message_type ==  "HEARTBEAT":
+            if message_type == "HEARTBEAT":
                 self._status.mode = DroneMode.from_str(mavutil.mode_string_v10(msg))
                 self._status.armed = (msg.base_mode & mavutil.mavlink.MAV_MODE_FLAG_SAFETY_ARMED) != 0
                 self._status.last_heartbeat_s = time.time()

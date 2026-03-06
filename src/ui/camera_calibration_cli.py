@@ -2,10 +2,9 @@ import click
 from loguru import logger
 
 from application.camera_calibration_service import CameraCalibrationParameters, CameraCalibrationService
-
 from domain.models import TargetedMarker
-
 from infrastructure.vision.opencv_gridboard_calibration_engine import GridBoardCalibrationConfig, GridBoardSpec
+from ui.common_functions import build_camera
 
 
 @click.command(context_settings={"help_option_names": ["-h", "--help"]})
@@ -56,11 +55,7 @@ def main(
             zero_tangent_dist=zt,
             fix_principal_point=pc,
         ),
-        target=TargetedMarker(
-            id=None,
-            length=marker_length,
-            dictionary=dictionary_id
-        ),
+        target=TargetedMarker(id=None, length=marker_length, dictionary=dictionary_id),
         dictionary_id=dictionary_id,
     )
 

@@ -1,8 +1,11 @@
 from domain.camera import Camera
 from domain.drone import Drone
 from infrastructure.camera.opencv_capture_adapter import OpenCVCamera
-from infrastructure.communication.drone_mavlink_connector import DroneMavlinkSerial, MavlinkConnectionParams, \
-    DroneMavlinkUDP
+from infrastructure.communication.drone_mavlink_connector import (
+    DroneMavlinkSerial,
+    DroneMavlinkUDP,
+    MavlinkConnectionParams,
+)
 from infrastructure.persistence.configuration_models import DroneConnectionConfiguration
 
 
@@ -23,9 +26,7 @@ def build_drone(drone_connection_config: DroneConnectionConfiguration) -> Drone:
     )
     if drone_connection_config.use_serial:
         return DroneMavlinkSerial(
-           mavlink_params,
+            mavlink_params,
         )
     else:
-        return DroneMavlinkUDP(
-            mavlink_params
-        )
+        return DroneMavlinkUDP(mavlink_params)

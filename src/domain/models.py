@@ -31,7 +31,6 @@ class CalibrationData:
     camera_width: Optional[int] = 640
     camera_height: Optional[int] = 480
 
-
     def __post_init__(self) -> None:
         k = np.asarray(self.camera_matrix)
         d = np.asarray(self.dist_coeffs)
@@ -70,7 +69,7 @@ class TargetedMarker:
         if not np.isfinite(self.length) or self.length <= 0.0:
             raise InvalidMarkerLengthError(f"marker_length_m must be > 0, got {self.length}")
 
-        if not self.dictionary >=1 and self.dictionary <= 16:
+        if not self.dictionary >= 1 and self.dictionary <= 16:
             raise ValueError("dictionary must be between 1 and 16")
 
 
