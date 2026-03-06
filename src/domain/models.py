@@ -28,6 +28,9 @@ class CalibrationData:
 
     camera_matrix: np.ndarray  # expected (3, 3)
     dist_coeffs: np.ndarray  # common shapes: (1,5) (1,8) (5,) (8,) ...
+    camera_width: Optional[int] = 640
+    camera_height: Optional[int] = 480
+
 
     def __post_init__(self) -> None:
         k = np.asarray(self.camera_matrix)

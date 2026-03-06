@@ -24,7 +24,7 @@ tracking_service = TrackingService.create(camera, target, calib_path, detector_c
 
 webrtc = WebRTCContentDiffuser(buf, WebRTCConfig(port=8080, stream_fps=30))
 pipeline = ThreadedPipeline(
-    camera=camera, frame_processor=tracking_service.track_once, frame_buffer=buf, com_channel=webrtc.diffuse_data
+    camera=camera, frame_processor=tracking_service.track_target, frame_buffer=buf, com_channel=webrtc.diffuse_data
 )
 pipeline.start()
 
