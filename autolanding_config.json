@@ -3,7 +3,7 @@
     "id" : 0,
     "use_picamera": false,
     "fps": 30,
-    "calibration_filepath": ""
+    "calibration_filepath": "/home/bertrand-awz/Documents/avionCargo/autolander/calibration_results/calibration_2026-02-07_21-45-24.npz"
   },
 
   "vision": {
@@ -25,9 +25,9 @@
   },
 
   "drone_connection": {
-    "use_serial": true,
-    "address": "/dev/serial0",
-    "port": null,
+    "use_serial": false,
+    "address": "127.0.0.1",
+    "port": 14560,
     "baud_rate": 921600
   }
 }

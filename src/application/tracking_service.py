@@ -79,7 +79,7 @@ class TrackingService:
         camera: Camera,
         target: TargetedMarker,
         detector_config: OpenCVArucoDetectorConfig,
-        calibration: Optional[CalibrationData, Path] = None,
+        calibration: Optional[CalibrationData | Path] = None,
         drone: Optional[Drone] = None,
     ) -> "TrackingService":
         detector = OpenCVArucoDetector(detector_config)

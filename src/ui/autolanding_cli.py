@@ -1,3 +1,5 @@
+from pathlib import Path
+
 import click
 from loguru import logger
 
@@ -15,7 +17,7 @@ from ui.common_functions import build_camera, build_drone
 @click.argument("config_file_path", type=click.Path(exists=True))
 @logger.catch
 def main(config_file_path):
-    config_reader = AutolanderConfigurationReader(config_file_path)
+    config_reader = AutolanderConfigurationReader(Path(config_file_path))
     autolander_config = config_reader.read()
 
     # camera and vision
@@ -67,3 +69,6 @@ def main(config_file_path):
     pipeline.start()
     content_streamer.stream_video()
     pipeline.stop()
+
+if __name__ == "__main__":
+    main()
