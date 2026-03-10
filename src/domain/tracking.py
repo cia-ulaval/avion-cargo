@@ -19,7 +19,7 @@ class TrackingResult:
 
     @staticmethod
     def not_found() -> "TrackingResult":
-        return TrackingResult(status=TrackingStatus.NOT_FOUND)
+        return TrackingResult(status=TrackingStatus.NOT_FOUND, pose=None, marker_id=None)
 
     @staticmethod
     def detected(pose: Pose3D, marker_id: int, confidence: Optional[float] = None) -> "TrackingResult":
