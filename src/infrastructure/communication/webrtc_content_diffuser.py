@@ -10,8 +10,8 @@ from aiortc import RTCPeerConnection, RTCSessionDescription
 from aiortc.mediastreams import VideoStreamTrack
 from av import VideoFrame
 
-from domain.camera import LastestFrameBuffer
 from domain.content_diffuser import ContentStreamer
+from infrastructure.camera.frame_buffer import FrameBuffer
 
 INDEX_HTML = """<!doctype html>
 <html>
@@ -104,7 +104,7 @@ class _BufferVideoTrack(VideoStreamTrack):
     IMPORTANT: aucun OpenCV ici, seulement lecture buffer + pacing.
     """
 
-    def __init__(self, frame_buffer: LastestFrameBuffer, target_fps: int, fallback_hw=(480, 640)):
+    def __init__(self, frame_buffer: FrameBuffer, target_fps: int, fallback_hw=(480, 640)):
         super().__init__()
         self._buf = frame_buffer
         self._period = 1.0 / max(1, int(target_fps))
@@ -119,7 +119,7 @@ class _BufferVideoTrack(VideoStreamTrack):
             await asyncio.sleep(self._period - dt)
         self._last = time.time()
 
-        frame, _meta = self._buf.get_copy()
+        frame, _meta = self._buf.get_value()
         if frame is None:
             img = np.zeros((self._fh, self._fw, 3), dtype=np.uint8)
             vf = VideoFrame.from_ndarray(img, format="bgr24")
@@ -141,12 +141,12 @@ class WebRTCConfig:
 
 class WebRTCContentStreamer(ContentStreamer):
     """
-    Implémentation WebRTC qui réutilise ton LastestFrameBuffer.
+    Implémentation WebRTC qui réutilise ton FrameBuffer.
     - diffuse_video(): démarre un serveur aiohttp + aiortc (bloquant, "script style")
     - diffuse_data(): envoie via DataChannel (thread-safe)
     """
 
-    def __init__(self, frame_buffer: LastestFrameBuffer, config: WebRTCConfig = WebRTCConfig()):
+    def __init__(self, frame_buffer: FrameBuffer, config: WebRTCConfig = WebRTCConfig()):
         self._buf = frame_buffer
         self._cfg = config
 
