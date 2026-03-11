@@ -1,5 +1,5 @@
 from threading import Lock
-from typing import Optional, Dict, Tuple, Any
+from typing import Any, Dict, Optional, Tuple
 
 import numpy as np
 

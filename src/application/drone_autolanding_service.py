@@ -1,14 +1,13 @@
 import time
 from dataclasses import asdict
 from threading import Thread
-from typing import Optional
 
-from application.tracking_service import TrackingService
 from loguru import logger
 
+from application.tracking_service import TrackingService
 from domain.drone import Drone
 from infrastructure.camera.frame_buffer import FrameBuffer
-from infrastructure.communication.webrtc_content_diffuser import WebRTCContentStreamer, WebRTCConfig
+from infrastructure.communication.webrtc_content_diffuser import WebRTCConfig, WebRTCContentStreamer
 from infrastructure.vision.pose_buffer import PoseBuffer
 
 
@@ -19,7 +18,7 @@ class DroneAutolandingService:
         self.frame_buffer = FrameBuffer()
         self.pose_buffer = PoseBuffer()
         self.content_streamer = WebRTCContentStreamer(self.frame_buffer, content_streamer_config)
-        self._threads : dict[str, Thread] = dict()
+        self._threads: dict[str, Thread] = dict()
         self._tracking_started: bool = False
 
     def _tracking_target_loop(self):
@@ -30,7 +29,7 @@ class DroneAutolandingService:
 
             vis, tracking_result = self.aruco_tracker.track_target()
             self.frame_buffer.set_value(vis, asdict(tracking_result))
-            self.content_streamer.send_data(asdict(tracking_result))
+            self.content_streamer.send_data(tracking_result.to_dict())
             self.pose_buffer.set_value(tracking_result.pose)
 
             end_time = time.monotonic()
@@ -59,18 +58,24 @@ class DroneAutolandingService:
         self._threads["streaming"] = video_streaming_thread
         video_streaming_thread.start()
 
-
     def land(self):
         if not self._tracking_started:
             raise SystemError("The target's tracking is not started yet. Cannot start precision landing")
 
         self._landing_target_loop()
 
-    def stop(self, what:Optional[str] = None):
-        if what:
-            thread_to_stop = self._threads.get(what)
-            thread_to_stop.join()
+    def stop_streaming(self):
+        streaming_thread = self._threads.get("streaming")
+        if streaming_thread:
+            streaming_thread.join()
 
-        else :
-            for thread in self._threads:
-                self._threads[thread].join()
+    def stop_tracking(self):
+        if not self._tracking_started:
+            return
+        tracking_thread = self._threads.get("tracking")
+        tracking_thread.join()
+        self._tracking_started = False
+
+    def stop(self):
+        self.stop_streaming()
+        self.stop_tracking()
