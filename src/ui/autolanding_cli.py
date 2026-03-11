@@ -9,7 +9,8 @@ from infrastructure.communication.webrtc_content_diffuser import WebRTCConfig, W
 from infrastructure.persistence.autolander_configuration_reader import AutolanderConfigurationReader
 from infrastructure.persistence.calibration_repo import CalibrationRepository
 from infrastructure.vision.opencv_aruco_detector import OpenCVArucoDetectorConfig
-#from infrastructure.vision.threaded_pipeline import ThreadedPipeline
+
+# from infrastructure.vision.threaded_pipeline import ThreadedPipeline
 from ui.common_functions import build_camera, build_drone
 
 
@@ -53,9 +54,10 @@ def main(config_file_path):
     # landing operations
 
     landing_service = DroneAutolandingService(drone, tracker, streamer_config)
-    #landing_service.track_target()
+    landing_service.track_target()
     landing_service.stream_landing_video()
     landing_service.stop()
+
 
 if __name__ == "__main__":
     main()

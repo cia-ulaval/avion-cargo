@@ -76,18 +76,14 @@ class Drone(ABC):
     def land(self):
         raise NotImplementedError()
 
-
     def activate_precision_landing_mode(self):
         raise NotImplementedError()
-
 
     def activate_guided_mode(self):
         raise NotImplementedError()
 
-
     def arm(self):
         raise NotImplementedError()
-
 
     def takeoff(self):
         raise NotImplementedError()

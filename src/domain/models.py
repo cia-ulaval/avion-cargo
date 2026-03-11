@@ -21,6 +21,9 @@ class Pose3D:
             if not np.isfinite(v):
                 raise InvalidPoseError(f"Pose3D.{name} must be finite, got {v}")
 
+    def to_dict(self) -> dict[str, float | None]:
+        return {"x": self.x, "y": self.y, "z": self.z}
+
 
 @dataclass(frozen=True, slots=True)
 class CalibrationData:
