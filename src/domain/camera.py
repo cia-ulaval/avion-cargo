@@ -15,3 +15,8 @@ class Camera(ABC):
     @abstractmethod
     def get_frame(self) -> np.ndarray:
         """Return an RGB or BGR frame (document which one you choose)."""
+        raise NotImplementedError()
+
+    @abstractmethod
+    def get_fps(self) -> int:
+        raise NotImplementedError()

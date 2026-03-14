@@ -1,0 +1,33 @@
+{
+  "camera": {
+    "id" : 0,
+    "use_picamera": false,
+    "fps": 30,
+    "calibration_filepath": "/home/bertrand-awz/Documents/avionCargo/autolander/calibration_results/calibration_2026-02-07_21-45-24.npz"
+  },
+
+  "vision": {
+    "targeted_marker": {
+      "length": 0.181,
+      "id": 1,
+      "aruco_dictionary": 16
+    }
+  },
+
+  "streaming": {
+    "port": 8085,
+    "data": {
+      "dps": 20
+    },
+    "video": {
+      "fps": 30
+    }
+  },
+
+  "drone_connection": {
+    "use_serial": false,
+    "address": "127.0.0.1",
+    "port": 14560,
+    "baud_rate": 921600
+  }
+}

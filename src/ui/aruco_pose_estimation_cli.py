@@ -4,21 +4,29 @@ import click
 from loguru import logger
 
 from application.tracking_service import TrackingService
-from domain.camera import Camera
+from domain.camera import LastestFrameBuffer
+from domain.content_diffuser import ContentStreamer
 from domain.models import TargetedMarker
-from infrastructure.camera.opencv_capture_adapter import OpenCVCamera
+from infrastructure.communication.webrtc_content_diffuser import WebRTCConfig, WebRTCContentStreamer
 from infrastructure.persistence.calibration_repo import CalibrationRepository
 from infrastructure.vision.opencv_aruco_detector import OpenCVArucoDetector, OpenCVArucoDetectorConfig
 from infrastructure.vision.opencv_pose_estimator import OpenCVPoseEstimator
+from infrastructure.vision.threaded_pipeline import ThreadedPipeline
+from ui.common_functions import build_camera
 
 
-def build_camera(*, picam: bool, cam_id: int, width: int, height: int, fps: int) -> Camera:
-    if picam:
-        from infrastructure.camera.picamera_adapter import PiCameraAdapter
-
-        return PiCameraAdapter(width=width, height=height, fps=fps, rgb=False)
-
-    return OpenCVCamera(source=cam_id, width=width, height=height, fps=fps, rgb=False)
+def track_and_send_data(tracker: TrackingService, sender: ContentStreamer):
+    frame, trk_res = tracker.track_target()
+    sender.send_data(
+        {
+            "tracking_result": {
+                "x": trk_res.pose.x,
+                "y": trk_res.pose.y,
+                "z": trk_res.pose.z,
+            }
+        }
+    )
+    logger.info(trk_res.pose)
 
 
 @click.command(context_settings={"help_option_names": ["-h", "--help"]})
@@ -27,7 +35,7 @@ def build_camera(*, picam: bool, cam_id: int, width: int, height: int, fps: int)
 @click.option(
     "-d", "dictionary_id", required=True, default=16, show_default=True, type=int, help="Dictionary id (0..16)"
 )
-@click.option("-mid", "marker_id", default=None, show_default=True, type=int, help="Marker id (0..16)")
+@click.option("-mid", "id", default=None, show_default=True, type=int, help="Marker id (0..16)")
 @click.option("--picam", is_flag=True, help="Use PiCamera2 (Raspberry Pi)")
 @click.option("--cam-id", default=0, show_default=True, type=int, help="Webcam id. Not necessary if using Picamera2.")
 @click.option("--width", default=640, show_default=True, type=int)
@@ -36,7 +44,7 @@ def build_camera(*, picam: bool, cam_id: int, width: int, height: int, fps: int)
 @logger.catch()
 def main(calibration_file, marker_length, dictionary_id, marker_id, cam_id, width, height, fps, picam):
 
-    target_marker = TargetedMarker(marker_id, marker_length)
+    target_marker = TargetedMarker(marker_id, marker_length, dictionary_id)
     camera = build_camera(picam=picam, cam_id=cam_id, width=width, height=height, fps=fps)
     pose_estimator = OpenCVPoseEstimator()
     calibration_data = CalibrationRepository().load_report(Path(calibration_file))
@@ -50,9 +58,16 @@ def main(calibration_file, marker_length, dictionary_id, marker_id, cam_id, widt
         calibration=calibration_data,
     )
 
-    while True:
-        frame, track_result= tracker.track_once()
-        logger.info(f"res: {track_result}")
+    buffer = LastestFrameBuffer()
+    webrtc = WebRTCContentStreamer(buffer, WebRTCConfig(port=8080, stream_fps=30))
+    # frame_processor = ArucoAxisAddingProcessor()
+    pipeline = ThreadedPipeline(camera=camera, frame_processor=tracker.track_target, frame_buffer=buffer)
+
+    pipeline.start()
+
+    webrtc.stream_video()
+
+    pipeline.stop()
 
 
 if __name__ == "__main__":

@@ -3,8 +3,9 @@ from datetime import datetime
 from typing import Any, Optional
 
 import numpy as np
-from domain.errors import InvalidCalibrationError, InvalidMarkerLengthError, InvalidPoseError
 from tabulate import tabulate
+
+from domain.errors import InvalidCalibrationError, InvalidMarkerLengthError, InvalidPoseError
 
 
 @dataclass(frozen=True, slots=True)
@@ -20,6 +21,9 @@ class Pose3D:
             if not np.isfinite(v):
                 raise InvalidPoseError(f"Pose3D.{name} must be finite, got {v}")
 
+    def to_dict(self) -> dict[str, float | None]:
+        return {"x": self.x, "y": self.y, "z": self.z}
+
 
 @dataclass(frozen=True, slots=True)
 class CalibrationData:
@@ -27,6 +31,8 @@ class CalibrationData:
 
     camera_matrix: np.ndarray  # expected (3, 3)
     dist_coeffs: np.ndarray  # common shapes: (1,5) (1,8) (5,) (8,) ...
+    camera_width: Optional[int] = 640
+    camera_height: Optional[int] = 480
 
     def __post_init__(self) -> None:
         k = np.asarray(self.camera_matrix)
@@ -55,15 +61,19 @@ class CalibrationData:
 class TargetedMarker:
     """Defines which marker/target we want to track and its real size."""
 
-    marker_id: Optional[int]  # None => accept any marker (first detected)
-    marker_length_m: float  # side length in meters
+    id: Optional[int]  # None => accept any marker (first detected)
+    length: float  # side length in meters
+    dictionary: int
 
     def __post_init__(self) -> None:
-        if self.marker_id is not None and self.marker_id < 0:
-            raise ValueError("marker_id must be >= 0 or None")
+        if self.id is not None and self.id < 0:
+            raise ValueError("id must be >= 0 or None")
 
-        if not np.isfinite(self.marker_length_m) or self.marker_length_m <= 0.0:
-            raise InvalidMarkerLengthError(f"marker_length_m must be > 0, got {self.marker_length_m}")
+        if not np.isfinite(self.length) or self.length <= 0.0:
+            raise InvalidMarkerLengthError(f"marker_length_m must be > 0, got {self.length}")
+
+        if not self.dictionary >= 1 and self.dictionary <= 16:
+            raise ValueError("dictionary must be between 1 and 16")
 
 
 @dataclass(frozen=True, slots=True)

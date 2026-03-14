@@ -1,3 +1,5 @@
+from typing import Tuple
+
 import cv2
 import numpy as np
 
@@ -6,7 +8,9 @@ from domain.pose_estimator import PoseEstimator
 
 
 class OpenCVPoseEstimator(PoseEstimator):
-    def estimate_pose(self, corners: np.ndarray, marker_length_m: float, calib: CalibrationData) -> Pose3D:
+    def estimate_pose(
+        self, corners: np.ndarray, marker_length_m: float, calib: CalibrationData
+    ) -> Tuple[Pose3D, np.ndarray, np.ndarray]:
         if corners.ndim == 2:
             corners_in = corners.reshape(1, 1, 4, 2)
         elif corners.ndim == 3:
@@ -19,4 +23,4 @@ class OpenCVPoseEstimator(PoseEstimator):
         )
 
         t = tvecs[0][0]
-        return Pose3D(x=float(t[0]), y=float(t[1]), z=float(t[2]))
+        return Pose3D(x=float(t[0]), y=float(t[1]), z=float(t[2])), rvecs, tvecs

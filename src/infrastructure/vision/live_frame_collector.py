@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from dataclasses import dataclass
 from typing import List
 
@@ -10,6 +8,7 @@ from domain.camera import Camera
 from domain.frame_collector import FrameCollector
 from domain.marker_detector import MarkerDetector
 from domain.models import TargetedMarker
+from infrastructure.vision.opencv_frame_manipution_tool import Color, FrameManipulationTool
 
 
 @dataclass(slots=True)
@@ -58,18 +57,16 @@ class LiveFrameCollector(FrameCollector):
             frame_i += 1
 
             detections = self.detector.detect(frame, self.target)
-
-            # For visualization: draw markers if we can (OpenCV expects corners+ids)
             vis = frame.copy() if self.cfg.show_overlays else frame
+
             if self.cfg.show_overlays and len(detections) > 0:
-                # convert to OpenCV draw format: corners list + ids array
                 corners_list = [c for (_mid, c) in detections]
                 ids_arr = np.array([[mid] for (mid, _c) in detections], dtype=np.int32)
-                cv2.aruco.drawDetectedMarkers(vis, corners_list, ids_arr)
+                FrameManipulationTool.draw_detected_markers(vis, corners_list, ids_arr)
 
             if self.cfg.show_overlays:
                 msg = f"Captures: {len(frames)} | 'c' capture | ESC finish"
-                cv2.putText(vis, msg, (10, 22), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 0, 0), 2)
+                FrameManipulationTool.write_text_on_frame(vis, msg, Color.BLUE)
 
             if not self.cfg.headless:
                 cv2.imshow(self.cfg.window_name, vis)
@@ -77,7 +74,6 @@ class LiveFrameCollector(FrameCollector):
             else:
                 key = 255
 
-            # ESC
             if key == 27:
                 break
 
@@ -85,7 +81,7 @@ class LiveFrameCollector(FrameCollector):
             if key == ord("c"):
                 if len(detections) > 0:
                     print(f"[CAPTURE] frame {frame_i} ({len(detections)} markers)")
-                    frames.append(frame.copy())  # copy to freeze it (safe)
+                    frames.append(frame.copy())
                 else:
                     print("[SKIP] no markers detected")
 

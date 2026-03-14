@@ -14,8 +14,14 @@ dependencies = [
     "click (>=8.3.1,<9.0.0)",
     "picamera2 (>=0.3.33,<0.4.0)",
     "reportlab (>=4.4.9,<5.0.0)",
-    "opencv-contrib-python (>=4.13.0.92,<5.0.0.0)",
     "tabulate (>=0.9.0,<0.10.0)",
+    "gpiozero (>=2.0.1,<3.0.0)",
+    "pymavlink (>=2.4.49,<3.0.0)",
+    "aiohttp (>=3.13.3,<4.0.0)",
+    "aiortc (>=1.14.0,<2.0.0)",
+    "av (>=16.1.0,<17.0.0)",
+    "pyserial (>=3.5,<4.0)",
+    "opencv-contrib-python (>=4.13.0.92,<5.0.0.0)",
 ]
 
 [tool.poetry]
@@ -43,9 +49,10 @@ requires = ["poetry-core>=2.0.0,<3.0.0"]
 build-backend = "poetry.core.masonry.api"
 
 [tool.poetry.scripts]
-calibrate_camera = "ui.cam_calibration_cli:main"
+calibrate_camera = "ui.camera_calibration_cli:main"
 estimate_pose = "ui.aruco_pose_estimation_cli:main"
 fmt = "script:run_code_formatting"
 fmt-check = "script:run_code_format_checking"
 clean = "script:clean_project"
+main = "ui.autolanding_cli:main"
 
