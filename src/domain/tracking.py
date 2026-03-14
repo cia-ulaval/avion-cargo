@@ -1,6 +1,6 @@
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 from enum import Enum, auto
-from typing import Optional
+from typing import Any, Optional
 
 from .models import Pose3D
 
@@ -19,7 +19,7 @@ class TrackingResult:
 
     @staticmethod
     def not_found() -> "TrackingResult":
-        return TrackingResult(status=TrackingStatus.NOT_FOUND)
+        return TrackingResult(status=TrackingStatus.NOT_FOUND, pose=None, marker_id=None)
 
     @staticmethod
     def detected(pose: Pose3D, marker_id: int, confidence: Optional[float] = None) -> "TrackingResult":
@@ -29,3 +29,10 @@ class TrackingResult:
             marker_id=marker_id,
             confidence=confidence,
         )
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "status": self.status.value,
+            "pose": self.pose.to_dict() if self.pose is not None else None,
+            "marker_id": self.marker_id,
+        }

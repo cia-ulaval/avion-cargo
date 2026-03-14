@@ -14,6 +14,7 @@ class PiCameraAdapter(Camera):
         self._cam_config = self.__make_config(width=width, height=height, is_rgb_cam=rgb)
         self._cam_controls = self.__make_controls(fps=fps)
         self._started = False
+        self._fps = fps
 
     def __make_config(self, width: int, height: int, is_rgb_cam: bool) -> Dict[str, Any]:
         config = {
@@ -47,3 +48,6 @@ class PiCameraAdapter(Camera):
             self.open()
         frame = self._cam.capture_array()
         return frame
+
+    def get_fps(self) -> int:
+        return self._fps
