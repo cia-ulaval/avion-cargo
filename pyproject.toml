@@ -22,7 +22,6 @@ dependencies = [
     "av (>=16.1.0,<17.0.0)",
     "pyserial (>=3.5,<4.0)",
     "opencv-contrib-python (>=4.13.0.92,<5.0.0.0)",
-    "dronekit (>=2.9.2,<3.0.0)",
 ]
 
 [tool.poetry]
@@ -35,6 +34,10 @@ pytest-cov = "^7.0.0"
 black = "^26.1.0"
 flake8 = "^7.3.0"
 isort = "^7.0.0"
+
+
+[tool.poetry.group.simulation.dependencies]
+dronekit = "^2.9.2"
 
 [tool.black]
 line-length = 120

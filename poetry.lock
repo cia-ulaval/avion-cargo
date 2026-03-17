@@ -807,7 +807,7 @@ version = "2.9.2"
 description = "Developer Tools for Drones."
 optional = false
 python-versions = "*"
-groups = ["main"]
+groups = ["simulation"]
 files = [
     {file = "dronekit-2.9.2-py2-none-any.whl", hash = "sha256:2952badfea7d9d6f2092ad35e87443f3f72f6b0804f04580e0c39eef917f9eec"},
     {file = "dronekit-2.9.2-py3-none-any.whl", hash = "sha256:97542ad03a7584287d878f2082f8533e41b2ba77881b06bfbd5594bfbd75434f"},
@@ -824,7 +824,7 @@ version = "0.3.5"
 description = "A hyper-fast Python module for computing CRC(8, 16, 32, 64) checksum"
 optional = false
 python-versions = ">=3.7"
-groups = ["main"]
+groups = ["main", "simulation"]
 files = [
     {file = "fastcrc-0.3.5-cp310-cp310-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:45a04142b34d1a54891b16766955cc38fc85a2323094457e9a03f8d918a389df"},
     {file = "fastcrc-0.3.5-cp310-cp310-manylinux_2_17_armv7l.manylinux2014_armv7l.whl", hash = "sha256:e44a765e411a2bda54c186d689af383686c0d78010e10944c954e6e9bfcd09f7"},
@@ -1325,7 +1325,7 @@ version = "6.0.2"
 description = "Powerful and Pythonic XML processing library combining libxml2/libxslt with the ElementTree API."
 optional = false
 python-versions = ">=3.8"
-groups = ["main"]
+groups = ["main", "simulation"]
 files = [
     {file = "lxml-6.0.2-cp310-cp310-macosx_10_9_universal2.whl", hash = "sha256:e77dd455b9a16bbd2a5036a63ddbd479c19572af81b624e79ef422f929eef388"},
     {file = "lxml-6.0.2-cp310-cp310-macosx_10_9_x86_64.whl", hash = "sha256:5d444858b9f07cefff6455b983aea9a67f7462ba1f6cbe4a21e8bf6791bf2153"},
@@ -1493,7 +1493,7 @@ version = "1.6"
 description = "An implementation of time.monotonic() for Python 2 & < 3.3"
 optional = false
 python-versions = "*"
-groups = ["main"]
+groups = ["simulation"]
 files = [
     {file = "monotonic-1.6-py2.py3-none-any.whl", hash = "sha256:68687e19a14f11f26d140dd5c86f3dba4bf5df58003000ed467e0e2a69bca96c"},
     {file = "monotonic-1.6.tar.gz", hash = "sha256:3a55207bcfed53ddd5c5bae174524062935efed17792e9de2ad0205ce9ad63f7"},
@@ -2319,7 +2319,7 @@ version = "2.4.49"
 description = "Python MAVLink code"
 optional = false
 python-versions = "*"
-groups = ["main"]
+groups = ["main", "simulation"]
 files = [
     {file = "pymavlink-2.4.49-cp310-cp310-macosx_10_9_universal2.whl", hash = "sha256:e7c92b066ff05587dbdbc517f20eb7f98f2aa13916223fcd6daed54a8d1b7bc5"},
     {file = "pymavlink-2.4.49-cp310-cp310-macosx_10_9_x86_64.whl", hash = "sha256:be3607975eb7392b89a847c6810a4b5e2e3ea6935c7875dfb1289de39ccb4aea"},
@@ -3038,4 +3038,4 @@ propcache = ">=0.2.1"
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.11,<3.14"
-content-hash = "11ded72ea48aa1662e846c878e9a5cb5a44663caeb8bde800b899ce8f711770e"
+content-hash = "eda8fc976c0743b9f44c3751145102cd8f7488dc6dfa3868d249d6937cd1377d"
