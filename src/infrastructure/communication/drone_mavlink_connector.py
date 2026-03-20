@@ -34,15 +34,19 @@ class DroneMavlinkBase(Drone):
             last_heartbeat_s=0.0,
             last_signal_gpio_s=0.0,
             alt_m=0.0,
+            speed=0.0,
+            relative_altitude=0.0,
+            relative_altitude_ms=0.0,
+            latitude=0.0,
+            longitude=0.0,
+            heading_deg=0.0
         )
-
-    # --------- helpers GPIO (optionnel) ---------
 
     def notify_gpio_signal(self, now_s: Optional[float] = None) -> None:
         """Appelle ça depuis ton handler GPIO quand le pin s'active."""
         self._status.last_signal_gpio_s = time.time() if now_s is None else float(now_s)
 
-    # --------- Drone interface ---------
+
 
     def connect(self) -> None:
         raise NotImplementedError
@@ -51,47 +55,32 @@ class DroneMavlinkBase(Drone):
         self._update_status()
         return self._status
 
-    def move_to(self, position: Pose3D) -> None:
-        """
-        Envoie LANDING_TARGET (comme ton VehicleInterface) :
-          - x: droite/gauche (m)
-          - y: avant/arrière (m)
-          - z: distance verticale / profondeur (m)  (doit être > 0)
+    def land_on_target(self, uav_pose: Pose3D) -> None:
 
-        -> angles:
-            angle_x = atan2(y, z)
-            angle_y = atan2(x, z)
-            distance = sqrt(x^2+y^2+z^2)
-        """
         self._require_connected()
-        if position.z <= 0.0:
+        if uav_pose.z <= 0.0:
             return
 
-        angle_x = math.atan2(position.y, position.z)
-        angle_y = math.atan2(position.x, position.z)
-        distance = math.sqrt((position.x * position.x) + (position.y * position.y) + (position.z * position.z))
+        angle_x = math.atan2(uav_pose.y, uav_pose.z)
+        angle_y = math.atan2(uav_pose.x, uav_pose.z)
+        distance = uav_pose.z
 
         self._conn.mav.landing_target_send(
-            0,  # time_usec
-            0,  # target_num
-            mavutil.mavlink.MAV_FRAME_BODY_NED,
+            0,
+            0,
+            mavutil.mavlink.MAV_FRAME_BODY_FRD,
             angle_x,
             angle_y,
             distance,
-            1,  # size_x
-            1,  # size_y
+            0.0,
+            0.0
         )
 
-    def land(self) -> None:
-        """
-        Le 'position' n'est pas utilisé ici (pas de lat/lon). On fait:
-          - set_mode('LAND') si disponible.
-        """
+    def activate_land_mode(self) -> None:
         self._require_connected()
         self._conn.set_mode("LAND")
         self._update_status()
 
-    # --------- internal ---------
 
     def _require_connected(self) -> None:
         if self._conn is None:
@@ -120,6 +109,16 @@ class DroneMavlinkBase(Drone):
 
             elif message_type == "GPS_RAW_INT":
                 self._status.gps_fix_type = int(getattr(msg, "fix_type", 0) or 0)
+
+
+            elif message_type == "GLOBAL_POSITION_INT":
+                self._status.latitude = float(getattr(msg, "lat", 0)) / 1e7
+                self._status.longitude = float(getattr(msg, "lon", 0)) / 1e7
+                self._status.relative_altitude_ms = float(getattr(msg, "alt", 0)) / 1000.0
+                self._status.relative_altitude= float(getattr(msg, "relative_alt", 0)) / 1000.0
+                self._status.speed = float(getattr(msg, "vz", 0)) / 100.0
+                hdg = int(getattr(msg, "hdg", 65535))
+                self._status.heading_deg = None if hdg == 65535 else hdg / 100.0
 
             msg = self._conn.recv_match(blocking=False)
 

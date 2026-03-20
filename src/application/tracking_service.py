@@ -33,7 +33,6 @@ class TrackingService:
     pose_estimator: PoseEstimator
     target: TargetedMarker
     calibration: CalibrationData
-    drone: Optional[Drone] = None
 
     def track_target(self) -> Tuple[np.ndarray, TrackingResult]:
         """
@@ -62,16 +61,6 @@ class TrackingService:
             frame, self.calibration.camera_matrix, self.calibration.dist_coeffs, rotation_vectors, translation_vectors
         )
 
-        # TODO: À retirer
-        if self.drone:
-            drone_status = self.drone.get_status()
-            if drone_status.should_drop(time.time()):
-                if not drone_status.mode.PLND:
-                    self.drone.activate_precision_landing_mode()
-                if drone_status.mode.PLND:
-                    self.drone.move_to(pose)
-        # fin à retirer
-
         return frame, TrackingResult.detected(pose=pose, marker_id=marker_id)
 
     @staticmethod
@@ -80,7 +69,6 @@ class TrackingService:
         target: TargetedMarker,
         detector_config: OpenCVArucoDetectorConfig,
         calibration: Optional[CalibrationData | Path] = None,
-        drone: Optional[Drone] = None,
     ) -> "TrackingService":
         detector = OpenCVArucoDetector(detector_config)
         pose_estimator = OpenCVPoseEstimator()
@@ -94,5 +82,4 @@ class TrackingService:
             pose_estimator=pose_estimator,
             target=target,
             calibration=calib,
-            drone=drone,
         )
