@@ -14,6 +14,7 @@ class TrackingStatus(Enum):
 class TrackingResult:
     status: TrackingStatus
     pose: Optional[Pose3D] = None
+    uav_pose: Optional[Pose3D] = None
     marker_id: Optional[int] = None
     confidence: Optional[float] = None  # optional; can be filled later
 
@@ -33,6 +34,9 @@ class TrackingResult:
     def to_dict(self) -> dict[str, Any]:
         return {
             "status": self.status.value,
-            "pose": self.pose.to_dict() if self.pose is not None else None,
+            "poses":{
+                "estimated_pose_from_camera": self.pose.to_dict() if self.pose is not None else None,
+                "estimated_pose_to_uav": self.uav_pose.to_dict() if self.uav_pose is not None else None,
+            },
             "marker_id": self.marker_id,
         }

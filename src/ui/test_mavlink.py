@@ -65,7 +65,7 @@ def main() -> None:
         y = args.radius * math.sin(w * elapsed)
         z = args.z
 
-        drone.move_to(Pose3D(x=x, y=y, z=z))
+        drone.land_on_target(Pose3D(x=x, y=y, z=z))
 
         if elapsed - last_print >= 0.5:
             st = drone.get_status()
