@@ -66,14 +66,13 @@ class DroneMavlinkBase(Drone):
         distance = uav_pose.z
 
         self._conn.mav.landing_target_send(
+            int(time.time()  * 1e6),
             0,
-            0,
-            mavutil.mavlink.MAV_FRAME_BODY_FRD,
+            mavutil.mavlink.MAV_FRAME_BODY_NED,
             angle_x,
             angle_y,
             distance,
-            0.0,
-            0.0
+            1.0185, 1.0185
         )
 
     def activate_land_mode(self) -> None:
@@ -132,7 +131,7 @@ class DroneMavlinkSerial(DroneMavlinkBase):
 
 class DroneMavlinkUDP(DroneMavlinkBase):
     def connect(self) -> None:
-        conn_str = f"udp:{self._p.address}:{self._p.port}"
-        self._conn = mavutil.mavlink_connection(conn_str)
+        conn_str = f'tcp:{self._p.address}:{self._p.port}'
+        self._conn = mavutil.mavlink_connection(conn_str, source_component=190)
         self._conn.wait_heartbeat(timeout=self._p.timeout)
         self._status.last_heartbeat_s = time.time()
