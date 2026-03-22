@@ -1,6 +1,7 @@
 import time
 from dataclasses import asdict
 from threading import Thread
+from typing import Optional
 
 from loguru import logger
 
@@ -31,7 +32,9 @@ class DroneAutolandingService:
             vis, tracking_result = self.aruco_tracker.track_target()
             self.frame_buffer.set_value(vis, asdict(tracking_result))
             self.pose_buffer.set_value(tracking_result.pose)
-            self.pose_buffer.set_uav_pose_value(self._to_uav_pose(tracking_result.pose))
+
+            uav_pose = self._to_uav_pose(tracking_result.pose)
+            self.pose_buffer.set_uav_pose_value(uav_pose)
 
             self.content_streamer.send_data(tracking_result.to_dict())
 
@@ -43,7 +46,10 @@ class DroneAutolandingService:
                 time.sleep(remaining_time)
 
     @staticmethod
-    def _to_uav_pose(estimated_pose: Pose3D) -> Pose3D:
+    def _to_uav_pose(estimated_pose: Optional[Pose3D]) -> Optional[Pose3D]:
+        if estimated_pose is None:
+            return None
+
         return Pose3D(
             x=-estimated_pose.y,
             y=estimated_pose.x,
@@ -51,8 +57,26 @@ class DroneAutolandingService:
         )
 
     def _landing_target_loop(self):
+        waiting_period = 1.0 / 30.0
+        try:
+            self.drone.activate_land_mode()
+        except Exception as e:
+            logger.warning(f"Could not activate LAND mode: {e}")
+
         while self._tracking_started:
-            pass
+            start_time = time.monotonic()
+
+            uav_pose = self.pose_buffer.get_uav_pose_value()
+            if uav_pose is not None:
+                logger.info(f"UAV pose sent is {uav_pose}")
+                self.drone.land_on_target(uav_pose)
+
+            end_time = time.monotonic()
+            elapsed_time = end_time - start_time
+            remaining_time = waiting_period - elapsed_time
+
+            if remaining_time > 0:
+                time.sleep(remaining_time)
 
     def track_target(self):
         self._tracking_started = True

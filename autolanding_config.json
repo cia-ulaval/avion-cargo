@@ -27,7 +27,7 @@
   "drone_connection": {
     "use_serial": false,
     "address": "127.0.0.1",
-    "port": 14560,
+    "port": 14570,
     "baud_rate": 921600
   }
 }

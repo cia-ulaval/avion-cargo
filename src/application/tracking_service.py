@@ -8,7 +8,7 @@ import numpy as np
 from domain.camera import Camera
 from domain.drone import Drone
 from domain.marker_detector import MarkerDetector
-from domain.models import CalibrationData, TargetedMarker
+from domain.models import CalibrationData, TargetedMarker, Pose3D
 from domain.pose_estimator import PoseEstimator
 from domain.tracking import TrackingResult
 from infrastructure.persistence.calibration_repo import CalibrationRepository
@@ -33,6 +33,17 @@ class TrackingService:
     pose_estimator: PoseEstimator
     target: TargetedMarker
     calibration: CalibrationData
+
+    @staticmethod
+    def _to_uav_pose(estimated_pose: Optional[Pose3D]) -> Optional[Pose3D]:
+        if estimated_pose is None:
+            return None
+
+        return Pose3D(
+            x=-estimated_pose.y,
+            y=estimated_pose.x,
+            z=estimated_pose.z,
+        )
 
     def track_target(self) -> Tuple[np.ndarray, TrackingResult]:
         """
@@ -61,7 +72,7 @@ class TrackingService:
             frame, self.calibration.camera_matrix, self.calibration.dist_coeffs, rotation_vectors, translation_vectors
         )
 
-        return frame, TrackingResult.detected(pose=pose, marker_id=marker_id)
+        return frame, TrackingResult.detected(pose=pose, marker_id=marker_id, uav_pose= self._to_uav_pose(pose))
 
     @staticmethod
     def create(

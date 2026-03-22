@@ -5,7 +5,7 @@ from loguru import logger
 
 from simulation.drone_autolanding_service import DroneAutolandingService
 from application.tracking_service import TrackingService
-from infrastructure.communication.webrtc_content_diffuser import WebRTCConfig, WebRTCContentStreamer
+from infrastructure.communication.webrtc_content_diffuser import WebRTCConfig
 from infrastructure.persistence.autolander_configuration_reader import AutolanderConfigurationReader
 from infrastructure.persistence.calibration_repo import CalibrationRepository
 from infrastructure.vision.opencv_aruco_detector import OpenCVArucoDetectorConfig
@@ -16,10 +16,9 @@ from ui.common_functions import build_camera, build_drone
 
 
 @click.command(context_settings={"help_option_names": ["-h", "--help"]})
-@click.argument("config_file_path", type=click.Path(exists=True))
 @logger.catch
-def main(config_file_path):
-    config_reader = AutolanderConfigurationReader(Path(config_file_path))
+def main():
+    config_reader = AutolanderConfigurationReader(Path("/home/bertrand-awz/Documents/avionCargo/autolander/autolanding_config.json"))
     autolander_config = config_reader.read()
 
     # camera and vision
@@ -36,7 +35,6 @@ def main(config_file_path):
         camera=camera,
         detector_config=detector_config,
         calibration=calibration_data,
-        drone=drone,
     )
 
     # streaming
@@ -51,6 +49,7 @@ def main(config_file_path):
     landing_service = DroneAutolandingService(drone, tracker, streamer_config)
     landing_service.track_target()
     landing_service.stream_landing_video()
+    landing_service.land()
     landing_service.stop()
 
 

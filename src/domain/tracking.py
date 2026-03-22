@@ -23,10 +23,11 @@ class TrackingResult:
         return TrackingResult(status=TrackingStatus.NOT_FOUND, pose=None, marker_id=None)
 
     @staticmethod
-    def detected(pose: Pose3D, marker_id: int, confidence: Optional[float] = None) -> "TrackingResult":
+    def detected(pose: Pose3D, marker_id: int, uav_pose: Optional[Pose3D] = None,  confidence: Optional[float] = None) -> "TrackingResult":
         return TrackingResult(
             status=TrackingStatus.DETECTED,
             pose=pose,
+            uav_pose=uav_pose,
             marker_id=marker_id,
             confidence=confidence,
         )
