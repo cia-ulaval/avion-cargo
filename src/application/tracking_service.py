@@ -65,6 +65,7 @@ class TrackingService:
             corners=corners,
             marker_length_m=self.target.length,
             calib=self.calibration,
+            center=True
         )
 
         FrameManipulationTool.draw_detected_markers(frame, [corners], np.array([[marker_id]], dtype=np.int32))
