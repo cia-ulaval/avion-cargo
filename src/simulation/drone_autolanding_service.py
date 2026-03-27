@@ -57,26 +57,22 @@ class DroneAutolandingService:
         )
 
     def _landing_target_loop(self):
-        waiting_period = 1.0 / 30.0
         try:
             self.drone.activate_land_mode()
         except Exception as e:
             logger.warning(f"Could not activate LAND mode: {e}")
 
         while self._tracking_started:
-            start_time = time.monotonic()
+            drone_status = self.drone.get_status()
+            logger.info(f"Drone status: {drone_status}")
 
             uav_pose = self.pose_buffer.get_uav_pose_value()
             if uav_pose is not None:
-                logger.info(f"UAV pose sent is {uav_pose}")
-                self.drone.land_on_target(uav_pose)
+                altitude_to_use = drone_status.relative_altitude if drone_status.relative_altitude > 4.5 else uav_pose.z
+                new_uav_pose = Pose3D(x=uav_pose.x, y=uav_pose.y, z=altitude_to_use)
+                logger.info(f"UAV pose sent is {new_uav_pose}")
+                self.drone.land_on_target(new_uav_pose)
 
-            end_time = time.monotonic()
-            elapsed_time = end_time - start_time
-            remaining_time = waiting_period - elapsed_time
-
-            if remaining_time > 0:
-                time.sleep(remaining_time)
 
     def track_target(self):
         self._tracking_started = True

@@ -1,164 +1,96 @@
-#!/usr/bin/env python3
-from __future__ import annotations
-
-import argparse
-import sys
-import time
-from typing import Optional
-
 from pymavlink import mavutil
+from loguru import logger
+import time
 
+connection = mavutil.mavlink_connection("udp:127.0.0.1:14550")
 
-def connect_mavlink(
-    connection_string: str,
-    source_system: int = 255,
-    source_component: int = 190,
-    heartbeat_timeout: float = 10.0,
-) -> mavutil.mavfile:
-    """
-    Ouvre une connexion MAVLink et attend un HEARTBEAT.
-    """
-    print(f"[INFO] Connexion MAVLink sur: {connection_string}")
+logger.info("Waiting for heartbeat...")
+connection.wait_heartbeat()
+logger.info(
+    f"Connected. target_system={connection.target_system}, "
+    f"target_component={connection.target_component}"
+)
 
-    master = mavutil.mavlink_connection(
-        connection_string,
-        source_system=source_system,
-        source_component=source_component,
-    )
+def wait_cmd_ack(conn, command_id, timeout=5):
+    start = time.time()
+    while time.time() - start < timeout:
+        msg = conn.recv_match(type="COMMAND_ACK", blocking=True, timeout=1)
+        if msg and msg.command == command_id:
+            return msg
+    return None
 
-    print("[INFO] Attente du HEARTBEAT...")
-    hb = master.wait_heartbeat(timeout=heartbeat_timeout)
-    if hb is None:
-        raise TimeoutError(
-            f"Aucun HEARTBEAT reçu après {heartbeat_timeout:.1f}s sur {connection_string}"
-        )
+def set_mode_guided(conn):
+    mode = "GUIDED"
+    if mode not in conn.mode_mapping():
+        raise RuntimeError(f"Mode {mode} non supporté par cet autopilote")
 
-    print(
-        "[OK] HEARTBEAT reçu "
-        f"(target_system={master.target_system}, "
-        f"target_component={master.target_component})"
-    )
-    return master
+    mode_id = conn.mode_mapping()[mode]
+    conn.set_mode(mode_id)
 
+    # attendre que le mode change vraiment
+    start = time.time()
+    while time.time() - start < 10:
+        hb = conn.recv_match(type="HEARTBEAT", blocking=True, timeout=1)
+        if hb:
+            current_mode = mavutil.mode_string_v10(hb)
+            logger.info(f"Mode courant: {current_mode}")
+            if current_mode == mode:
+                return
+    raise RuntimeError("Impossible de passer en GUIDED")
 
-def request_message_interval(
-    master: mavutil.mavfile,
-    message_name: str,
-    frequency_hz: float,
-) -> None:
-    """
-    Demande au véhicule d'envoyer un message à une fréquence donnée.
-    Ex: GLOBAL_POSITION_INT à 5 Hz.
-    """
-    if frequency_hz <= 0:
-        raise ValueError("frequency_hz doit être > 0")
-
-    message_id = getattr(mavutil.mavlink, f"MAVLINK_MSG_ID_{message_name}", None)
-    if message_id is None:
-        raise ValueError(f"Message MAVLink inconnu: {message_name}")
-
-    interval_us = int(1_000_000 / frequency_hz)
-
-    master.mav.command_long_send(
-        master.target_system,
-        master.target_component,
-        mavutil.mavlink.MAV_CMD_SET_MESSAGE_INTERVAL,
-        0,                  # confirmation
-        message_id,         # param1: ID du message
-        interval_us,        # param2: interval en microsecondes
+def arm_vehicle(conn, force=False):
+    conn.mav.command_long_send(
+        conn.target_system,
+        conn.target_component,
+        mavutil.mavlink.MAV_CMD_COMPONENT_ARM_DISARM,
+        0,
+        1,                 # 1 = arm
+        21196 if force else 0,  # force si nécessaire
         0, 0, 0, 0, 0
     )
 
-    print(f"[INFO] Demande de {message_name} à {frequency_hz:.1f} Hz")
+    ack = wait_cmd_ack(conn, mavutil.mavlink.MAV_CMD_COMPONENT_ARM_DISARM)
+    if ack:
+        logger.info(f"ARM ACK result={ack.result}")
 
+    conn.motors_armed_wait()
+    logger.info("Vehicle armed")
 
-def send_heartbeat(master: mavutil.mavfile) -> None:
-    """
-    Envoie un HEARTBEAT depuis le companion computer / GCS-like endpoint.
-    """
-    master.mav.heartbeat_send(
-        mavutil.mavlink.MAV_TYPE_ONBOARD_CONTROLLER,
-        mavutil.mavlink.MAV_AUTOPILOT_INVALID,
+def takeoff(conn, altitude_m):
+    conn.mav.command_long_send(
+        conn.target_system,
+        conn.target_component,
+        mavutil.mavlink.MAV_CMD_NAV_TAKEOFF,
         0,
-        0,
-        0,
+        0, 0, 0, 0, 0, 0,
+        altitude_m
     )
-    print("[INFO] HEARTBEAT envoyé")
+
+    ack = wait_cmd_ack(conn, mavutil.mavlink.MAV_CMD_NAV_TAKEOFF)
+    if ack:
+        logger.info(f"TAKEOFF ACK result={ack.result}")
+
+def get_relative_altitude_m(conn):
+    msg = conn.recv_match(type="GLOBAL_POSITION_INT", blocking=True, timeout=1)
+    if msg:
+        return msg.relative_alt / 1000.0
+    return None
 
 
-def read_messages(master: mavutil.mavfile, duration_s: float = 15.0) -> None:
-    """
-    Lit quelques messages pendant une durée donnée.
-    """
-    deadline = time.time() + duration_s
-    print(f"[INFO] Lecture des messages pendant {duration_s:.1f}s...\n")
+# 1) GUIDED
+set_mode_guided(connection)
 
-    while time.time() < deadline:
-        msg = master.recv_match(blocking=True, timeout=1.0)
-        if msg is None:
-            continue
+# 2) ARM
+arm_vehicle(connection)
 
-        msg_type = msg.get_type()
-        if msg_type == "BAD_DATA":
-            continue
+# 3) TAKEOFF à 10 m
+takeoff(connection, 10)
 
-        print(f"[MSG] {msg_type}: {msg}")
-
-
-def main() -> int:
-    parser = argparse.ArgumentParser(
-        description="Test de connexion UDP pymavlink/mavutil"
-    )
-    parser.add_argument(
-        "--connect",
-        required=True,
-        help=(
-            "Chaîne de connexion mavutil. "
-            "Exemples: udpout:127.0.0.1:14560 ou udpin:0.0.0.0:14550"
-        ),
-    )
-    parser.add_argument(
-        "--heartbeat-timeout",
-        type=float,
-        default=10.0,
-        help="Timeout d'attente du heartbeat en secondes",
-    )
-    parser.add_argument(
-        "--request-global-position",
-        type=float,
-        default=0.0,
-        help="Si > 0, demande GLOBAL_POSITION_INT à cette fréquence (Hz)",
-    )
-    parser.add_argument(
-        "--duration",
-        type=float,
-        default=15.0,
-        help="Durée de lecture des messages en secondes",
-    )
-    args = parser.parse_args()
-
-    try:
-        master = connect_mavlink(
-            connection_string=args.connect,
-            heartbeat_timeout=args.heartbeat_timeout,
-        )
-
-        send_heartbeat(master)
-
-        if args.request_global_position > 0:
-            request_message_interval(
-                master,
-                message_name="GLOBAL_POSITION_INT",
-                frequency_hz=args.request_global_position,
-            )
-
-        read_messages(master, duration_s=args.duration)
-        return 0
-
-    except Exception as exc:
-        print(f"[ERREUR] {exc}", file=sys.stderr)
-        return 1
-
-
-if __name__ == "__main__":
-    raise SystemExit(main())
+# 4) suivi de montée
+while True:
+    alt = get_relative_altitude_m(connection)
+    if alt is not None:
+        logger.info(f"Altitude relative: {alt:.2f} m")
+        if alt >= 9.5:
+            logger.info("Altitude cible atteinte")
+            break
