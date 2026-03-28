@@ -23,7 +23,9 @@ class TrackingResult:
         return TrackingResult(status=TrackingStatus.NOT_FOUND, pose=None, marker_id=None)
 
     @staticmethod
-    def detected(pose: Pose3D, marker_id: int, uav_pose: Optional[Pose3D] = None,  confidence: Optional[float] = None) -> "TrackingResult":
+    def detected(
+        pose: Pose3D, marker_id: int, uav_pose: Optional[Pose3D] = None, confidence: Optional[float] = None
+    ) -> "TrackingResult":
         return TrackingResult(
             status=TrackingStatus.DETECTED,
             pose=pose,
@@ -35,7 +37,7 @@ class TrackingResult:
     def to_dict(self) -> dict[str, Any]:
         return {
             "status": self.status.value,
-            "poses":{
+            "poses": {
                 "estimated_pose_from_camera": self.pose.to_dict() if self.pose is not None else None,
                 "estimated_pose_to_uav": self.uav_pose.to_dict() if self.uav_pose is not None else None,
             },

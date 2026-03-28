@@ -22,7 +22,6 @@ class Pose3D:
             if not np.isfinite(v):
                 raise InvalidPoseError(f"Pose3D.{name} must be finite, got {v}")
 
-
     def to_dict(self) -> dict[str, float | None]:
         return {"x": self.x, "y": self.y, "z": self.z}
 
@@ -30,6 +29,7 @@ class Pose3D:
         angle_x = math.atan2(self.y, self.z)
         angle_y = math.atan2(self.x, self.z)
         return angle_x, angle_y
+
 
 @dataclass(frozen=True, slots=True)
 class CalibrationData:

@@ -41,7 +41,6 @@ def main(config_file_path):
         camera=camera,
         detector_config=detector_config,
         calibration=calibration_data,
-        drone=drone,
     )
 
     # streaming

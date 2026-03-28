@@ -73,7 +73,6 @@ class DroneAutolandingService:
                 logger.info(f"UAV pose sent is {new_uav_pose}")
                 self.drone.land_on_target(new_uav_pose)
 
-
     def track_target(self):
         self._tracking_started = True
         self.aruco_tracker.camera.open()

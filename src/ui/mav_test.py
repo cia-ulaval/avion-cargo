@@ -1,15 +1,14 @@
-from pymavlink import mavutil
-from loguru import logger
 import time
+
+from loguru import logger
+from pymavlink import mavutil
 
 connection = mavutil.mavlink_connection("udp:127.0.0.1:14550")
 
 logger.info("Waiting for heartbeat...")
 connection.wait_heartbeat()
-logger.info(
-    f"Connected. target_system={connection.target_system}, "
-    f"target_component={connection.target_component}"
-)
+logger.info(f"Connected. target_system={connection.target_system}, " f"target_component={connection.target_component}")
+
 
 def wait_cmd_ack(conn, command_id, timeout=5):
     start = time.time()
@@ -18,6 +17,7 @@ def wait_cmd_ack(conn, command_id, timeout=5):
         if msg and msg.command == command_id:
             return msg
     return None
+
 
 def set_mode_guided(conn):
     mode = "GUIDED"
@@ -38,15 +38,20 @@ def set_mode_guided(conn):
                 return
     raise RuntimeError("Impossible de passer en GUIDED")
 
+
 def arm_vehicle(conn, force=False):
     conn.mav.command_long_send(
         conn.target_system,
         conn.target_component,
         mavutil.mavlink.MAV_CMD_COMPONENT_ARM_DISARM,
         0,
-        1,                 # 1 = arm
+        1,  # 1 = arm
         21196 if force else 0,  # force si nécessaire
-        0, 0, 0, 0, 0
+        0,
+        0,
+        0,
+        0,
+        0,
     )
 
     ack = wait_cmd_ack(conn, mavutil.mavlink.MAV_CMD_COMPONENT_ARM_DISARM)
@@ -56,19 +61,16 @@ def arm_vehicle(conn, force=False):
     conn.motors_armed_wait()
     logger.info("Vehicle armed")
 
+
 def takeoff(conn, altitude_m):
     conn.mav.command_long_send(
-        conn.target_system,
-        conn.target_component,
-        mavutil.mavlink.MAV_CMD_NAV_TAKEOFF,
-        0,
-        0, 0, 0, 0, 0, 0,
-        altitude_m
+        conn.target_system, conn.target_component, mavutil.mavlink.MAV_CMD_NAV_TAKEOFF, 0, 0, 0, 0, 0, 0, 0, altitude_m
     )
 
     ack = wait_cmd_ack(conn, mavutil.mavlink.MAV_CMD_NAV_TAKEOFF)
     if ack:
         logger.info(f"TAKEOFF ACK result={ack.result}")
+
 
 def get_relative_altitude_m(conn):
     msg = conn.recv_match(type="GLOBAL_POSITION_INT", blocking=True, timeout=1)

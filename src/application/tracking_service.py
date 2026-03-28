@@ -8,7 +8,7 @@ import numpy as np
 from domain.camera import Camera
 from domain.drone import Drone
 from domain.marker_detector import MarkerDetector
-from domain.models import CalibrationData, TargetedMarker, Pose3D
+from domain.models import CalibrationData, Pose3D, TargetedMarker
 from domain.pose_estimator import PoseEstimator
 from domain.tracking import TrackingResult
 from infrastructure.persistence.calibration_repo import CalibrationRepository
@@ -62,10 +62,7 @@ class TrackingService:
 
         marker_id, corners = detections[0]
         pose, rotation_vectors, translation_vectors = self.pose_estimator.estimate_pose(
-            corners=corners,
-            marker_length_m=self.target.length,
-            calib=self.calibration,
-            center=True
+            corners=corners, marker_length_m=self.target.length, calib=self.calibration, center=True
         )
 
         FrameManipulationTool.draw_detected_markers(frame, [corners], np.array([[marker_id]], dtype=np.int32))
@@ -73,7 +70,7 @@ class TrackingService:
             frame, self.calibration.camera_matrix, self.calibration.dist_coeffs, rotation_vectors, translation_vectors
         )
 
-        return frame, TrackingResult.detected(pose=pose, marker_id=marker_id, uav_pose= self._to_uav_pose(pose))
+        return frame, TrackingResult.detected(pose=pose, marker_id=marker_id, uav_pose=self._to_uav_pose(pose))
 
     @staticmethod
     def create(
