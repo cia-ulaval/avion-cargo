@@ -15,23 +15,25 @@ modprobe bcm2835-v4l2
 
 
 """
-from os import  path
-import time
-import math
-import argparse
 
-from dronekit import connect, VehicleMode, LocationGlobalRelative, Command, LocationGlobal
-from pymavlink import mavutil
+import argparse
+import math
+import time
+from os import path
+
 from cv2.aruco import *
+from dronekit import Command, LocationGlobal, LocationGlobalRelative, VehicleMode, connect
+from pymavlink import mavutil
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--connect', default='')
+parser.add_argument("--connect", default="")
 args = parser.parse_args()
 
 
 # --------------------------------------------------
 # -------------- FUNCTIONS
 # --------------------------------------------------
+
 
 def get_location_metres(original_location, dNorth, dEast):
     """
@@ -81,14 +83,14 @@ def uav_to_ne(x_uav, y_uav, yaw_rad):
 
 
 def check_angle_descend(angle_x, angle_y, angle_desc):
-    return (math.sqrt(angle_x ** 2 + angle_y ** 2) <= angle_desc)
+    return math.sqrt(angle_x**2 + angle_y**2) <= angle_desc
 
 
 # --------------------------------------------------
 # -------------- CONNECTION
 # --------------------------------------------------
 # -- Connect to the vehicle
-print('Connecting...')
+print("Connecting...")
 vehicle = connect(args.connect)
 
 # --------------------------------------------------
@@ -113,10 +115,15 @@ land_speed_cms = 30.0
 # Find full directory path of this script, used for loading config and other files
 cwd = path.dirname(path.abspath(__file__))
 calib_path = cwd + "/../opencv/"
-camera_matrix = np.loadtxt(calib_path + 'cameraMatrix_raspi.txt', delimiter=',')
-camera_distortion = np.loadtxt(calib_path + 'cameraDistortion_raspi.txt', delimiter=',')
-aruco_tracker = ArucoSingleTracker(id_to_find=id_to_find, marker_size=marker_size, show_video=False,
-                                   camera_matrix=camera_matrix, camera_distortion=camera_distortion)
+camera_matrix = np.loadtxt(calib_path + "cameraMatrix_raspi.txt", delimiter=",")
+camera_distortion = np.loadtxt(calib_path + "cameraDistortion_raspi.txt", delimiter=",")
+aruco_tracker = ArucoSingleTracker(
+    id_to_find=id_to_find,
+    marker_size=marker_size,
+    show_video=False,
+    camera_matrix=camera_matrix,
+    camera_distortion=camera_distortion,
+)
 
 time_0 = time.time()
 
@@ -142,9 +149,12 @@ while True:
             print
             "Altitude = %.0fcm" % z_cm
             print
-            "Marker found x = %5.0f cm  y = %5.0f cm -> angle_x = %5f  angle_y = %5f" % (x_cm, y_cm,
-                                                                                         angle_x * rad_2_deg,
-                                                                                         angle_y * rad_2_deg)
+            "Marker found x = %5.0f cm  y = %5.0f cm -> angle_x = %5f  angle_y = %5f" % (
+                x_cm,
+                y_cm,
+                angle_x * rad_2_deg,
+                angle_y * rad_2_deg,
+            )
 
             north, east = uav_to_ne(x_cm, y_cm, vehicle.attitude.yaw)
             print
@@ -155,8 +165,9 @@ while True:
             if check_angle_descend(angle_x, angle_y, angle_descend):
                 print
                 "Low error: descending"
-                location_marker = LocationGlobalRelative(marker_lat, marker_lon,
-                                                         uav_location.alt - (land_speed_cms * 0.01 / freq_send))
+                location_marker = LocationGlobalRelative(
+                    marker_lat, marker_lon, uav_location.alt - (land_speed_cms * 0.01 / freq_send)
+                )
             else:
                 location_marker = LocationGlobalRelative(marker_lat, marker_lon, uav_location.alt)
 

@@ -41,9 +41,7 @@ class _GazeboCameraNode(Node):
         data = np.frombuffer(msg.data, dtype=np.uint8)
 
         if data.size != expected_size:
-            raise RuntimeError(
-                f"Unexpected image size: got {data.size}, expected {expected_size}"
-            )
+            raise RuntimeError(f"Unexpected image size: got {data.size}, expected {expected_size}")
 
         frame = data.reshape((msg.height, msg.width, channels))
 
@@ -101,8 +99,7 @@ class GazeboCamera(Camera):
         if not self._node.wait_first_frame(self._first_frame_timeout_sec):
             self.close()
             raise RuntimeError(
-                f"No image received on topic '{self._topic_name}' "
-                f"within {self._first_frame_timeout_sec} seconds."
+                f"No image received on topic '{self._topic_name}' " f"within {self._first_frame_timeout_sec} seconds."
             )
 
     def _spin(self) -> None:

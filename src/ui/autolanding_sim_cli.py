@@ -3,12 +3,13 @@ from pathlib import Path
 import click
 from loguru import logger
 
-from simulation.drone_autolanding_service import DroneAutolandingService
 from application.tracking_service import TrackingService
+from domain.drone import Drone
 from infrastructure.communication.webrtc_content_diffuser import WebRTCConfig
 from infrastructure.persistence.autolander_configuration_reader import AutolanderConfigurationReader
 from infrastructure.persistence.calibration_repo import CalibrationRepository
 from infrastructure.vision.opencv_aruco_detector import OpenCVArucoDetectorConfig
+from simulation.drone_autolanding_service import DroneAutolandingService
 from simulation.gazebo_camera import GazeboCamera
 
 # from infrastructure.vision.threaded_pipeline import ThreadedPipeline
@@ -18,16 +19,22 @@ from ui.common_functions import build_camera, build_drone
 @click.command(context_settings={"help_option_names": ["-h", "--help"]})
 @logger.catch
 def main():
-    config_reader = AutolanderConfigurationReader(Path("/home/bertrand-awz/Documents/avionCargo/autolander/autolanding_config.json"))
+    config_reader = AutolanderConfigurationReader(
+        Path("/home/bertrand-awz/Documents/avionCargo/autolander/autolanding_config.json")
+    )
     autolander_config = config_reader.read()
 
     # camera and vision
     calibration_data = CalibrationRepository().load_report(autolander_config.camera_config.calibration_filepath)
-    camera = GazeboCamera(topic_name="/world/iris_runway/model/iris_with_gimbal/model/gimbal/link/pitch_link/sensor/camera/image")
-    detector_config = OpenCVArucoDetectorConfig(dictionary_id=autolander_config.targeted_marker.dictionary)
+    camera = GazeboCamera(
+        topic_name="/world/iris_runway/model/iris_with_gimbal/model/gimbal/link/pitch_link/sensor/camera/image"
+    )
+    detector_config: OpenCVArucoDetectorConfig = OpenCVArucoDetectorConfig(
+        dictionary_id=autolander_config.targeted_marker.dictionary
+    )
 
     # drone communication
-    drone = build_drone(autolander_config.drone_connection_config)
+    drone: Drone = build_drone(autolander_config.drone_connection_config)
     drone.connect()
 
     tracker = TrackingService.create(

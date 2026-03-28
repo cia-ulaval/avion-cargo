@@ -52,7 +52,7 @@ class DroneStatus:
     latitude: float
     longitude: float
     relative_altitude_ms: float
-    heading_deg:float
+    heading_deg: float
 
     @property
     def connected(self) -> bool:
