@@ -17,8 +17,8 @@ class PoseEstimator(ABC):
         :param marker_length_m: length of marker detected (in meters)
         :param calib: calibration data (CalibrationData object)
         :param center: center of pose estimation
-        :return: Tuple[Pose3D, rvecs, tvecs]
+        :return: Tuple[Pose3D, rotation_vectors, translation_vectors]
             - Estimated pose as Pose3D object
-            - Translation vectors
             - Rotation vectors
+            - Translation vectors
         """
