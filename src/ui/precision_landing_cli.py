@@ -24,7 +24,9 @@ def main(config_file_path, gz_simulation):
 
     # camera and vision
     calibration_data = (
-        CalibrationRepository().set_calibration_filepath(config_file_path.calibration_filepath).load_calibration_data()
+        CalibrationRepository()
+        .set_calibration_filepath(autolander_config.camera_config.calibration_filepath)
+        .load_calibration_data()
     )
 
     camera = build_camera(
