@@ -61,5 +61,4 @@ fmt = "script:run_code_formatting"
 fmt-check = "script:run_code_format_checking"
 clean = "script:clean_project"
 main = "ui.autolanding_cli:main"
-simulation = "ui.autolanding_sim_cli:main"
 

@@ -3,7 +3,10 @@
     "id" : 0,
     "use_picamera": false,
     "fps": 30,
-    "calibration_filepath": "/home/bertrand-awz/Documents/avionCargo/autolander/calibration_results/calibration_057px.npz"
+    "calibration_filepath": "/home/bertrand-awz/Documents/avionCargo/autolander/calibration_results/calibration_057px.npz",
+    "gz_simulation": {
+      "topic_name": "/world/iris_runway/model/iris_with_gimbal/model/gimbal/link/pitch_link/sensor/camera/image"
+    }
   },
 
   "vision": {
@@ -27,7 +30,7 @@
   "drone_connection": {
     "use_serial": false,
     "address": "127.0.0.1",
-    "port": 14571,
+    "port": 14550,
     "baud_rate": 921600
   }
 }

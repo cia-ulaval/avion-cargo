@@ -1,25 +1,21 @@
 import math
 import time
 from abc import abstractmethod
-from dataclasses import dataclass
 from typing import Optional
 
 from pymavlink import mavutil
 
-from domain.drone import Drone, DroneMode, DroneStatus
+from domain.drone import Drone, DroneStatus, DroneMode
 from domain.models import Pose3D
-
-
-@dataclass(frozen=True, slots=True)
-class MavlinkConnectionParams:
-    address: str
-    port: int = 0
-    timeout: float = 10.0
-    baud_rate: int = 921600
+from .mavlink_connection_params import MavlinkConnectionParams
 
 
 class DroneMavlinkBase(Drone):
     def __init__(self, params: MavlinkConnectionParams):
+        """
+
+        :param params:
+        """
         self.parameters = params
         self.connection: Optional[mavutil.mavfile] = None
         self.status: DroneStatus = DroneStatus(
@@ -40,25 +36,26 @@ class DroneMavlinkBase(Drone):
             heading_deg=0.0,
         )
 
+    @abstractmethod
+    def _init_mavlink_connection(self) -> None:
+        raise NotImplementedError()
+
     def notify_gpio_signal(self, now_s: Optional[float] = None) -> None:
         """Appelle ça depuis ton handler GPIO quand le pin s'active."""
         self.status.last_signal_gpio_s = time.time() if now_s is None else float(now_s)
 
     def connect(self) -> None:
-        self.init_mavlink_connection(self.parameters)
+        self._init_mavlink_connection()
         self._wait_for_heartbeat()
         self._send_heartbeat()
         self._update_status()
 
-    @abstractmethod
-    def init_mavlink_connection(self, params: MavlinkConnectionParams) -> None:
-        raise NotImplementedError()
 
     def get_status(self) -> DroneStatus:
         self._update_status()
         return self.status
 
-    def land_on_target(self, uav_pose: Pose3D) -> None:
+    def land_on_target(self, uav_pose: Pose3D, target_size:tuple[float, float]) -> None:
         const = math.pi / 180
         h_fov, v_fov = 53.5 * const, 41.41 * const
         x_ang = (uav_pose.x - 640 * 0.5) * h_fov / 640
@@ -74,8 +71,8 @@ class DroneMavlinkBase(Drone):
             x_ang,  # angle_x
             y_ang,  # angle_y
             distance,  # distance
-            1.0185,  # size_x
-            1.0185,  # size_y
+            target_size[0],  # size_x
+            target_size[1],  # size_y
             uav_pose.x,  # x
             uav_pose.y,  # y
             uav_pose.z,  # z
@@ -89,42 +86,41 @@ class DroneMavlinkBase(Drone):
 
     def _require_connected(self) -> None:
         if self.connection is None:
-            raise RuntimeError("Drone not connected. Call connect() first.")
+            raise RuntimeError("Drone not connected. Call must be connected first.")
 
     def _update_status(self) -> None:
         self._require_connected()
+        received_message = self.connection.recv_match(blocking=True)
 
-        msg = self.connection.recv_match(blocking=True)
-        if not msg:
-            return
+        if received_message:
 
-        message_type: str = msg.get_type()
+            message_type: str = received_message.get_type()
 
-        if message_type == "HEARTBEAT":
-            self.status.mode = DroneMode.from_str(mavutil.mode_string_v10(msg))
-            self.status.armed = (msg.base_mode & mavutil.mavlink.MAV_MODE_FLAG_SAFETY_ARMED) != 0
-            self.status.last_heartbeat_s = time.time()
+            if message_type == "HEARTBEAT":
+                self.status.mode = DroneMode.from_str(mavutil.mode_string_v10(received_message))
+                self.status.armed = (received_message.base_mode & mavutil.mavlink.MAV_MODE_FLAG_SAFETY_ARMED) != 0
+                self.status.last_heartbeat_s = time.time()
 
-        elif message_type == "VFR_HUD":
-            self.status.alt_m = float(getattr(msg, "alt", 0.0))
-            self.status.groundspeed_mps = float(getattr(msg, "groundspeed", 0.0))
+            elif message_type == "VFR_HUD":
+                self.status.alt_m = float(getattr(received_message, "alt", 0.0))
+                self.status.groundspeed_mps = float(getattr(received_message, "groundspeed", 0.0))
 
-        elif message_type == "SYS_STATUS":
-            battery_mv = getattr(msg, "voltage_battery", 0)  # mV
-            self.status.battery_voltage_v = float(battery_mv) / 1000.0
-            self.status.battery_remaining_pct = int(getattr(msg, "battery_remaining", 0) or 0)
+            elif message_type == "SYS_STATUS":
+                battery_mv = getattr(received_message, "voltage_battery", 0)  # mV
+                self.status.battery_voltage_v = float(battery_mv) / 1000.0
+                self.status.battery_remaining_pct = int(getattr(received_message, "battery_remaining", 0) or 0)
 
-        elif message_type == "GPS_RAW_INT":
-            self.status.gps_fix_type = int(getattr(msg, "fix_type", 0) or 0)
+            elif message_type == "GPS_RAW_INT":
+                self.status.gps_fix_type = int(getattr(received_message, "fix_type", 0) or 0)
 
-        elif message_type == "GLOBAL_POSITION_INT":
-            self.status.latitude = float(getattr(msg, "lat", 0)) / 1e7
-            self.status.longitude = float(getattr(msg, "lon", 0)) / 1e7
-            self.status.relative_altitude_ms = float(getattr(msg, "alt", 0)) / 1000.0
-            self.status.relative_altitude = float(getattr(msg, "relative_alt", 0)) / 1000.0
-            self.status.speed = float(getattr(msg, "vz", 0)) / 100.0
-            hdg = int(getattr(msg, "hdg", 65535))
-            self.status.heading_deg = None if hdg == 65535 else hdg / 100.0
+            elif message_type == "GLOBAL_POSITION_INT":
+                self.status.latitude = float(getattr(received_message, "lat", 0)) / 1e7
+                self.status.longitude = float(getattr(received_message, "lon", 0)) / 1e7
+                self.status.relative_altitude_ms = float(getattr(received_message, "alt", 0)) / 1000.0
+                self.status.relative_altitude = float(getattr(received_message, "relative_alt", 0)) / 1000.0
+                self.status.speed = float(getattr(received_message, "vz", 0)) / 100.0
+                hdg = int(getattr(received_message, "hdg", 65535))
+                self.status.heading_deg = None if hdg == 65535 else hdg / 100.0
 
     def _send_heartbeat(self):
         self._require_connected()
@@ -141,18 +137,5 @@ class DroneMavlinkBase(Drone):
         self._require_connected()
         self.connection.wait_heartbeat()
 
-
-class DroneMavlinkSerial(DroneMavlinkBase):
-    def __init__(self, params: MavlinkConnectionParams):
-        super().__init__(params)
-
-    def init_mavlink_connection(self, params) -> None:
-        self.connection = mavutil.mavlink_connection(self.parameters.address, baud=self.parameters.baud_rate)
-
-
-class DroneMavlinkUDP(DroneMavlinkBase):
-    def __init__(self, params: MavlinkConnectionParams):
-        super().__init__(params)
-
-    def init_mavlink_connection(self, params) -> None:
-        self.connection = mavutil.mavlink_connection("udp:127.0.0.1:14550")
+    def switch_mode(self, mode: DroneMode) -> None:
+        pass
