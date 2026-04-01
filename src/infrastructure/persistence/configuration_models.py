@@ -10,8 +10,8 @@ class CameraConfiguration:
     id: int
     use_picamera: bool
     fps: int
-    width: int
-    height: int
+    width: Optional[int] = 640
+    height: Optional[int] = 480
     calibration_filepath: Optional[Path] = None
     simulation_topic_name: Optional[str] = None
 
