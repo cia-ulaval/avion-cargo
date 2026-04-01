@@ -1,11 +1,13 @@
 import time
 from dataclasses import asdict
 from threading import Thread
+from typing import Optional
 
 from loguru import logger
 
 from application.tracking_service import TrackingService
 from domain.drone import Drone
+from domain.models import Pose3D
 from infrastructure.camera.frame_buffer import FrameBuffer
 from infrastructure.communication.webrtc_content_diffuser import WebRTCConfig, WebRTCContentStreamer
 from infrastructure.vision.pose_buffer import PoseBuffer
@@ -29,8 +31,12 @@ class DroneAutolandingService:
 
             vis, tracking_result = self.aruco_tracker.track_target()
             self.frame_buffer.set_value(vis, asdict(tracking_result))
-            self.content_streamer.send_data(tracking_result.to_dict())
             self.pose_buffer.set_value(tracking_result.pose)
+
+            uav_pose = self._to_uav_pose(tracking_result.pose)
+            self.pose_buffer.set_uav_pose_value(uav_pose)
+
+            self.content_streamer.send_data(tracking_result.to_dict())
 
             end_time = time.monotonic()
             elapsed_time = end_time - start_time
@@ -39,9 +45,35 @@ class DroneAutolandingService:
             if remaining_time > 0:
                 time.sleep(remaining_time)
 
+    @staticmethod
+    def _to_uav_pose(estimated_pose: Optional[Pose3D]) -> Optional[Pose3D]:
+        if estimated_pose is None:
+            return None
+
+        return Pose3D(
+            x=-estimated_pose.y,
+            y=estimated_pose.x,
+            z=estimated_pose.z,
+        )
+
     def _landing_target_loop(self):
+        try:
+            self.drone.activate_land_mode()
+        except Exception as e:
+            logger.warning(f"Could not activate LAND mode: {e}")
+
         while self._tracking_started:
-            pass
+            drone_status = self.drone.get_status()
+            logger.info(f"Drone status: {drone_status}")
+
+            uav_pose = self.pose_buffer.get_uav_pose_value()
+            if uav_pose is not None:
+                altitude_to_use = drone_status.relative_altitude if drone_status.relative_altitude > 4.5 else uav_pose.z
+                new_uav_pose = Pose3D(x=uav_pose.x, y=uav_pose.y, z=altitude_to_use)
+                logger.info(f"UAV pose sent is {new_uav_pose}")
+                target = self.aruco_tracker.get_target()
+                target_size = target.length, target.length
+                self.drone.land_on_target(new_uav_pose, target_size)
 
     def track_target(self):
         self._tracking_started = True
@@ -50,7 +82,7 @@ class DroneAutolandingService:
         self._threads["tracking"] = tracking_thread
         tracking_thread.start()
 
-    def stream_landing_video(self):
+    def stream_video(self):
         if not self._tracking_started:
             logger.warning("The target's tracking is not started yet. Streaming video")
 
@@ -58,7 +90,7 @@ class DroneAutolandingService:
         self._threads["streaming"] = video_streaming_thread
         video_streaming_thread.start()
 
-    def land(self):
+    def perform_precision_landing(self):
         if not self._tracking_started:
             raise SystemError("The target's tracking is not started yet. Cannot start precision landing")
 

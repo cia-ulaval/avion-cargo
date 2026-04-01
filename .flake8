@@ -1,4 +1,4 @@
 [flake8]
 max-line-length = 120
-ignore = E203, W503
-exclude = .git, .github, .idea, .vscode, __pycache__, build, dist, docs
+ignore = E203, W503, Q000
+exclude = .git, .github, .idea, .vscode, __pycache__, build, dist, docs, .venv, venv, .env, env

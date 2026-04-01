@@ -1,21 +1,40 @@
+from typing import Optional
+
 from domain.camera import Camera
 from domain.drone import Drone
+from domain.models import CalibrationData
 from infrastructure.camera.opencv_capture_adapter import OpenCVCamera
-from infrastructure.communication.drone_mavlink_connector import (
-    DroneMavlinkSerial,
-    DroneMavlinkUDP,
+from infrastructure.communication.mavlink import (
+    DroneMavlinkSerialConnector,
+    DroneMavlinkUDPConnector,
     MavlinkConnectionParams,
 )
-from infrastructure.persistence.configuration_models import DroneConnectionConfiguration
+from infrastructure.persistence.configuration_models import CameraConfiguration, DroneConnectionConfiguration
+from simulation.gazebo_camera import GazeboCamera
 
 
-def build_camera(*, picam: bool, cam_id: int, width: int, height: int, fps: int) -> Camera:
-    if picam:
+def build_camera(
+    camera_config: CameraConfiguration, calibration_data: CalibrationData, use_simulated_cam: Optional[bool] = False
+) -> Camera:
+    if use_simulated_cam:
+        if not camera_config.simulation_topic_name:
+            raise ValueError("The simulation topic name must be provided")
+
+        return GazeboCamera(camera_config.simulation_topic_name)
+
+    if camera_config.use_picamera:
         from infrastructure.camera.picamera_adapter import PiCameraAdapter
 
-        return PiCameraAdapter(width=width, height=height, fps=fps, rgb=False)
+        return PiCameraAdapter(
+            width=calibration_data.camera_width, height=calibration_data.camera_height, fps=camera_config.fps
+        )
 
-    return OpenCVCamera(source=cam_id, width=width, height=height, fps=fps, rgb=False)
+    return OpenCVCamera(
+        source=camera_config.id,
+        width=calibration_data.camera_width,
+        height=calibration_data.camera_height,
+        fps=camera_config.fps,
+    )
 
 
 def build_drone(drone_connection_config: DroneConnectionConfiguration) -> Drone:
@@ -25,8 +44,7 @@ def build_drone(drone_connection_config: DroneConnectionConfiguration) -> Drone:
         baud_rate=drone_connection_config.baud_rate,
     )
     if drone_connection_config.use_serial:
-        return DroneMavlinkSerial(
-            mavlink_params,
-        )
+        return DroneMavlinkSerialConnector(mavlink_params)
+
     else:
-        return DroneMavlinkUDP(mavlink_params)
+        return DroneMavlinkUDPConnector(mavlink_params)
