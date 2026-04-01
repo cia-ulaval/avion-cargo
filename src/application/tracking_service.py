@@ -8,7 +8,7 @@ import numpy as np
 from domain.camera import Camera
 from domain.drone import Drone
 from domain.marker_detector import MarkerDetector
-from domain.models import CalibrationData, TargetedMarker
+from domain.models import CalibrationData, TargetedMarker, Pose3D
 from domain.pose_estimator import PoseEstimator
 from domain.tracking import TrackingResult
 from infrastructure.persistence.calibration_repo import CalibrationRepository
@@ -33,7 +33,17 @@ class TrackingService:
     pose_estimator: PoseEstimator
     target: TargetedMarker
     calibration: CalibrationData
-    drone: Optional[Drone] = None
+
+    @staticmethod
+    def _to_uav_pose(estimated_pose: Optional[Pose3D]) -> Optional[Pose3D]:
+        if estimated_pose is None:
+            return None
+
+        return Pose3D(
+            x=-estimated_pose.y,
+            y=estimated_pose.x,
+            z=estimated_pose.z,
+        )
 
     def track_target(self) -> Tuple[np.ndarray, TrackingResult]:
         """
@@ -55,6 +65,7 @@ class TrackingService:
             corners=corners,
             marker_length_m=self.target.length,
             calib=self.calibration,
+            center=True
         )
 
         FrameManipulationTool.draw_detected_markers(frame, [corners], np.array([[marker_id]], dtype=np.int32))
@@ -62,17 +73,7 @@ class TrackingService:
             frame, self.calibration.camera_matrix, self.calibration.dist_coeffs, rotation_vectors, translation_vectors
         )
 
-        # TODO: À retirer
-        if self.drone:
-            drone_status = self.drone.get_status()
-            if drone_status.should_drop(time.time()):
-                if not drone_status.mode.PLND:
-                    self.drone.activate_precision_landing_mode()
-                if drone_status.mode.PLND:
-                    self.drone.move_to(pose)
-        # fin à retirer
-
-        return frame, TrackingResult.detected(pose=pose, marker_id=marker_id)
+        return frame, TrackingResult.detected(pose=pose, marker_id=marker_id, uav_pose= self._to_uav_pose(pose))
 
     @staticmethod
     def create(
@@ -80,7 +81,6 @@ class TrackingService:
         target: TargetedMarker,
         detector_config: OpenCVArucoDetectorConfig,
         calibration: Optional[CalibrationData | Path] = None,
-        drone: Optional[Drone] = None,
     ) -> "TrackingService":
         detector = OpenCVArucoDetector(detector_config)
         pose_estimator = OpenCVPoseEstimator()
@@ -94,5 +94,4 @@ class TrackingService:
             pose_estimator=pose_estimator,
             target=target,
             calibration=calib,
-            drone=drone,
         )

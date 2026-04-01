@@ -47,6 +47,12 @@ class DroneStatus:
     armed: bool
     last_heartbeat_s: float
     last_signal_gpio_s: float
+    speed: float
+    relative_altitude: float
+    latitude: float
+    longitude: float
+    relative_altitude_ms: float
+    heading_deg:float
 
     @property
     def connected(self) -> bool:
@@ -69,11 +75,11 @@ class Drone(ABC):
         raise NotImplementedError()
 
     @abstractmethod
-    def move_to(self, position: Pose3D):
+    def land_on_target(self, position: Pose3D):
         raise NotImplementedError()
 
     @abstractmethod
-    def land(self):
+    def activate_land_mode(self):
         raise NotImplementedError()
 
     def activate_precision_landing_mode(self):

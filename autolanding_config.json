@@ -3,13 +3,13 @@
     "id" : 0,
     "use_picamera": false,
     "fps": 30,
-    "calibration_filepath": "/home/bertrand-awz/Documents/avionCargo/autolander/calibration_results/calibration_2026-02-07_21-45-24.npz"
+    "calibration_filepath": "/home/bertrand-awz/Documents/avionCargo/autolander/calibration_results/calibration_057px.npz"
   },
 
   "vision": {
     "targeted_marker": {
-      "length": 0.181,
-      "id": 1,
+      "length": 0.896,
+      "id": 29,
       "aruco_dictionary": 16
     }
   },
@@ -27,7 +27,7 @@
   "drone_connection": {
     "use_serial": false,
     "address": "127.0.0.1",
-    "port": 14560,
+    "port": 14571,
     "baud_rate": 921600
   }
 }
