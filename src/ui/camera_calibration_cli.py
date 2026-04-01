@@ -3,6 +3,7 @@ from loguru import logger
 
 from application.camera_calibration_service import CameraCalibrationParameters, CameraCalibrationService
 from domain.models import TargetedMarker
+from infrastructure.persistence.configuration_models import CameraConfiguration
 from infrastructure.vision.opencv_gridboard_calibration_engine import GridBoardCalibrationConfig, GridBoardSpec
 from ui.common_functions import build_camera
 
@@ -39,7 +40,14 @@ def main(
     height,
     fps,
 ):
-    camera = build_camera(picam=picam, cam_id=cam_id, width=width, height=height, fps=fps)
+    camera_config = CameraConfiguration(
+        use_picamera=picam,
+        fps=fps,
+        id=cam_id,
+        height=height,
+        width=width,
+    )
+    camera = build_camera(camera_config)
 
     camera_calibration_params = CameraCalibrationParameters(
         board_specifications=GridBoardSpec(

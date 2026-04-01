@@ -14,7 +14,9 @@ from simulation.gazebo_camera import GazeboCamera
 
 
 def build_camera(
-    camera_config: CameraConfiguration, calibration_data: CalibrationData, use_simulated_cam: Optional[bool] = False
+    camera_config: CameraConfiguration,
+    calibration_data: Optional[CalibrationData] = None,
+    use_simulated_cam: Optional[bool] = False,
 ) -> Camera:
     if use_simulated_cam:
         if not camera_config.simulation_topic_name:
@@ -22,17 +24,19 @@ def build_camera(
 
         return GazeboCamera(camera_config.simulation_topic_name)
 
+    camera_height, camera_width = camera_config.height, camera_config.width
+    if calibration_data:
+        camera_height, camera_width = calibration_data.camera_height, calibration_data.camera_width
+
     if camera_config.use_picamera:
         from infrastructure.camera.picamera_adapter import PiCameraAdapter
 
-        return PiCameraAdapter(
-            width=calibration_data.camera_width, height=calibration_data.camera_height, fps=camera_config.fps
-        )
+        return PiCameraAdapter(width=camera_width, height=camera_height, fps=camera_config.fps)
 
     return OpenCVCamera(
         source=camera_config.id,
-        width=calibration_data.camera_width,
-        height=calibration_data.camera_height,
+        width=camera_width,
+        height=camera_height,
         fps=camera_config.fps,
     )
 
