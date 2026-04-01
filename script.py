@@ -30,5 +30,6 @@ def clean_project() -> None:
     project_cleaner.clean()
     logger.success("Project cleaned")
 
+
 if __name__ == "__main__":
     clean_project()
