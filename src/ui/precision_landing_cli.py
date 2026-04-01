@@ -3,27 +3,37 @@ from pathlib import Path
 import click
 from loguru import logger
 
-from simulation.drone_autolanding_service import DroneAutolandingService
+from application.drone_autolanding_service import DroneAutolandingService
 from application.tracking_service import TrackingService
 from infrastructure.communication.webrtc_content_diffuser import WebRTCConfig
 from infrastructure.persistence.autolander_configuration_reader import AutolanderConfigurationReader
-from infrastructure.persistence.calibration_repo import CalibrationRepository
+from infrastructure.persistence.calibration_repository import CalibrationRepository
 from infrastructure.vision.opencv_aruco_detector import OpenCVArucoDetectorConfig
-from simulation.gazebo_camera import GazeboCamera
-
-# from infrastructure.vision.threaded_pipeline import ThreadedPipeline
 from ui.common_functions import build_camera, build_drone
 
 
 @click.command(context_settings={"help_option_names": ["-h", "--help"]})
+@click.argument("config_file_path", type=click.Path(exists=True))
+@click.option(
+    "--gz-simulation", default=False, is_flag=True, help="Run simulation using Gazebo Camera", show_default=True
+)
 @logger.catch
-def main():
-    config_reader = AutolanderConfigurationReader(Path("/home/bertrand-awz/Documents/avionCargo/autolander/autolanding_config.json"))
+def main(config_file_path, gz_simulation):
+    config_reader = AutolanderConfigurationReader(Path(config_file_path))
     autolander_config = config_reader.read()
 
     # camera and vision
-    calibration_data = CalibrationRepository().load_report(autolander_config.camera_config.calibration_filepath)
-    camera = GazeboCamera(topic_name="/world/iris_runway/model/iris_with_gimbal/model/gimbal/link/pitch_link/sensor/camera/image")
+    calibration_data = (
+        CalibrationRepository()
+        .set_calibration_filepath(autolander_config.camera_config.calibration_filepath)
+        .load_calibration_data()
+    )
+
+    camera = build_camera(
+        use_simulated_cam=gz_simulation,
+        camera_config=autolander_config.camera_config,
+        calibration_data=calibration_data,
+    )
     detector_config = OpenCVArucoDetectorConfig(dictionary_id=autolander_config.targeted_marker.dictionary)
 
     # drone communication
@@ -31,10 +41,10 @@ def main():
     drone.connect()
 
     tracker = TrackingService.create(
-        target=autolander_config.targeted_marker,
         camera=camera,
+        target=autolander_config.targeted_marker,
         detector_config=detector_config,
-        calibration=calibration_data,
+        calibration_data=calibration_data,
     )
 
     # streaming
@@ -45,11 +55,10 @@ def main():
     )
 
     # landing operations
-
     landing_service = DroneAutolandingService(drone, tracker, streamer_config)
     landing_service.track_target()
-    landing_service.stream_landing_video()
-    landing_service.land()
+    landing_service.stream_video()
+    landing_service.perform_precision_landing()
     landing_service.stop()
 
 

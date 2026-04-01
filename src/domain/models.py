@@ -22,7 +22,6 @@ class Pose3D:
             if not np.isfinite(v):
                 raise InvalidPoseError(f"Pose3D.{name} must be finite, got {v}")
 
-
     def to_dict(self) -> dict[str, float | None]:
         return {"x": self.x, "y": self.y, "z": self.z}
 
@@ -31,12 +30,13 @@ class Pose3D:
         angle_y = math.atan2(self.x, self.z)
         return angle_x, angle_y
 
+
 @dataclass(frozen=True, slots=True)
 class CalibrationData:
     """Camera intrinsics + distortion."""
 
-    camera_matrix: np.ndarray  # expected (3, 3)
-    dist_coeffs: np.ndarray  # common shapes: (1,5) (1,8) (5,) (8,) ...
+    camera_matrix: Optional[np.ndarray] = None
+    dist_coeffs: Optional[np.ndarray] = None
     camera_width: Optional[int] = 640
     camera_height: Optional[int] = 480
 
