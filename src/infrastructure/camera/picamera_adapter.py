@@ -16,7 +16,8 @@ class PiCameraAdapter(Camera):
         self._started = False
         self._fps = fps
 
-    def __make_config(self, width: int, height: int, is_rgb_cam: bool) -> Dict[str, Any]:
+    @staticmethod
+    def __make_config(width: int, height: int, is_rgb_cam: bool) -> Dict[str, Any]:
         config = {
             "size": (width, height),
             "format": "RGB888" if is_rgb_cam else "BGR888",
@@ -24,7 +25,8 @@ class PiCameraAdapter(Camera):
 
         return config
 
-    def __make_controls(self, fps: int) -> Dict[str, Any]:
+    @staticmethod
+    def __make_controls(fps: int) -> Dict[str, Any]:
         frame_duration = int(NUMBER_OF_MILLISECONDS_IN_ONE_SECOND / fps)
         controls = {"FrameDurationLimits": (frame_duration, frame_duration)}
         return controls
