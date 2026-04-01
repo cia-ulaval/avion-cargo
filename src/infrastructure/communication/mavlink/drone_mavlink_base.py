@@ -5,8 +5,9 @@ from typing import Optional
 
 from pymavlink import mavutil
 
-from domain.drone import Drone, DroneStatus, DroneMode
+from domain.drone import Drone, DroneMode, DroneStatus
 from domain.models import Pose3D
+
 from .mavlink_connection_params import MavlinkConnectionParams
 
 
@@ -50,12 +51,11 @@ class DroneMavlinkBase(Drone):
         self._send_heartbeat()
         self._update_status()
 
-
     def get_status(self) -> DroneStatus:
         self._update_status()
         return self.status
 
-    def land_on_target(self, uav_pose: Pose3D, target_size:tuple[float, float]) -> None:
+    def land_on_target(self, uav_pose: Pose3D, target_size: tuple[float, float]) -> None:
         const = math.pi / 180
         h_fov, v_fov = 53.5 * const, 41.41 * const
         x_ang = (uav_pose.x - 640 * 0.5) * h_fov / 640

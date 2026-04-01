@@ -110,7 +110,7 @@ class ConfigurationValidator:
                 )
 
         gz_simulation = self._req_obj(camera, "gz_simulation", "camera")
-        self._req_str(gz_simulation, "topic_name", "gz_simulation",allow_empty=False)
+        self._req_str(gz_simulation, "topic_name", "gz_simulation", allow_empty=False)
         self._no_extra_keys(camera, {"id", "use_picamera", "fps", "calibration_filepath", "gz_simulation"}, "camera")
 
     def _validate_vision(self, root: dict[str, Any]) -> None:

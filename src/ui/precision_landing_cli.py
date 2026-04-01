@@ -9,7 +9,6 @@ from infrastructure.communication.webrtc_content_diffuser import WebRTCConfig
 from infrastructure.persistence.autolander_configuration_reader import AutolanderConfigurationReader
 from infrastructure.persistence.calibration_repo import CalibrationRepository
 from infrastructure.vision.opencv_aruco_detector import OpenCVArucoDetectorConfig
-
 from ui.common_functions import build_camera, build_drone
 
 
@@ -26,7 +25,7 @@ def main(config_file_path, gz_simulation):
     camera = build_camera(
         use_simulated_cam=gz_simulation,
         camera_config=autolander_config.camera_config,
-        calibration_data=calibration_data
+        calibration_data=calibration_data,
     )
     detector_config = OpenCVArucoDetectorConfig(dictionary_id=autolander_config.targeted_marker.dictionary)
 

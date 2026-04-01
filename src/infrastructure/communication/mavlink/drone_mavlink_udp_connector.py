@@ -1,7 +1,7 @@
 from pymavlink import mavutil
 
-from .mavlink_connection_params import MavlinkConnectionParams
 from .drone_mavlink_base import DroneMavlinkBase
+from .mavlink_connection_params import MavlinkConnectionParams
 
 
 class DroneMavlinkUDPConnector(DroneMavlinkBase):

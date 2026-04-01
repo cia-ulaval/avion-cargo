@@ -39,7 +39,6 @@ class DroneConnectionConfiguration:
     baud_rate: int
 
 
-
 @dataclass(slots=True, frozen=True)
 class AutolanderConfiguration:
     targeted_marker: TargetedMarker
