@@ -52,7 +52,7 @@ class DroneStatus:
     latitude: float
     longitude: float
     relative_altitude_ms: float
-    heading_deg:float
+    heading_deg: float
 
     @property
     def connected(self) -> bool:
@@ -75,7 +75,11 @@ class Drone(ABC):
         raise NotImplementedError()
 
     @abstractmethod
-    def land_on_target(self, position: Pose3D):
+    def land_on_target(self, position: Pose3D, target_size: tuple[float, float]):
+        raise NotImplementedError()
+
+    @abstractmethod
+    def switch_mode(self, mode: DroneMode) -> None:
         raise NotImplementedError()
 
     @abstractmethod

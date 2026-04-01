@@ -35,6 +35,7 @@ pytest-cov = "^7.0.0"
 black = "^26.1.0"
 flake8 = "^7.3.0"
 isort = "^7.0.0"
+ruff = "^0.15.8"
 
 
 [tool.poetry.group.simulation.dependencies]
@@ -45,6 +46,10 @@ cv-bridge = "^1.13.0.post0"
 line-length = 120
 target-version = ["py312"]
 skip-string-normalization = false
+
+[tool.ruff]
+line-length = 120
+target-version = "py312"
 
 [tool.isort]
 profile = "black"
@@ -60,6 +65,5 @@ estimate_pose = "ui.aruco_pose_estimation_cli:main"
 fmt = "script:run_code_formatting"
 fmt-check = "script:run_code_format_checking"
 clean = "script:clean_project"
-main = "ui.autolanding_cli:main"
-simulation = "ui.autolanding_sim_cli:main"
+main = "ui.precision_landing_cli:main"
 

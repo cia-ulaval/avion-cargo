@@ -1,4 +1,4 @@
-from typing import Tuple, Optional
+from typing import Optional, Tuple
 
 import cv2
 import numpy as np
@@ -35,7 +35,7 @@ class OpenCVPoseEstimator(PoseEstimator):
             cx = calib.camera_matrix[0, 2]
             cy = calib.camera_matrix[1, 2]
 
-            x = (x_avg - cx) * z/fx
-            y = (y_avg - cy) * z/fy
+            x = (x_avg - cx) * z / fx
+            y = (y_avg - cy) * z / fy
 
         return Pose3D(x=float(x), y=float(y), z=float(z)), rotation_vecs, translation_vecs

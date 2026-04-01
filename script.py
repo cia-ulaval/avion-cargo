@@ -29,3 +29,7 @@ def clean_project() -> None:
     logger.info("Start cleaning project")
     project_cleaner.clean()
     logger.success("Project cleaned")
+
+
+if __name__ == "__main__":
+    clean_project()
