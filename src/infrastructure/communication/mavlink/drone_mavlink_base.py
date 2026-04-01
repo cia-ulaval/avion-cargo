@@ -62,8 +62,7 @@ class DroneMavlinkBase(Drone):
         y_ang = (uav_pose.y - 480 * 0.5) * v_fov / 480
 
         distance = math.sqrt(uav_pose.x**2 + uav_pose.y**2 + uav_pose.z**2)
-        angle_x = math.atan2(uav_pose.y, uav_pose.z)
-        angle_y = math.atan2(uav_pose.x, uav_pose.z)
+
         self.connection.mav.landing_target_send(
             int(time.time() * 1_000_000),  # time_usec
             0,  # target_num

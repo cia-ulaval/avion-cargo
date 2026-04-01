@@ -1,4 +1,3 @@
-import time
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional, Tuple
@@ -6,7 +5,6 @@ from typing import Optional, Tuple
 import numpy as np
 
 from domain.camera import Camera
-from domain.drone import Drone
 from domain.marker_detector import MarkerDetector
 from domain.models import CalibrationData, Pose3D, TargetedMarker
 from domain.pose_estimator import PoseEstimator
