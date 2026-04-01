@@ -2,7 +2,7 @@
   "camera": {
     "id" : 0,
     "use_picamera": false,
-    "fps": 30,
+    "fps": 25,
     "calibration_filepath": "/home/bertrand-awz/Documents/avionCargo/autolander/calibration_results/calibration_057px.npz",
     "gz_simulation": {
       "topic_name": "/world/iris_runway/model/iris_with_gimbal/model/gimbal/link/pitch_link/sensor/camera/image"
@@ -20,10 +20,10 @@
   "streaming": {
     "port": 8085,
     "data": {
-      "dps": 20
+      "dps": 5
     },
     "video": {
-      "fps": 30
+      "fps": 15
     }
   },
 
