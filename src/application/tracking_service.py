@@ -1,5 +1,4 @@
 from dataclasses import dataclass
-from pathlib import Path
 from typing import Optional, Tuple
 
 import numpy as np
@@ -9,7 +8,6 @@ from domain.marker_detector import MarkerDetector
 from domain.models import CalibrationData, Pose3D, TargetedMarker
 from domain.pose_estimator import PoseEstimator
 from domain.tracking import TrackingResult
-from infrastructure.persistence.calibration_repo import CalibrationRepository
 from infrastructure.vision.opencv_aruco_detector import OpenCVArucoDetector, OpenCVArucoDetectorConfig
 from infrastructure.vision.opencv_frame_manipution_tool import FrameManipulationTool
 from infrastructure.vision.opencv_pose_estimator import OpenCVPoseEstimator
@@ -78,18 +76,15 @@ class TrackingService:
         camera: Camera,
         target: TargetedMarker,
         detector_config: OpenCVArucoDetectorConfig,
-        calibration: Optional[CalibrationData | Path] = None,
+        calibration_data: CalibrationData,
     ) -> "TrackingService":
         detector = OpenCVArucoDetector(detector_config)
         pose_estimator = OpenCVPoseEstimator()
-        if isinstance(calibration, CalibrationData):
-            calib = calibration
-        else:
-            calib = CalibrationRepository().load_report(calibration)
+
         return TrackingService(
             camera=camera,
             detector=detector,
             pose_estimator=pose_estimator,
             target=target,
-            calibration=calib,
+            calibration=calibration_data,
         )

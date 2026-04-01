@@ -35,8 +35,8 @@ class Pose3D:
 class CalibrationData:
     """Camera intrinsics + distortion."""
 
-    camera_matrix: np.ndarray  # expected (3, 3)
-    dist_coeffs: np.ndarray  # common shapes: (1,5) (1,8) (5,) (8,) ...
+    camera_matrix: Optional[np.ndarray] = None
+    dist_coeffs: Optional[np.ndarray] = None
     camera_width: Optional[int] = 640
     camera_height: Optional[int] = 480
 
