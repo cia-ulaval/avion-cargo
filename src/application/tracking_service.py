@@ -1,17 +1,13 @@
-import time
 from dataclasses import dataclass
-from pathlib import Path
 from typing import Optional, Tuple
 
 import numpy as np
 
 from domain.camera import Camera
-from domain.drone import Drone
 from domain.marker_detector import MarkerDetector
-from domain.models import CalibrationData, TargetedMarker, Pose3D
+from domain.models import CalibrationData, Pose3D, TargetedMarker
 from domain.pose_estimator import PoseEstimator
 from domain.tracking import TrackingResult
-from infrastructure.persistence.calibration_repo import CalibrationRepository
 from infrastructure.vision.opencv_aruco_detector import OpenCVArucoDetector, OpenCVArucoDetectorConfig
 from infrastructure.vision.opencv_frame_manipution_tool import FrameManipulationTool
 from infrastructure.vision.opencv_pose_estimator import OpenCVPoseEstimator
@@ -62,10 +58,7 @@ class TrackingService:
 
         marker_id, corners = detections[0]
         pose, rotation_vectors, translation_vectors = self.pose_estimator.estimate_pose(
-            corners=corners,
-            marker_length_m=self.target.length,
-            calib=self.calibration,
-            center=True
+            corners=corners, marker_length_m=self.target.length, calib=self.calibration, center=True
         )
 
         FrameManipulationTool.draw_detected_markers(frame, [corners], np.array([[marker_id]], dtype=np.int32))
@@ -73,25 +66,25 @@ class TrackingService:
             frame, self.calibration.camera_matrix, self.calibration.dist_coeffs, rotation_vectors, translation_vectors
         )
 
-        return frame, TrackingResult.detected(pose=pose, marker_id=marker_id, uav_pose= self._to_uav_pose(pose))
+        return frame, TrackingResult.detected(pose=pose, marker_id=marker_id, uav_pose=self._to_uav_pose(pose))
+
+    def get_target(self) -> TargetedMarker:
+        return self.target
 
     @staticmethod
     def create(
         camera: Camera,
         target: TargetedMarker,
         detector_config: OpenCVArucoDetectorConfig,
-        calibration: Optional[CalibrationData | Path] = None,
+        calibration_data: CalibrationData,
     ) -> "TrackingService":
         detector = OpenCVArucoDetector(detector_config)
         pose_estimator = OpenCVPoseEstimator()
-        if isinstance(calibration, CalibrationData):
-            calib = calibration
-        else:
-            calib = CalibrationRepository().load_report(calibration)
+
         return TrackingService(
             camera=camera,
             detector=detector,
             pose_estimator=pose_estimator,
             target=target,
-            calibration=calib,
+            calibration=calibration_data,
         )

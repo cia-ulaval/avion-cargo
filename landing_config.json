@@ -1,11 +1,11 @@
 {
   "camera": {
     "id" : 0,
-    "use_picamera": false,
+    "use_picamera": true,
     "fps": 25,
-    "calibration_filepath": "/home/bertrand-awz/Documents/avionCargo/autolander/calibration_results/calibration_057px.npz",
+    "calibration_filepath": "/calibration_results/pi_camera_calibration.yaml",
     "gz_simulation": {
-      "topic_name": "/world/iris_runway/model/iris_with_gimbal/model/gimbal/link/pitch_link/sensor/camera/image"
+      "topic_name": ""
     }
   },
 

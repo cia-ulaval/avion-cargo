@@ -77,12 +77,14 @@ class AutolanderConfigurationReader:
         use_picamera = bool(self._require(camera, "use_picamera", "camera"))
         fps = int(self._require(camera, "fps", "camera"))
         calibration_filepath = str(self._require(camera, "calibration_filepath", "camera"))
+        gz_simulation = self._require(camera, "gz_simulation", "camera")
 
         return CameraConfiguration(
             id=camera_id,
             use_picamera=use_picamera,
             fps=fps,
             calibration_filepath=Path(calibration_filepath).resolve(),
+            simulation_topic_name=gz_simulation.get("topic_name"),
         )
 
     def _parse_targeted_marker(self, raw: dict[str, Any]) -> TargetedMarker:

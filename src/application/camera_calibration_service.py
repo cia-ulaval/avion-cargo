@@ -6,7 +6,7 @@ from domain.camera import Camera
 from domain.camera_calibration_engine import CameraCalibrationEngine
 from domain.frame_collector import FrameCollector
 from domain.models import CalibrationReport, TargetedMarker
-from infrastructure.persistence.calibration_repo import CalibrationRepository
+from infrastructure.persistence.calibration_repository import CalibrationRepository
 from infrastructure.vision.live_frame_collector import LiveFrameCollector, LiveFrameCollectorConfig
 from infrastructure.vision.opencv_aruco_detector import (
     OpenCVArucoDetector,
