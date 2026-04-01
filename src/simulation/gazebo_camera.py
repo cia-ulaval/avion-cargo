@@ -30,7 +30,8 @@ class _GazeboCameraNode(Node):
             self._last_frame = frame
         self._first_frame_event.set()
 
-    def _image_msg_to_bgr(self, msg: Image) -> np.ndarray:
+    @staticmethod
+    def _image_msg_to_bgr(msg: Image) -> np.ndarray:
         if msg.encoding not in ("rgb8", "bgr8"):
             raise RuntimeError(f"Unsupported encoding: {msg.encoding}")
 

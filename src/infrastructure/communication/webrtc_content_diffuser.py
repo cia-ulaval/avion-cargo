@@ -181,7 +181,8 @@ class WebRTCContentStreamer(ContentStreamer):
         print(f"[WebRTC] Open http://<PI_IP>:{self._cfg.port}/")
         await web._run_app(app, host=self._cfg.host, port=self._cfg.port)  # internal helper used by web.run_app
 
-    async def _index(self, _request: web.Request) -> web.Response:
+    @staticmethod
+    async def _index(_request: web.Request) -> web.Response:
         return web.Response(text=INDEX_HTML, content_type="text/html")
 
     async def _offer(self, request: web.Request) -> web.Response:

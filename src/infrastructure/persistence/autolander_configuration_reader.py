@@ -44,7 +44,8 @@ class AutolanderConfigurationReader:
 
     # --------- internals ---------
 
-    def _read_json(self, path: Path) -> dict[str, Any]:
+    @staticmethod
+    def _read_json(path: Path) -> dict[str, Any]:
         if path.suffix.lower() != ".json":
             raise ValueError(f"Configuration file must be a .json file, got: {path.name}")
 
@@ -60,12 +61,14 @@ class AutolanderConfigurationReader:
             raise ValueError("Root JSON must be an object/dict.")
         return data
 
-    def _require_dict(self, obj: Any, path: str) -> dict[str, Any]:
+    @staticmethod
+    def _require_dict(obj: Any, path: str) -> dict[str, Any]:
         if not isinstance(obj, dict):
             raise ValueError(f"Expected object at '{path}', got {type(obj).__name__}")
         return obj
 
-    def _require(self, d: dict[str, Any], key: str, path: str) -> Any:
+    @staticmethod
+    def _require(d: dict[str, Any], key: str, path: str) -> Any:
         if key not in d:
             raise ValueError(f"Missing required key '{key}' at '{path}'")
         return d[key]
