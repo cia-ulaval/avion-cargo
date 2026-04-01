@@ -1,0 +1,36 @@
+{
+  "camera": {
+    "id" : 0,
+    "use_picamera": true,
+    "fps": 25,
+    "calibration_filepath": "/calibration_results/pi_camera_calibration.yaml",
+    "gz_simulation": {
+      "topic_name": ""
+    }
+  },
+
+  "vision": {
+    "targeted_marker": {
+      "length": 0.896,
+      "id": 29,
+      "aruco_dictionary": 16
+    }
+  },
+
+  "streaming": {
+    "port": 8085,
+    "data": {
+      "dps": 5
+    },
+    "video": {
+      "fps": 15
+    }
+  },
+
+  "drone_connection": {
+    "use_serial": false,
+    "address": "127.0.0.1",
+    "port": 14550,
+    "baud_rate": 921600
+  }
+}
