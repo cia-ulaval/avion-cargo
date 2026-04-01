@@ -60,5 +60,5 @@ estimate_pose = "ui.aruco_pose_estimation_cli:main"
 fmt = "script:run_code_formatting"
 fmt-check = "script:run_code_format_checking"
 clean = "script:clean_project"
-main = "ui.autolanding_cli:main"
+main = "ui.precision_landing_cli:main"
 
