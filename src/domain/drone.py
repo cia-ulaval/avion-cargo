@@ -75,8 +75,13 @@ class Drone(ABC):
         raise NotImplementedError()
 
     @abstractmethod
-    def land_on_target(self, position: Pose3D):
+    def land_on_target(self, position: Pose3D, target_size:tuple[float, float]):
         raise NotImplementedError()
+
+    @abstractmethod
+    def switch_mode(self, mode: DroneMode) -> None:
+        raise NotImplementedError()
+
 
     @abstractmethod
     def activate_land_mode(self):

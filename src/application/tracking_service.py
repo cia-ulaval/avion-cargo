@@ -72,6 +72,9 @@ class TrackingService:
 
         return frame, TrackingResult.detected(pose=pose, marker_id=marker_id, uav_pose=self._to_uav_pose(pose))
 
+    def get_target(self) -> TargetedMarker:
+        return self.target
+
     @staticmethod
     def create(
         camera: Camera,

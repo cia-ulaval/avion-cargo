@@ -10,12 +10,13 @@ class CameraConfiguration:
     id: int
     use_picamera: bool
     fps: int
-    calibration_filepath: Path  # "" accepté
+    calibration_filepath: Path
+    simulation_topic_name: Optional[str] = None
 
 
 @dataclass(frozen=True, slots=True)
 class StreamingDataConfiguration:
-    dps: int  # data per second
+    dps: int
 
 
 @dataclass(frozen=True, slots=True)
@@ -34,8 +35,9 @@ class StreamingConfiguration:
 class DroneConnectionConfiguration:
     use_serial: bool
     address: str
-    port: Optional[int]  # peut être null
+    port: Optional[int]
     baud_rate: int
+
 
 
 @dataclass(slots=True, frozen=True)

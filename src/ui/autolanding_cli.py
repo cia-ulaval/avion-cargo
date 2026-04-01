@@ -5,30 +5,28 @@ from loguru import logger
 
 from application.drone_autolanding_service import DroneAutolandingService
 from application.tracking_service import TrackingService
-from infrastructure.communication.webrtc_content_diffuser import WebRTCConfig, WebRTCContentStreamer
+from infrastructure.communication.webrtc_content_diffuser import WebRTCConfig
 from infrastructure.persistence.autolander_configuration_reader import AutolanderConfigurationReader
 from infrastructure.persistence.calibration_repo import CalibrationRepository
 from infrastructure.vision.opencv_aruco_detector import OpenCVArucoDetectorConfig
 
-# from infrastructure.vision.threaded_pipeline import ThreadedPipeline
 from ui.common_functions import build_camera, build_drone
 
 
 @click.command(context_settings={"help_option_names": ["-h", "--help"]})
 @click.argument("config_file_path", type=click.Path(exists=True))
+@click.option("--gz-simulation", default=False, is_flag=True, help="Run simulation using Gazebo Camera")
 @logger.catch
-def main(config_file_path):
+def main(config_file_path, gz_simulation):
     config_reader = AutolanderConfigurationReader(Path(config_file_path))
     autolander_config = config_reader.read()
 
     # camera and vision
     calibration_data = CalibrationRepository().load_report(autolander_config.camera_config.calibration_filepath)
     camera = build_camera(
-        picam=autolander_config.camera_config.use_picamera,
-        cam_id=autolander_config.camera_config.id,
-        width=calibration_data.camera_width,
-        height=calibration_data.camera_height,
-        fps=autolander_config.camera_config.fps,
+        use_simulated_cam=gz_simulation,
+        camera_config=autolander_config.camera_config,
+        calibration_data=calibration_data
     )
     detector_config = OpenCVArucoDetectorConfig(dictionary_id=autolander_config.targeted_marker.dictionary)
 
@@ -51,10 +49,10 @@ def main(config_file_path):
     )
 
     # landing operations
-
     landing_service = DroneAutolandingService(drone, tracker, streamer_config)
     landing_service.track_target()
-    landing_service.stream_landing_video()
+    landing_service.stream_video()
+    landing_service.perform_precision_landing()
     landing_service.stop()
 
 
