@@ -35,6 +35,7 @@ pytest-cov = "^7.0.0"
 black = "^26.1.0"
 flake8 = "^7.3.0"
 isort = "^7.0.0"
+ruff = "^0.15.8"
 
 
 [tool.poetry.group.simulation.dependencies]
@@ -45,6 +46,10 @@ cv-bridge = "^1.13.0.post0"
 line-length = 120
 target-version = ["py312"]
 skip-string-normalization = false
+
+[tool.ruff]
+line-length = 120
+target-version = "py312"
 
 [tool.isort]
 profile = "black"
