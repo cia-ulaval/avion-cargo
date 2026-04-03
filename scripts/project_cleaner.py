@@ -36,11 +36,11 @@ class ProjectCleaner:
             return False
 
     def __remove_pycache_and_empty_parents(self, root_path: Path | str) -> None:
-        for dirpath, dirnames, filenames in os.walk(root_path, topdown=False):
+        for dirpath, dir_names, filenames in os.walk(root_path, topdown=False):
             if self.__should_skip__(dirpath):
                 continue
 
-            if "__pycache__" in dirnames:
+            if "__pycache__" in dir_names:
                 pycache_path = os.path.join(dirpath, "__pycache__")
                 logger.info(f"Removing {pycache_path}")
                 shutil.rmtree(pycache_path)
