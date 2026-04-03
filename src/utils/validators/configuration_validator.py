@@ -185,7 +185,8 @@ class ConfigurationValidator:
     # Helpers
     # -------------------------
 
-    def _req_key(self, d: dict[str, Any], key: str, parent_path: str) -> Any:
+    @staticmethod
+    def _req_key(d: dict[str, Any], key: str, parent_path: str) -> Any:
         if key not in d:
             raise ValidationError(f"Missing required key '{key}'", f"{parent_path}.{key}")
         return d[key]
@@ -251,12 +252,14 @@ class ConfigurationValidator:
             raise ValidationError("Must be a non-empty string", f"{parent_path}.{key}")
         return v
 
-    def _no_extra_keys(self, obj: dict[str, Any], allowed: set[str], path: str) -> None:
+    @staticmethod
+    def _no_extra_keys(obj: dict[str, Any], allowed: set[str], path: str) -> None:
         extra = set(obj.keys()) - allowed
         if extra:
             raise ValidationError(f"Unknown keys: {sorted(extra)}", path)
 
-    def _validate_host_like(self, host: str, path: str) -> None:
+    @staticmethod
+    def _validate_host_like(host: str, path: str) -> None:
         # Tolérant: hostname ou IPv4
         ipv4 = re.compile(r"^\d{1,3}(\.\d{1,3}){3}$")
         hostname = re.compile(r"^(?=.{1,253}$)([a-zA-Z0-9-]{1,63}\.)*[a-zA-Z0-9-]{1,63}$")

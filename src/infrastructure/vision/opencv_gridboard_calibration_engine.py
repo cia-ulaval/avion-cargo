@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Iterable, Optional, Tuple
+from typing import Iterable, Optional, Tuple, Sequence
 
 import cv2
 import numpy as np
@@ -100,7 +100,7 @@ class OpenCVGridBoardCameraCalibrationEngine(CameraCalibrationEngine):
         return flags, aspect_ratio, camera_matrix
 
     def calibrate_from_frames(self, frames: Iterable[np.ndarray]) -> CalibrationReport:
-        all_corners_per_frame: list[list[np.ndarray]] = []
+        all_corners_per_frame: list[Sequence[np.ndarray]] = []
         all_ids_per_frame: list[np.ndarray] = []
         img_size: Optional[tuple[int, int]] = None  # (w,h)
 
