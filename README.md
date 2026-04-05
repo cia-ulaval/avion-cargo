@@ -141,6 +141,7 @@ flake8 . # exécuter à la racine du projet
 ```
 
 ### 5. Le fichier de configuration
+
 Le fichier de configuration est nécessaire pour faire l'atterrissage de précision. C'est un fichier `json` avant la structure suivante :
 
 ```text
@@ -185,6 +186,9 @@ Le fichier de configuration est nécessaire pour faire l'atterrissage de précis
 :warning: La structure de ce fichier doit être respectée.
 
 ### 6. Table recapitulative pour dictionnaires ArUco
+
+Le tableau suivant présente la correspondance entre les identifiants numériques et les noms des dictionnaires ArUco pris en charge :
+
 | ID | Nom du dictionnaire | Taille de grille    | Nombre de marqueurs | Remarque                                                                         |
 |----|---------------------|---------------------|---------------------|----------------------------------------------------------------------------------|
 | 0  | DICT_4X4_50         | 4 × 4               | 50                  | Dictionnaire compact, utile si peu d’identifiants sont nécessaires               |
