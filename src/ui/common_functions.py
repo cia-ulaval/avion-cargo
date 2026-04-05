@@ -10,7 +10,6 @@ from infrastructure.communication.mavlink import (
     MavlinkConnectionParams,
 )
 from infrastructure.persistence.configuration_models import CameraConfiguration, DroneConnectionConfiguration
-from simulation.gazebo_camera import GazeboCamera
 
 
 def build_camera(
@@ -22,6 +21,7 @@ def build_camera(
         if not camera_config.simulation_topic_name:
             raise ValueError("The simulation topic name must be provided")
 
+        from simulation.gazebo_camera import GazeboCamera
         return GazeboCamera(camera_config.simulation_topic_name)
 
     camera_height, camera_width = camera_config.height, camera_config.width
