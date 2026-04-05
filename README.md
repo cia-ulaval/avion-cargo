@@ -182,8 +182,10 @@ Le fichier de configuration est nécessaire pour faire l'atterrissage de précis
   }
 }
 ```
-:information_source: Le fichier de configuration recommandé pour RaspberryPi est [landing_config.json](landing_config.json)
-:warning: La structure de ce fichier doit être respectée.
+
+>:information_source: Le fichier de configuration recommandé pour RaspberryPi est [landing_config.json](landing_config.json)  
+>
+>:warning: La structure de ce fichier doit être respectée.
 
 ### 6. Table recapitulative pour dictionnaires ArUco
 
