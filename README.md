@@ -140,7 +140,58 @@ poetry run fmt-check # ou
 flake8 . # exécuter à la racine du projet
 ```
 
+### 5. Le fichier de configuration
+Le fichier de configuration est nécessaire pour faire l'atterrissage de précision. C'est un fichier `json` avant la structure suivante :
 
+```text
+{
+  "camera": {
+    "id": "entier représentant l'identifiant de la caméra. Généralement 0 pour la caméra par défaut du système.",
+    "use_picamera": "booléen. true pour utiliser Picamera2 sur Raspberry Pi, false pour utiliser OpenCV / caméra système classique.",
+    "fps": "nombre entier représentant le framerate souhaité pour la capture vidéo.",
+    "calibration_filepath": "chemin absolu ou relatif vers le fichier de calibration de la caméra (formats supportés : .npz ou .yaml).",
+    "gz_simulation": {
+      "topic_name": "chaîne de caractères représentant le nom du topic Gazebo à utiliser pour récupérer les images de la caméra simulée. Utile seulement en simulation."
+    }
+  },
+
+  "vision": {
+    "targeted_marker": {
+      "length": "taille réelle du côté du marqueur ArUco en mètres. Exemple : 0.896 pour un marqueur de 89.6 cm.",
+      "id": "identifiant entier du marqueur ArUco cible à détecter.",
+      "aruco_dictionary": "identifiant entier du dictionnaire ArUco utilisé pour générer et détecter le marqueur. Valeur entre 0 et 4 voir la table recapitulative en 6"
+    }
+  },
+
+  "streaming": {
+    "port": "port réseau utilisé pour exposer le flux de streaming ou le serveur associé.",
+    "data": {
+      "dps": "fréquence d'envoi des données de télémétrie ou de tracking, en données par seconde."
+    },
+    "video": {
+      "fps": "framerate du flux vidéo diffusé. Peut être différent du fps de capture caméra."
+    }
+  },
+
+  "drone_connection": {
+    "use_serial": "booléen. true pour utiliser une connexion série UART, false pour utiliser une connexion réseau UDP/TCP selon l'implémentation.",
+    "address": "adresse IP de la cible pour la connexion réseau. Par défaut : 127.0.0.1",
+    "port": "port réseau utilisé pour la connexion au drone ou au simulateur. Par défaut : 14550",
+    "baud_rate": "vitesse de communication série en bauds. Utilisée si use_serial = true. Par défaut: 921600."
+  }
+}
+```
+:information_source: Le fichier de configuration recommandé pour RaspberryPi est [landing_config.json](landing_config.json)
+:warning: La structure de ce fichier doit être respectée.
+
+### 6. Table recapitulative pour dictionnaires ArUco
+| ID | Nom du dictionnaire | Taille de grille    | Nombre de marqueurs | Remarque                                                                         |
+|----|---------------------|---------------------|---------------------|----------------------------------------------------------------------------------|
+| 0  | DICT_4X4_50         | 4 × 4               | 50                  | Dictionnaire compact, utile si peu d’identifiants sont nécessaires               |
+| 1  | DICT_5X5_50         | 5 × 5               | 50                  | Plus de bits que 4x4, meilleure capacité de distinction                          |
+| 2  | DICT_6X6_50         | 6 × 6               | 50                  | Plus robuste pour des usages exigeant une meilleure unicité visuelle             |
+| 3  | DICT_7X7_50         | 7 × 7               | 50                  | Très riche en information, mais plus exigeant en qualité d’image                 |
+| 4  | DICT_ARUCO_ORIGINAL | Variable historique | Variable historique | Dictionnaire ArUco original, utilisé pour compatibilité avec d’anciens marqueurs |
 
 ### 5. Notes
 
