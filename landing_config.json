@@ -3,7 +3,7 @@
     "id" : 0,
     "use_picamera": true,
     "fps": 25,
-    "calibration_filepath": "/calibration_results/pi_camera_calibration.yaml",
+    "calibration_filepath": "/home/pi/autolander/calibration_results/pi_camera_calibration.yaml",
     "gz_simulation": {
       "topic_name": ""
     }
