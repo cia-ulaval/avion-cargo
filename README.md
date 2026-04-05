@@ -83,7 +83,7 @@ poetry install
 
 Il est important de calibrer la caméra afin d’obtenir la matrice intrinsèque et les coefficients de distorsion.  
 Une bonne calibration, pour l’estimation de pose, devrait idéalement fournir une erreur de reprojection
-\( \leq 1 \) px.
+$\leq$ 1 px.
 
 Pour plus d’informations sur le script de calibration :
 
@@ -91,18 +91,32 @@ Pour plus d’informations sur le script de calibration :
 poetry run calibrate_camera --help
 ```
 
-#### 2.3 Estimation de pose
+#### 2.3 Atterrissage de précision
 
-L’estimation de pose permet de détecter un tag ArUco et d’estimer sa position (et donc la distance) par rapport à la caméra.
+#### 2.3.1 Commande pour l'ordinateur de bord
 
-Pour plus d’informations sur le script d’estimation de pose :
+Après avoir obtenu une bonne calibration de la caméra, vous pouvez opérer l'atterrissage de précision.
+
+Pour ce, il vous faudra un fichier de configuration qui fournit au logiciel certaines informations pour son fonctionnement voir la section sur le [fichier de configuration](#5-le-fichier-de-configuration).
+
+Pour lancer [autolander](#) pour operer un l'atterrissage sur ArUco:
 
 ```shell
-poetry run estimate_pose --help
+poetry run precion_landing [PATH_TO_CONFIGURATION_FILE]
 ```
 
-> :warning: L’estimation de pose nécessite un fichier de calibration.  
-> Les mêmes paramètres (board, tailles, etc.) utilisés lors de la calibration doivent être réutilisés pour l’estimation de pose.
+Par exemple, si le fichier de config est à la racine et s'appelle [landing_config.json](landing_config.json): 
+
+```shell
+poetry run precion_landing landing_config.json
+```
+
+Pour plus d’informations sur la commande `precision_landing`:
+
+```shell
+poetry run precion_landing --help
+```
+#### 2.3.2 Paramètres à mettre à jour sur le Flight Controller
 
 ---
 
@@ -140,7 +154,64 @@ poetry run fmt-check # ou
 flake8 . # exécuter à la racine du projet
 ```
 
+### 5. Le fichier de configuration
 
+Le fichier de configuration est nécessaire pour faire l'atterrissage de précision. C'est un fichier `json` avant la structure suivante :
+
+```text
+{
+  "camera": {
+    "id": "entier représentant l'identifiant de la caméra. Généralement 0 pour la caméra par défaut du système.",
+    "use_picamera": "booléen. true pour utiliser Picamera2 sur Raspberry Pi, false pour utiliser OpenCV / caméra système classique.",
+    "fps": "nombre entier représentant le framerate souhaité pour la capture vidéo.",
+    "calibration_filepath": "chemin absolu ou relatif vers le fichier de calibration de la caméra (formats supportés : .npz ou .yaml).",
+    "gz_simulation": {
+      "topic_name": "chaîne de caractères représentant le nom du topic Gazebo à utiliser pour récupérer les images de la caméra simulée. Utile seulement en simulation."
+    }
+  },
+
+  "vision": {
+    "targeted_marker": {
+      "length": "taille réelle du côté du marqueur ArUco en mètres. Exemple : 0.896 pour un marqueur de 89.6 cm.",
+      "id": "identifiant entier du marqueur ArUco cible à détecter.",
+      "aruco_dictionary": "identifiant entier du dictionnaire ArUco utilisé pour générer et détecter le marqueur. Valeur entre 0 et 4 voir la table recapitulative en 6"
+    }
+  },
+
+  "streaming": {
+    "port": "port réseau utilisé pour exposer le flux de streaming ou le serveur associé.",
+    "data": {
+      "dps": "fréquence d'envoi des données de télémétrie ou de tracking, en données par seconde."
+    },
+    "video": {
+      "fps": "framerate du flux vidéo diffusé. Peut être différent du fps de capture caméra."
+    }
+  },
+
+  "drone_connection": {
+    "use_serial": "booléen. true pour utiliser une connexion série UART, false pour utiliser une connexion réseau UDP/TCP selon l'implémentation.",
+    "address": "adresse IP de la cible pour la connexion réseau. Par défaut : 127.0.0.1",
+    "port": "port réseau utilisé pour la connexion au drone ou au simulateur. Par défaut : 14550",
+    "baud_rate": "vitesse de communication série en bauds. Utilisée si use_serial = true. Par défaut: 921600."
+  }
+}
+```
+
+>:information_source: Le fichier de configuration recommandé pour RaspberryPi est [landing_config.json](landing_config.json)  
+>
+>:warning: La structure de ce fichier doit être respectée.
+
+### 6. Table recapitulative pour dictionnaires ArUco
+
+Le tableau suivant présente la correspondance entre les identifiants numériques et les noms des dictionnaires ArUco pris en charge :
+
+| ID | Nom du dictionnaire | Taille de grille    | Nombre de marqueurs | Remarque                                                                         |
+|----|---------------------|---------------------|---------------------|----------------------------------------------------------------------------------|
+| 0  | DICT_4X4_50         | 4 × 4               | 50                  | Dictionnaire compact, utile si peu d’identifiants sont nécessaires               |
+| 1  | DICT_5X5_50         | 5 × 5               | 50                  | Plus de bits que 4x4, meilleure capacité de distinction                          |
+| 2  | DICT_6X6_50         | 6 × 6               | 50                  | Plus robuste pour des usages exigeant une meilleure unicité visuelle             |
+| 3  | DICT_7X7_50         | 7 × 7               | 50                  | Très riche en information, mais plus exigeant en qualité d’image                 |
+| 4  | DICT_ARUCO_ORIGINAL | Variable historique | Variable historique | Dictionnaire ArUco original, utilisé pour compatibilité avec d’anciens marqueurs |
 
 ### 5. Notes
 
