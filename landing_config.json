@@ -5,7 +5,7 @@
     "fps": 25,
     "calibration_filepath": "/home/pi/autolander/calibration_results/pi_camera_calibration.yaml",
     "gz_simulation": {
-      "topic_name": ""
+      "topic_name": "/NoEmptyPath/to/topic/here"
     }
   },
 
@@ -28,7 +28,7 @@
   },
 
   "drone_connection": {
-    "use_serial": false,
+    "use_serial": true,
     "address": "127.0.0.1",
     "port": 14550,
     "baud_rate": 921600
