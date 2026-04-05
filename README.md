@@ -83,7 +83,7 @@ poetry install
 
 Il est important de calibrer la caméra afin d’obtenir la matrice intrinsèque et les coefficients de distorsion.  
 Une bonne calibration, pour l’estimation de pose, devrait idéalement fournir une erreur de reprojection
-\( \leq 1 \) px.
+$\leq$ 1 px.
 
 Pour plus d’informations sur le script de calibration :
 
@@ -91,18 +91,32 @@ Pour plus d’informations sur le script de calibration :
 poetry run calibrate_camera --help
 ```
 
-#### 2.3 Estimation de pose
+#### 2.3 Atterrissage de précision
 
-L’estimation de pose permet de détecter un tag ArUco et d’estimer sa position (et donc la distance) par rapport à la caméra.
+#### 2.3.1 Commande pour l'ordinateur de bord
 
-Pour plus d’informations sur le script d’estimation de pose :
+Après avoir obtenu une bonne calibration de la caméra, vous pouvez opérer l'atterrissage de précision.
+
+Pour ce, il vous faudra un fichier de configuration qui fournit au logiciel certaines informations pour son fonctionnement voir la section sur le [fichier de configuration](#5-le-fichier-de-configuration).
+
+Pour lancer [autolander](#) pour operer un l'atterrissage sur ArUco:
 
 ```shell
-poetry run estimate_pose --help
+poetry run precion_landing [PATH_TO_CONFIGURATION_FILE]
 ```
 
-> :warning: L’estimation de pose nécessite un fichier de calibration.  
-> Les mêmes paramètres (board, tailles, etc.) utilisés lors de la calibration doivent être réutilisés pour l’estimation de pose.
+Par exemple, si le fichier de config est à la racine et s'appelle [landing_config.json](landing_config.json): 
+
+```shell
+poetry run precion_landing landing_config.json
+```
+
+Pour plus d’informations sur la commande `precision_landing`:
+
+```shell
+poetry run precion_landing --help
+```
+#### 2.3.2 Paramètres à mettre à jour sur le Flight Controller
 
 ---
 
