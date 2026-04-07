@@ -2,6 +2,7 @@ import asyncio
 import json
 import time
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any, Dict, Optional, Set
 
 import numpy as np
@@ -13,8 +14,6 @@ from loguru import logger
 
 from domain.content_streamer import ContentStreamer
 from infrastructure.camera.frame_buffer import FrameBuffer
-
-INDEX_HTML = ""
 
 
 class _VideoBufferTrack(VideoStreamTrack):
@@ -50,6 +49,9 @@ class WebRTCConfig:
     port: int = 8080
     stream_fps: int = 30
 
+SRC_ASSETS_BASE_DIR = Path(__file__).resolve().parent.parent.parent / "assets"
+SRC_ASSETS_STATIC_DIR = SRC_ASSETS_BASE_DIR / "static"
+INDEX_HTML_FILE = SRC_ASSETS_BASE_DIR / "index.html"
 
 class WebRTCContentStreamer(ContentStreamer):
     def __init__(self, frame_buffer: FrameBuffer, config: WebRTCConfig = WebRTCConfig()):
@@ -75,6 +77,7 @@ class WebRTCContentStreamer(ContentStreamer):
 
         app = web.Application()
         app["contentStreamer"] = self
+        app.router.add_static("/static/", path=SRC_ASSETS_STATIC_DIR, name="static")
         app.router.add_get("/", self._index)
         app.router.add_post("/offer", self._offer)
         app.on_shutdown.append(self._shutdown)
@@ -83,8 +86,8 @@ class WebRTCContentStreamer(ContentStreamer):
         await web._run_app(app, host=self.configuration.host, port=self.configuration.port)
 
     @staticmethod
-    async def _index(_request: web.Request) -> web.Response:
-        return web.Response(text=INDEX_HTML, content_type="text/html")
+    async def _index(_request: web.Request) -> web.FileResponse:
+        return web.FileResponse(path=INDEX_HTML_FILE)
 
     async def _offer(self, request: web.Request) -> web.Response:
         params = await request.json()
