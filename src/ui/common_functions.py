@@ -22,6 +22,7 @@ def build_camera(
             raise ValueError("The simulation topic name must be provided")
 
         from simulation.gazebo_camera import GazeboCamera
+
         return GazeboCamera(camera_config.simulation_topic_name)
 
     camera_height, camera_width = camera_config.height, camera_config.width

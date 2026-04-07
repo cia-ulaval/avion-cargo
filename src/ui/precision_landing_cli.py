@@ -5,7 +5,7 @@ from loguru import logger
 
 from application.drone_autolanding_service import DroneAutolandingService
 from application.tracking_service import TrackingService
-from infrastructure.communication.webrtc_content_diffuser import WebRTCConfig
+from infrastructure.communication.webrtc_content_streamer import WebRTCConfig
 from infrastructure.persistence.autolander_configuration_reader import AutolanderConfigurationReader
 from infrastructure.persistence.calibration_repository import CalibrationRepository
 from infrastructure.vision.opencv_aruco_detector import OpenCVArucoDetectorConfig

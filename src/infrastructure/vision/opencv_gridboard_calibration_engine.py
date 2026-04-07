@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Iterable, Optional, Tuple, Sequence
+from typing import Iterable, Optional, Sequence, Tuple
 
 import cv2
 import numpy as np
