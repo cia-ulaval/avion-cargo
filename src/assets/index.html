@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <title>WebRTC Viewer</title>
+  <style>
+    body { font-family: sans-serif; margin: 16px; }
+    video { width: 100%; max-width: 960px; background: #111; border-radius: 12px; border-radius: 12px; }
+    pre { max-width: 960px; background: #f6f6f6; padding: 12px; border-radius: 12px; }
+    .row { margin-top: 12px; display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+    button { padding: 10px 14px; border-radius: 10px; border: 1px solid #ccc; cursor: pointer; }
+  </style>
+</head>
+<body>
+  <h2>WebRTC stream</h2>
+
+  <video id="v" autoplay playsinline controls muted></video>
+
+  <div class="row">
+    <button onclick="start()">Start</button>
+    <button onclick="stop()">Stop</button>
+    <span id="st"></span>
+  </div>
+
+  <h3>Telemetry (DataChannel)</h3>
+  <pre id="telemetry">(no data)</pre>
+  <script src="static/webRTCViewer.js"></script>
+</body>
+</html>
