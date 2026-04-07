@@ -9,7 +9,7 @@ from application.tracking_service import TrackingService
 from domain.drone import Drone
 from domain.models import Pose3D
 from infrastructure.camera.frame_buffer import FrameBuffer
-from infrastructure.communication.webrtc_content_diffuser import WebRTCConfig, WebRTCContentStreamer
+from infrastructure.communication.webrtc_content_streamer import WebRTCConfig, WebRTCContentStreamer
 from infrastructure.vision.pose_buffer import PoseBuffer
 
 
