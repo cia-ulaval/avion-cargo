@@ -2,28 +2,348 @@
 <html lang="en">
 <head>
   <meta charset="utf-8"/>
-  <title>WebRTC Viewer</title>
-  <style>
-    body { font-family: sans-serif; margin: 16px; }
-    video { width: 100%; max-width: 960px; background: #111; border-radius: 12px; border-radius: 12px; }
-    pre { max-width: 960px; background: #f6f6f6; padding: 12px; border-radius: 12px; }
-    .row { margin-top: 12px; display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
-    button { padding: 10px 14px; border-radius: 10px; border: 1px solid #ccc; cursor: pointer; }
-  </style>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>AvionCargo Autolander</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="/static/main.css"/>
 </head>
 <body>
-  <h2>WebRTC stream</h2>
+  <div class="app-shell">
+    <header class="topbar card">
+      <div class="brand-block">
+        <div class="brand-mark">DJI</div>
+        <div class="brand-copy">
+          <span class="brand-title">AvionCargo</span>
+          <span class="brand-subtitle">AUTOLANDER</span>
+        </div>
+      </div>
 
-  <video id="v" autoplay playsinline controls muted></video>
+      <div class="topbar-summary">
+        <span class="summary-chip">
+          <span class="dot dot-live" id="header-link-dot"></span>
+          <span id="link-state-label">Offline link</span>
+        </span>
+        <span class="summary-chip">
+          Marker
+          <strong id="marker-lock-chip">Searching</strong>
+        </span>
+        <span class="summary-chip">
+          Battery
+          <strong id="battery-chip">--</strong>
+        </span>
+      </div>
 
-  <div class="row">
-    <button onclick="start()">Start</button>
-    <button onclick="stop()">Stop</button>
-    <span id="st"></span>
+      <div class="topbar-actions">
+        <button class="icon-chip" id="startButton" type="button">Start</button>
+        <button class="icon-chip icon-chip-muted" id="stopButton" type="button">Stop</button>
+      </div>
+    </header>
+
+    <div class="workspace">
+      <aside class="side-nav card" aria-label="Primary navigation">
+        <button class="nav-button nav-button-active" type="button" aria-label="Live stream">
+          <span class="nav-icon">LV</span>
+          <span class="nav-label">Live</span>
+        </button>
+        <button class="nav-button" type="button" aria-label="Camera">
+          <span class="nav-icon">CM</span>
+          <span class="nav-label">Cam</span>
+        </button>
+        <button class="nav-button" type="button" aria-label="Target tracking">
+          <span class="nav-icon">TG</span>
+          <span class="nav-label">Track</span>
+        </button>
+        <button class="nav-button" type="button" aria-label="Map">
+          <span class="nav-icon">MP</span>
+          <span class="nav-label">Map</span>
+        </button>
+        <button class="nav-button" type="button" aria-label="Settings">
+          <span class="nav-icon">CF</span>
+          <span class="nav-label">Cfg</span>
+        </button>
+        <button class="nav-button nav-button-power" type="button" aria-label="Power">
+          <span class="nav-icon">PW</span>
+          <span class="nav-label">Power</span>
+        </button>
+      </aside>
+
+      <main class="main-column">
+        <section class="video-panel card">
+          <div class="panel-head">
+            <div>
+              <p class="eyebrow">Approach view</p>
+              <h1>Precision landing console</h1>
+            </div>
+            <div class="panel-head-status">
+              <span class="status-pill" id="stream-state-pill">Offline</span>
+              <span class="status-pill status-pill-accent" id="target-state-pill">Target lost</span>
+            </div>
+          </div>
+
+          <div class="video-stage">
+            <video id="v" autoplay playsinline controls muted></video>
+            <div class="video-fallback">
+              <span class="fallback-badge">Live feed</span>
+              <p>Waiting for WebRTC video stream</p>
+            </div>
+
+            <div class="reticle" aria-hidden="true">
+              <div class="reticle-ring"></div>
+              <div class="reticle-square"></div>
+              <div class="reticle-center"></div>
+            </div>
+
+            <div class="hud-banner">
+              <div class="hud-banner-block">
+                <span class="hud-label">Marker ID</span>
+                <strong id="marker-id">--</strong>
+              </div>
+              <div class="hud-banner-block">
+                <span class="hud-label">Tracking</span>
+                <strong id="tracking-status">Searching</strong>
+              </div>
+              <div class="hud-banner-block">
+                <span class="hud-label">Telemetry</span>
+                <strong id="telemetry-age">No signal</strong>
+              </div>
+            </div>
+
+            <div class="hud-strip">
+              <div class="hud-metric">
+                <span class="hud-label">X</span>
+                <strong id="pose-x">--</strong>
+              </div>
+              <div class="hud-metric">
+                <span class="hud-label">Y</span>
+                <strong id="pose-y">--</strong>
+              </div>
+              <div class="hud-metric">
+                <span class="hud-label">Z</span>
+                <strong id="pose-z">--</strong>
+              </div>
+              <div class="hud-metric">
+                <span class="hud-label">Roll</span>
+                <strong id="att-roll">--</strong>
+              </div>
+              <div class="hud-metric">
+                <span class="hud-label">Pitch</span>
+                <strong id="att-pitch">--</strong>
+              </div>
+              <div class="hud-metric">
+                <span class="hud-label">Yaw</span>
+                <strong id="att-yaw">--</strong>
+              </div>
+            </div>
+          </div>
+
+          <div class="panel-foot">
+            <div class="connection-copy">
+              <span class="dot dot-live" id="connection-dot"></span>
+              <span id="st">Stopped</span>
+            </div>
+            <div class="panel-foot-meta">
+              <span>Last update <strong id="last-update-label">never</strong></span>
+              <span>Raw channel <strong id="channel-state-label">idle</strong></span>
+            </div>
+          </div>
+        </section>
+
+        <section class="lower-grid">
+          <article class="card support-card map-card">
+            <div class="support-card-head">
+              <div>
+                <p class="eyebrow">Relative pose</p>
+                <h2>Target map</h2>
+              </div>
+              <span class="mini-pill" id="camera-frame-pill">Camera frame</span>
+            </div>
+            <div class="map-stage">
+              <div class="map-grid"></div>
+              <div class="map-crosshair"></div>
+              <div class="map-target"></div>
+              <div class="map-drone" id="map-drone"></div>
+            </div>
+            <div class="support-metrics">
+              <div>
+                <span class="meta-label">UAV X</span>
+                <strong id="uav-pose-x">--</strong>
+              </div>
+              <div>
+                <span class="meta-label">UAV Y</span>
+                <strong id="uav-pose-y">--</strong>
+              </div>
+              <div>
+                <span class="meta-label">UAV Z</span>
+                <strong id="uav-pose-z">--</strong>
+              </div>
+            </div>
+          </article>
+
+          <article class="card support-card summary-card">
+            <div class="support-card-head">
+              <div>
+                <p class="eyebrow">Mission summary</p>
+                <h2>Flight data</h2>
+              </div>
+              <span class="mini-pill" id="mode-chip">UNKNOWN</span>
+            </div>
+            <div class="summary-grid">
+              <div class="summary-row">
+                <span>Altitude</span>
+                <strong id="altitude-main">--</strong>
+              </div>
+              <div class="summary-row">
+                <span>Ground speed</span>
+                <strong id="speed-main">--</strong>
+              </div>
+              <div class="summary-row">
+                <span>Battery</span>
+                <strong id="battery-main">--</strong>
+              </div>
+              <div class="summary-row">
+                <span>GPS fix</span>
+                <strong id="gps-main">--</strong>
+              </div>
+              <div class="summary-row">
+                <span>Latitude</span>
+                <strong id="lat-main">--</strong>
+              </div>
+              <div class="summary-row">
+                <span>Longitude</span>
+                <strong id="lon-main">--</strong>
+              </div>
+            </div>
+          </article>
+
+          <article class="card support-card compass-card">
+            <div class="support-card-head">
+              <div>
+                <p class="eyebrow">Heading</p>
+                <h2>Compass</h2>
+              </div>
+              <span class="mini-pill" id="heading-chip">--</span>
+            </div>
+            <div class="compass" id="compass">
+              <div class="compass-ring"></div>
+              <div class="compass-cardinal cardinal-n">N</div>
+              <div class="compass-cardinal cardinal-e">E</div>
+              <div class="compass-cardinal cardinal-s">S</div>
+              <div class="compass-cardinal cardinal-w">W</div>
+              <div class="compass-needle" id="compass-needle"></div>
+              <div class="compass-core"></div>
+              <div class="compass-readout" id="heading-readout">---</div>
+            </div>
+          </article>
+        </section>
+
+        <details class="telemetry-drawer card">
+          <summary>Raw telemetry</summary>
+          <pre id="telemetry">(no data)</pre>
+        </details>
+      </main>
+
+      <aside class="right-rail">
+        <section class="card status-card">
+          <div class="support-card-head">
+            <div>
+              <p class="eyebrow">Vehicle state</p>
+              <h2>Drone status</h2>
+            </div>
+            <span class="status-aircraft">AIR</span>
+          </div>
+
+          <dl class="status-list">
+            <div class="status-line">
+              <dt>Mode</dt>
+              <dd id="mode-value">UNKNOWN</dd>
+            </div>
+            <div class="status-line">
+              <dt>Armed</dt>
+              <dd id="armed-value">--</dd>
+            </div>
+            <div class="status-line">
+              <dt>Ground speed</dt>
+              <dd id="speed-value">--</dd>
+            </div>
+            <div class="status-line">
+              <dt>Altitude</dt>
+              <dd id="altitude-value">--</dd>
+            </div>
+            <div class="status-line">
+              <dt>Battery</dt>
+              <dd id="battery-value">--</dd>
+            </div>
+            <div class="status-line">
+              <dt>Voltage</dt>
+              <dd id="voltage-value">--</dd>
+            </div>
+            <div class="status-line">
+              <dt>GPS fix</dt>
+              <dd id="gps-value">--</dd>
+            </div>
+            <div class="status-line">
+              <dt>Heartbeat</dt>
+              <dd id="heartbeat-value">--</dd>
+            </div>
+            <div class="status-line">
+              <dt>Signal GPIO</dt>
+              <dd id="signal-value">--</dd>
+            </div>
+          </dl>
+        </section>
+
+        <section class="card modes-card">
+          <div class="support-card-head">
+            <div>
+              <p class="eyebrow">Mode selector</p>
+              <h2>Flight modes</h2>
+            </div>
+            <span class="mini-pill">Domain enum</span>
+          </div>
+          <div class="mode-grid">
+            <button class="mode-button" data-mode="STABILIZE" type="button">STABILIZE</button>
+            <button class="mode-button" data-mode="ALT_HOLD" type="button">ALT HOLD</button>
+            <button class="mode-button" data-mode="LOITER" type="button">LOITER</button>
+            <button class="mode-button" data-mode="GUIDED" type="button">GUIDED</button>
+            <button class="mode-button" data-mode="AUTO" type="button">AUTO</button>
+            <button class="mode-button" data-mode="RTL" type="button">RTL</button>
+            <button class="mode-button" data-mode="LAND" type="button">LAND</button>
+          </div>
+        </section>
+
+        <section class="card geo-card">
+          <div class="support-card-head">
+            <div>
+              <p class="eyebrow">Navigation</p>
+              <h2>Geo metrics</h2>
+            </div>
+            <span class="mini-pill" id="relative-alt-pill">--</span>
+          </div>
+          <div class="geo-list">
+            <div class="geo-item">
+              <span class="geo-key">Relative Alt</span>
+              <strong id="relative-alt-value">--</strong>
+            </div>
+            <div class="geo-item">
+              <span class="geo-key">Vertical speed</span>
+              <strong id="vertical-speed-value">--</strong>
+            </div>
+            <div class="geo-item">
+              <span class="geo-key">Coordinates</span>
+              <strong id="coordinates-value">--</strong>
+            </div>
+            <div class="geo-item">
+              <span class="geo-key">Heading</span>
+              <strong id="heading-value">--</strong>
+            </div>
+          </div>
+        </section>
+      </aside>
+    </div>
   </div>
 
-  <h3>Telemetry (DataChannel)</h3>
-  <pre id="telemetry">(no data)</pre>
-  <script src="static/webRTCViewer.js"></script>
+  <script src="/static/webRTCViewer.js"></script>
 </body>
 </html>
