@@ -90,13 +90,13 @@ class DroneAutolandingService:
         while self._tracking_started:
             drone_status = self.drone.get_status()
             self.drone_status_buffer.set_value(drone_status)
-            logger.info(f"Drone status: {drone_status}")
+            # logger.info(f"Drone status: {drone_status}")
 
             uav_pose = self.pose_buffer.get_uav_pose_value()
             if uav_pose is not None:
                 altitude_to_use = drone_status.relative_altitude if drone_status.relative_altitude > 4.5 else uav_pose.z
                 new_uav_pose = Pose3D(x=uav_pose.x, y=uav_pose.y, z=altitude_to_use)
-                logger.info(f"UAV pose sent is {new_uav_pose}")
+                # logger.info(f"UAV pose sent is {new_uav_pose}")
                 target = self.aruco_tracker.get_target()
                 target_size = target.length, target.length
                 self.drone.land_on_target(new_uav_pose, target_size)
