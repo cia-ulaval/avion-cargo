@@ -13,7 +13,9 @@
   <div class="app-shell">
     <header class="topbar card">
       <div class="brand-block">
-        <div class="brand-mark">DJI</div>
+        <div class="brand-mark">
+          <img src="static/images/logoEquipeAeroUlaval.png" alt="logo">
+        </div>
         <div class="brand-copy">
           <span class="brand-title">AvionCargo</span>
           <span class="brand-subtitle">AUTOLANDER</span>
@@ -83,7 +85,7 @@
           </div>
 
           <div class="video-stage">
-            <video id="v" autoplay playsinline controls muted></video>
+            <video id="video-field" autoplay playsinline controls muted></video>
             <div class="video-fallback">
               <span class="fallback-badge">Live feed</span>
               <p>Waiting for WebRTC video stream</p>
@@ -104,10 +106,7 @@
                 <span class="hud-label">Tracking</span>
                 <strong id="tracking-status">Searching</strong>
               </div>
-              <div class="hud-banner-block">
-                <span class="hud-label">Telemetry</span>
-                <strong id="telemetry-age">No signal</strong>
-              </div>
+
             </div>
 
             <div class="hud-strip">
@@ -143,10 +142,6 @@
               <span class="dot dot-live" id="connection-dot"></span>
               <span id="st">Stopped</span>
             </div>
-            <div class="panel-foot-meta">
-              <span>Last update <strong id="last-update-label">never</strong></span>
-              <span>Raw channel <strong id="channel-state-label">idle</strong></span>
-            </div>
           </div>
         </section>
 
@@ -181,66 +176,38 @@
             </div>
           </article>
 
-          <article class="card support-card summary-card">
+          <article class="card geo-card geo-card-main">
             <div class="support-card-head">
               <div>
-                <p class="eyebrow">Mission summary</p>
-                <h2>Flight data</h2>
+                <p class="eyebrow">Navigation</p>
+                <h2>Geo metrics</h2>
               </div>
-              <span class="mini-pill" id="mode-chip">UNKNOWN</span>
+              <span class="mini-pill" id="relative-alt-pill">--</span>
             </div>
-            <div class="summary-grid">
-              <div class="summary-row">
-                <span>Altitude</span>
-                <strong id="altitude-main">--</strong>
+            <div class="geo-list">
+              <div class="geo-item">
+                <span class="geo-key">Relative Alt</span>
+                <strong id="relative-alt-value">--</strong>
               </div>
-              <div class="summary-row">
-                <span>Ground speed</span>
-                <strong id="speed-main">--</strong>
+              <div class="geo-item">
+                <span class="geo-key">Vertical speed</span>
+                <strong id="vertical-speed-value">--</strong>
               </div>
-              <div class="summary-row">
-                <span>Battery</span>
-                <strong id="battery-main">--</strong>
+              <div class="geo-item">
+                <span class="geo-key">Coordinates</span>
+                <strong id="coordinates-value">--</strong>
               </div>
-              <div class="summary-row">
-                <span>GPS fix</span>
-                <strong id="gps-main">--</strong>
+              <div class="geo-item">
+                <span class="geo-key">Heading</span>
+                <strong id="heading-value">--</strong>
               </div>
-              <div class="summary-row">
-                <span>Latitude</span>
-                <strong id="lat-main">--</strong>
-              </div>
-              <div class="summary-row">
-                <span>Longitude</span>
-                <strong id="lon-main">--</strong>
-              </div>
-            </div>
-          </article>
-
-          <article class="card support-card compass-card">
-            <div class="support-card-head">
-              <div>
-                <p class="eyebrow">Heading</p>
-                <h2>Compass</h2>
-              </div>
-              <span class="mini-pill" id="heading-chip">--</span>
-            </div>
-            <div class="compass" id="compass">
-              <div class="compass-ring"></div>
-              <div class="compass-cardinal cardinal-n">N</div>
-              <div class="compass-cardinal cardinal-e">E</div>
-              <div class="compass-cardinal cardinal-s">S</div>
-              <div class="compass-cardinal cardinal-w">W</div>
-              <div class="compass-needle" id="compass-needle"></div>
-              <div class="compass-core"></div>
-              <div class="compass-readout" id="heading-readout">---</div>
             </div>
           </article>
         </section>
 
         <details class="telemetry-drawer card">
           <summary>Raw telemetry</summary>
-          <pre id="telemetry">(no data)</pre>
+          <div id="telemetry" class="telemetry-tree">(no data)</div>
         </details>
       </main>
 
@@ -251,7 +218,7 @@
               <p class="eyebrow">Vehicle state</p>
               <h2>Drone status</h2>
             </div>
-            <span class="status-aircraft">AIR</span>
+            <span class="status-aircraft"></span>
           </div>
 
           <dl class="status-list">
@@ -270,6 +237,14 @@
             <div class="status-line">
               <dt>Altitude</dt>
               <dd id="altitude-value">--</dd>
+            </div>
+            <div class="status-line">
+              <dt>Latitude</dt>
+              <dd id="latitude-value">--</dd>
+            </div>
+            <div class="status-line">
+              <dt>Longitude</dt>
+              <dd id="longitude-value">--</dd>
             </div>
             <div class="status-line">
               <dt>Battery</dt>
@@ -300,7 +275,7 @@
               <p class="eyebrow">Mode selector</p>
               <h2>Flight modes</h2>
             </div>
-            <span class="mini-pill">Domain enum</span>
+            <span class="mini-pill">Available modes</span>
           </div>
           <div class="mode-grid">
             <button class="mode-button" data-mode="STABILIZE" type="button">STABILIZE</button>
@@ -313,37 +288,10 @@
           </div>
         </section>
 
-        <section class="card geo-card">
-          <div class="support-card-head">
-            <div>
-              <p class="eyebrow">Navigation</p>
-              <h2>Geo metrics</h2>
-            </div>
-            <span class="mini-pill" id="relative-alt-pill">--</span>
-          </div>
-          <div class="geo-list">
-            <div class="geo-item">
-              <span class="geo-key">Relative Alt</span>
-              <strong id="relative-alt-value">--</strong>
-            </div>
-            <div class="geo-item">
-              <span class="geo-key">Vertical speed</span>
-              <strong id="vertical-speed-value">--</strong>
-            </div>
-            <div class="geo-item">
-              <span class="geo-key">Coordinates</span>
-              <strong id="coordinates-value">--</strong>
-            </div>
-            <div class="geo-item">
-              <span class="geo-key">Heading</span>
-              <strong id="heading-value">--</strong>
-            </div>
-          </div>
-        </section>
       </aside>
     </div>
   </div>
 
-  <script src="/static/webRTCViewer.js"></script>
+  <script type="module" src="/static/main.js"></script>
 </body>
 </html>
