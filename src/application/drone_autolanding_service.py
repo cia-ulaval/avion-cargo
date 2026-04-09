@@ -1,7 +1,7 @@
 import time
 from dataclasses import asdict
 from threading import Thread
-from typing import Optional
+from typing import Any, Optional
 
 from loguru import logger
 
@@ -9,6 +9,7 @@ from application.tracking_service import TrackingService
 from domain.drone import Drone
 from domain.models import Pose3D
 from infrastructure.camera.frame_buffer import FrameBuffer
+from infrastructure.communication.drone_status_buffer import DroneStatusBuffer
 from infrastructure.communication.webrtc_content_streamer import WebRTCConfig, WebRTCContentStreamer
 from infrastructure.vision.pose_buffer import PoseBuffer
 
@@ -19,6 +20,7 @@ class DroneAutolandingService:
         self.aruco_tracker = tracker
         self.frame_buffer = FrameBuffer()
         self.pose_buffer = PoseBuffer()
+        self.drone_status_buffer = DroneStatusBuffer()
         self.content_streamer = WebRTCContentStreamer(self.frame_buffer, content_streamer_config)
         self._threads: dict[str, Thread] = dict()
         self._tracking_started: bool = False
@@ -30,13 +32,11 @@ class DroneAutolandingService:
             start_time = time.monotonic()
 
             vis, tracking_result = self.aruco_tracker.track_target()
-            self.frame_buffer.set_value(vis, asdict(tracking_result))
+            self.frame_buffer.set_value(vis, tracking_result.to_dict())
             self.pose_buffer.set_value(tracking_result.pose)
 
             uav_pose = self._to_uav_pose(tracking_result.pose)
             self.pose_buffer.set_uav_pose_value(uav_pose)
-
-            self.content_streamer.send_data(tracking_result.to_dict())
 
             end_time = time.monotonic()
             elapsed_time = end_time - start_time
@@ -44,6 +44,31 @@ class DroneAutolandingService:
 
             if remaining_time > 0:
                 time.sleep(remaining_time)
+
+    def _telemetry_loop(self):
+        waiting_period = 1.0 / max(1, self.aruco_tracker.camera.get_fps())
+
+        while self._tracking_started:
+            start_time = time.monotonic()
+
+            self.content_streamer.send_data(self._build_telemetry_payload())
+
+            end_time = time.monotonic()
+            elapsed_time = end_time - start_time
+            remaining_time = waiting_period - elapsed_time
+
+            if remaining_time > 0:
+                time.sleep(remaining_time)
+
+    def _build_telemetry_payload(self) -> dict[str, Any]:
+        _frame, tracking_metadata = self.frame_buffer.get_value()
+        payload: dict[str, Any] = dict(tracking_metadata or {})
+
+        drone_status = self.drone_status_buffer.get_value()
+        if drone_status is not None:
+            payload["drone"] = asdict(drone_status)
+
+        return payload
 
     @staticmethod
     def _to_uav_pose(estimated_pose: Optional[Pose3D]) -> Optional[Pose3D]:
@@ -64,6 +89,7 @@ class DroneAutolandingService:
 
         while self._tracking_started:
             drone_status = self.drone.get_status()
+            self.drone_status_buffer.set_value(drone_status)
             logger.info(f"Drone status: {drone_status}")
 
             uav_pose = self.pose_buffer.get_uav_pose_value()
@@ -79,8 +105,11 @@ class DroneAutolandingService:
         self._tracking_started = True
         self.aruco_tracker.camera.open()
         tracking_thread = Thread(target=self._tracking_target_loop, daemon=True)
+        telemetry_thread = Thread(target=self._telemetry_loop, daemon=True)
         self._threads["tracking"] = tracking_thread
+        self._threads["telemetry"] = telemetry_thread
         tracking_thread.start()
+        telemetry_thread.start()
 
     def stream_video(self):
         if not self._tracking_started:
@@ -104,9 +133,12 @@ class DroneAutolandingService:
     def stop_tracking(self):
         if not self._tracking_started:
             return
-        tracking_thread = self._threads.get("tracking")
-        tracking_thread.join()
         self._tracking_started = False
+        tracking_thread = self._threads.get("tracking")
+        telemetry_thread = self._threads.get("telemetry")
+        tracking_thread.join()
+        if telemetry_thread:
+            telemetry_thread.join()
 
     def stop(self):
         self.stop_streaming()
