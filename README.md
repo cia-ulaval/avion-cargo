@@ -13,7 +13,8 @@
   </a>
 
   <h1 align="center">
-  AUTOLANDER
+    <span>AvionCargo</span>
+    <span style="color: #4db7ff; font-size: 0.86rem; letter-spacing: 0.18em;">AUTOLANDER</span>
   </h1>
 </div>
 
