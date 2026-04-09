@@ -231,6 +231,10 @@ video {
   color: var(--text);
 }
 
+.nav-button-unactive{
+  cursor: vertical-text !important;
+}
+
 .nav-button-power {
   margin-top: auto;
 }

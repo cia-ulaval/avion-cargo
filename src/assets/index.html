@@ -49,24 +49,24 @@
           <span class="nav-icon">LV</span>
           <span class="nav-label">Live</span>
         </button>
-        <button class="nav-button" type="button" aria-label="Camera">
-          <span class="nav-icon">CM</span>
+        <button class="nav-button nav-button-unactive" type="button" aria-label="Camera">
+          <i data-lucide="camera"></i>
           <span class="nav-label">Cam</span>
         </button>
-        <button class="nav-button" type="button" aria-label="Target tracking">
-          <span class="nav-icon">TG</span>
+        <button class="nav-button nav-button-unactive" type="button" aria-label="Target tracking">
+          <i data-lucide="crosshair"></i>
           <span class="nav-label">Track</span>
         </button>
-        <button class="nav-button" type="button" aria-label="Map">
-          <span class="nav-icon">MP</span>
+        <button class="nav-button nav-button-unactive" type="button" aria-label="Map">
+          <i data-lucide="map-pinned"></i>
           <span class="nav-label">Map</span>
         </button>
-        <button class="nav-button" type="button" aria-label="Settings">
-          <span class="nav-icon">CF</span>
+        <button class="nav-button nav-button-unactive" type="button" aria-label="Settings">
+          <i data-lucide="settings"></i>
           <span class="nav-label">Cfg</span>
         </button>
-        <button class="nav-button nav-button-power" type="button" aria-label="Power">
-          <span class="nav-icon">PW</span>
+        <button class="nav-button nav-button-power nav-button-unactive" type="button" aria-label="Power">
+          <i data-lucide="power"></i>
           <span class="nav-label">Power</span>
         </button>
       </aside>
@@ -293,5 +293,9 @@
   </div>
 
   <script type="module" src="/static/main.js"></script>
+  <script src="https://unpkg.com/lucide@1.8.0/dist/umd/lucide.min.js"></script>
+  <script>
+    lucide.createIcons();
+  </script>
 </body>
 </html>
