@@ -228,6 +228,19 @@ n’a pas été testé de manière rigoureuse.
 > Université Laval  
 >
 > Hiver 2026
+> 
+------------------------------------------------------------------------------------------------------------------------
+
+<div align="center" style="margin: 3rem 0 1rem 0; display:flex; justify-content: center; align-items: center; gap: 1rem">
+  <a href="./">
+    <img src="assets/img/CIA_LOGO.webp" alt="Project logo" width="140" height="140">
+  </a>
+
+  <a href="./">
+    <img src="assets/img/ula_cropped.png" alt="Project logo" width="140" height="140">
+  </a>
+  
+</div>
 
 <!-- BADGES LINKS -->
 
