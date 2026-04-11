@@ -19,7 +19,7 @@
 </div>
 
 
-**AUTOLANDER** est un projet de vision embarquée visant à faciliter l’atterrissage de précision
+**AUTOLANDER** est un projet de vision numérique embarquée visant à faciliter l’atterrissage de précision pour drones
 à l’aide de tags ArUco et d’une caméra sur **Raspberry Pi**.  
 
 Le dépôt inclut des scripts pour calibrer la caméra et estimer la pose (distance/orientation) d’un tag détecté.
