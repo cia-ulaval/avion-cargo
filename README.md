@@ -13,8 +13,7 @@
   </a>
 
   <h1 align="center">
-    <span>AvionCargo</span>
-    <span style="color: #4db7ff; font-size: 0.86rem; letter-spacing: 0.18em;">AUTOLANDER</span>
+    AvionCargo $\color{#4db7ff}{\text{AUTOLANDER}}$
   </h1>
 </div>
 
@@ -36,22 +35,20 @@ Pour exécuter ou contribuer à ce projet, assurez-vous d’avoir installé :
 
 ---
 
-## Commandes à connaître
+## Commandes
 
 ### 1. Ajouter et supprimer des dépendances
-
-Il est recommandé d’utiliser `poetry` pour la gestion des dépendances plutôt que `pip`.  
-Poetry permet de reproduire exactement l’environnement de travail (versions de dépendances identiques) et crée un
-environnement virtuel afin d’éviter de polluer vos packages Python système.
 
 #### 1.1 Ajouter une dépendance
 
 ##### 1.1.1 Ajout d’une dépendance « principale »
+
 ```shell
 poetry add <nom_de_la_dependance>
 ```
 
 ##### 1.1.2 Ajout d’une dépendance dans un groupe
+
 ```shell
 poetry add --group <nom_du_groupe> <nom_de_la_dependance>
 ```
@@ -64,9 +61,9 @@ Par exemple, la commande `poetry add --group dev flake8` ajoute l’outil `flake
 poetry remove <nom_de_la_dependance>
 ```
 
-> Il est normal qu’à l’ajout ou à la suppression d’une dépendance, les fichiers
-> [pyproject.toml](pyproject.toml) et [poetry.lock](poetry.lock) soient modifiés automatiquement.
-> Veuillez faire un commit lors de ces changements.
+> À l’ajout ou à la suppression d’une dépendance, les fichiers
+> [pyproject.toml](pyproject.toml) et [poetry.lock](poetry.lock) sont modifiés automatiquement.
+> C'est normal.
 
 ---
 
@@ -117,7 +114,10 @@ Pour plus d’informations sur la commande `precision_landing`:
 ```shell
 poetry run precion_landing --help
 ```
-#### 2.3.2 Paramètres à mettre à jour sur le Flight Controller
+
+#### 2.3.2 Paramètres et valeurs à mettre à jour dans le Flight Controller
+
+:information_source: Pour plus d'information sur l'atterrissage de précicion avec Ardupilot, lire [Precision Landing and Loiter](https://ardupilot.org/copter/docs/precision-landing-and-loiter.html)
 
 ---
 
