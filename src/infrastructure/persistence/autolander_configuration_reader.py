@@ -81,12 +81,19 @@ class AutolanderConfigurationReader:
         fps = int(self._require(camera, "fps", "camera"))
         calibration_filepath = str(self._require(camera, "calibration_filepath", "camera"))
         gz_simulation = self._require(camera, "gz_simulation", "camera")
+        calibration_path = Path(calibration_filepath)
+        if calibration_filepath == "":
+            resolved_calibration_path = None
+        else:
+            resolved_calibration_path = (
+                calibration_path if calibration_path.is_absolute() else self.config_path.parent / calibration_path
+            ).resolve()
 
         return CameraConfiguration(
             id=camera_id,
             use_picamera=use_picamera,
             fps=fps,
-            calibration_filepath=Path(calibration_filepath).resolve(),
+            calibration_filepath=resolved_calibration_path,
             simulation_topic_name=gz_simulation.get("topic_name"),
         )
 

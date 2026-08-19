@@ -24,9 +24,12 @@ class CalibrationRepository:
 
         np.savez(
             file_path,
+            width=calib.image_width,
+            height=calib.image_height,
             camera_width=calib.image_width,
             camera_height=calib.image_height,
             camera_matrix=calib.camera_matrix,
+            dist_coeffs=calib.camera_distortion_matrix,
             camera_distortion_matrix=calib.camera_distortion_matrix,
         )
         return file_path
@@ -48,9 +51,11 @@ class CalibrationRepository:
         data = np.load(file_path)
         return CalibrationData(
             camera_matrix=data["camera_matrix"],
-            dist_coeffs=data["camera_distortion_matrix"],
-            camera_height=data["height"],
-            camera_width=data["width"],
+            dist_coeffs=(
+                data["camera_distortion_matrix"] if "camera_distortion_matrix" in data.files else data["dist_coeffs"]
+            ),
+            camera_height=int(data["camera_height"] if "camera_height" in data.files else data["height"]),
+            camera_width=int(data["camera_width"] if "camera_width" in data.files else data["width"]),
         )
 
     def _load_calibration_data_from_yaml_file(self, file_path: Path) -> CalibrationData:
