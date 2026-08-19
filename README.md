@@ -123,7 +123,7 @@ poetry run precion_landing --help
 
 ### 3. Activer l’environnement virtuel Poetry dans le terminal courant
 
-Activer l’environnement virtuel Poetry dans la session courante permet d’utiliser les commandes sans `poetry run ...`.  
+Activer l’environnement virtuel Poetry dans la session courante permet d’utiliser les commandes sans `poetry run [nom_commande]`.  
 Une fois activé, les scripts définis dans [pyproject.toml](pyproject.toml) (section `[tool.poetry.scripts]`) deviennent accessibles comme des commandes système.
 
 ```shell
