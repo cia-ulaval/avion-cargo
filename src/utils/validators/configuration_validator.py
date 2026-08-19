@@ -119,7 +119,7 @@ class ConfigurationValidator:
 
         self._req_number(tm, "length", "vision.targeted_marker", min_exclusive=0.0)
         self._req_int(tm, "id", "vision.targeted_marker", min_=0)
-        self._req_int(tm, "aruco_dictionary", "vision.targeted_marker", min_=0)
+        self._req_int(tm, "aruco_dictionary", "vision.targeted_marker", min_=0, max_=16)
         self._no_extra_keys(tm, {"length", "id", "aruco_dictionary"}, "vision.targeted_marker")
         self._no_extra_keys(vision, {"targeted_marker"}, "vision")
 

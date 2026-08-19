@@ -58,7 +58,3 @@ class OpenCVCamera(Camera):
 
     def get_fps(self) -> int:
         return int(self._cap.get(cv2.CAP_PROP_FPS))
-
-
-class OpenCVCaptureAdapter:
-    pass

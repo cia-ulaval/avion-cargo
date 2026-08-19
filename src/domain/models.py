@@ -78,8 +78,11 @@ class TargetedMarker:
         if not np.isfinite(self.length) or self.length <= 0.0:
             raise InvalidMarkerLengthError(f"marker_length_m must be > 0, got {self.length}")
 
-        if not self.dictionary >= 1 and self.dictionary <= 16:
-            raise ValueError("dictionary must be between 1 and 16")
+        if not isinstance(self.dictionary, int) or isinstance(self.dictionary, bool):
+            raise ValueError("dictionary must be an integer")
+
+        if not 0 <= self.dictionary <= 16:
+            raise ValueError("dictionary must be between 0 and 16")
 
 
 @dataclass(frozen=True, slots=True)
