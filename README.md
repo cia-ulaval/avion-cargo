@@ -3,7 +3,7 @@
 [![Made with Python][python-shield]][python-url]
 [![Built with Poetry][poetry-shield]][poetry-url]
 [![Made for Raspberry Pi][rpi-shield]][rpi-url]
-[![Contributing][contributing-shield]][contributing-url]
+
 
 </div>
 
@@ -256,9 +256,6 @@ n’a pas été testé de manière rigoureuse.
 
 [rpi-shield]: https://img.shields.io/badge/Made%20for-Raspberry%20Pi-C51A4A?style=for-the-badge&logo=raspberrypi&logoColor=red
 [rpi-url]: https://www.raspberrypi.com/
-
-[contributing-shield]: https://img.shields.io/badge/Contributing-Team%20only-0F766E?style=for-the-badge
-[contributing-url]: ./CONTRIBUTING.md
 
 <!-- Docs links -->
 
