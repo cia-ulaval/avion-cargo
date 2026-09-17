@@ -89,6 +89,10 @@ Pour plus d’informations sur le script de calibration :
 poetry run calibrate_camera --help
 ```
 
+L’option `-d` utilise les identifiants OpenCV de `0` à `16`, identiques pour la collecte et le calcul de calibration.
+La valeur par défaut `16` correspond à `DICT_ARUCO_ORIGINAL` ; choisir le dictionnaire de la mire imprimée
+(par exemple `-d 0` pour `DICT_4X4_50`).
+
 #### 2.3 Atterrissage de précision
 
 #### 2.3.1 Commande pour l'ordinateur de bord

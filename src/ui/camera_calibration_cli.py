@@ -13,7 +13,14 @@ from ui.common_functions import build_camera
 @click.option("-hm", "markers_y", required=True, type=int, help="Markers Y")
 @click.option("-l", "marker_length", required=True, type=float, help="Marker length (meters)")
 @click.option("-s", "marker_separation", required=True, type=float, help="Marker separation (meters)")
-@click.option("-d", "dictionary_id", default=16, show_default=True, type=int, help="Dictionary id (0..16)")
+@click.option(
+    "-d",
+    "dictionary_id",
+    default=16,
+    show_default=True,
+    type=click.IntRange(0, 16),
+    help="OpenCV dictionary id (0..16; 16 = DICT_ARUCO_ORIGINAL)",
+)
 @click.option("--rs", is_flag=True, help="Refine strategy (during calibration)")
 @click.option("--zt", is_flag=True, help="Zero tangential distortion")
 @click.option("--pc", is_flag=True, help="Fix principal point")

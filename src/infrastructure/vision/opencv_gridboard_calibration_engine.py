@@ -8,7 +8,6 @@ import numpy as np
 from domain.camera_calibration_engine import CameraCalibrationEngine
 from domain.errors import InvalidCalibrationError
 from domain.models import CalibrationReport
-from utils.common.aruco_dico_id_to_name import DICT_ID_TO_NAME
 
 
 def _make_detector_params() -> "cv2.aruco.DetectorParameters":
@@ -26,6 +25,8 @@ def _make_detector_params() -> "cv2.aruco.DetectorParameters":
 
 @dataclass(frozen=True, slots=True)
 class GridBoardSpec:
+    """Grid geometry and OpenCV predefined dictionary ID (0..16)."""
+
     markers_x: int
     markers_y: int
     marker_length_m: float
@@ -62,14 +63,10 @@ class OpenCVGridBoardCameraCalibrationEngine(CameraCalibrationEngine):
         self._board_spec = board
         self._cfg = cfg
 
-        if board.dictionary_id not in DICT_ID_TO_NAME:
+        if not 0 <= board.dictionary_id <= 16:
             raise ValueError("dictionary_id must be in 0..16")
 
-        dict_name = DICT_ID_TO_NAME[board.dictionary_id]
-        if not hasattr(cv2.aruco, dict_name):
-            raise RuntimeError(f"OpenCV does not provide {dict_name}")
-
-        self._dictionary = cv2.aruco.getPredefinedDictionary(getattr(cv2.aruco, dict_name))
+        self._dictionary = cv2.aruco.getPredefinedDictionary(board.dictionary_id)
         self._board = cv2.aruco.GridBoard(
             (board.markers_x, board.markers_y),
             board.marker_length_m,
