@@ -15,7 +15,7 @@ class CalibrationRepository(CalibrationReportStore):
         self.default_calibration_filedir: Path = Path("calibration_results")
         self.default_calibration_file_extension = ".npz"
         self.calibration_filename = "calibration"
-        self.saving_datetime_format = "%Y-%m-%d_%H-%M-%S"
+        self.saving_datetime_format = "%Y-%m-%d_%H-%M-%S_%f"
 
     def save_report(self, calib: CalibrationReport) -> Path:
         self.default_calibration_filedir.mkdir(parents=True, exist_ok=True)
@@ -25,6 +25,9 @@ class CalibrationRepository(CalibrationReportStore):
 
         np.savez(
             file_path,
+            calibration_date=calib.calibration_date.isoformat(),
+            avg_reprojection_error=calib.avg_reprojection_error,
+            aspect_ratio=np.nan if calib.aspect_ratio is None else calib.aspect_ratio,
             width=calib.image_width,
             height=calib.image_height,
             camera_width=calib.image_width,
@@ -49,25 +52,31 @@ class CalibrationRepository(CalibrationReportStore):
     def _load_calibration_data_from_npz_file(self, file_path: Path) -> CalibrationData:
         self._require_existing_calibration_file()
         file_path = Path(file_path)
-        data = np.load(file_path)
-        return CalibrationData(
-            camera_matrix=data["camera_matrix"],
-            dist_coeffs=(
-                data["camera_distortion_matrix"] if "camera_distortion_matrix" in data.files else data["dist_coeffs"]
-            ),
-            camera_height=int(data["camera_height"] if "camera_height" in data.files else data["height"]),
-            camera_width=int(data["camera_width"] if "camera_width" in data.files else data["width"]),
-        )
+        with np.load(file_path, allow_pickle=False) as data:
+            return CalibrationData(
+                camera_matrix=data["camera_matrix"],
+                dist_coeffs=(
+                    data["camera_distortion_matrix"] if "camera_distortion_matrix" in data.files else data["dist_coeffs"]
+                ),
+                camera_height=int(data["camera_height"] if "camera_height" in data.files else data["height"]),
+                camera_width=int(data["camera_width"] if "camera_width" in data.files else data["width"]),
+            )
 
     def _load_calibration_data_from_yaml_file(self, file_path: Path) -> CalibrationData:
         self._require_existing_calibration_file()
         fs = cv2.FileStorage(file_path, cv2.FILE_STORAGE_READ)
-        return CalibrationData(
-            camera_matrix=fs.getNode("camera_matrix").mat(),
-            dist_coeffs=fs.getNode("dist_coeffs").mat(),
-            camera_height=int(fs.getNode("resolution_height").real()),
-            camera_width=int(fs.getNode("resolution_width").real()),
-        )
+        try:
+            if not fs.isOpened():
+                raise ValueError(f"Cannot read OpenCV calibration: {file_path}")
+            return CalibrationData(
+                camera_matrix=fs.getNode("camera_matrix").mat(),
+                dist_coeffs=fs.getNode("dist_coeffs").mat(),
+                camera_height=int(fs.getNode("resolution_height").real()),
+                camera_width=int(fs.getNode("resolution_width").real()),
+            )
+        finally:
+            fs.release()
+
 
     def _require_existing_calibration_file(self) -> None:
         if self.calibration_filepath is None or not self.calibration_filepath.exists():
@@ -75,4 +84,4 @@ class CalibrationRepository(CalibrationReportStore):
 
     def _is_npz_file(self, file_path: Path) -> bool:
         self._require_existing_calibration_file()
-        return file_path.suffix == self.default_calibration_file_extension
+        return file_path.suffix.lower() == self.default_calibration_file_extension
