@@ -40,6 +40,7 @@ class GridBoardCalibrationConfig:
     fix_aspect_ratio: Optional[float] = None
     zero_tangent_dist: bool = False
     fix_principal_point: bool = False
+    min_views: int = 6
 
 
 class NotEnoughFramesError(InvalidCalibrationError):
@@ -62,6 +63,12 @@ class OpenCVGridBoardCameraCalibrationEngine(CameraCalibrationEngine):
     ) -> None:
         self._board_spec = board
         self._cfg = cfg
+        if cfg.min_views < 6:
+            raise ValueError("Calibration requires at least six distinct views")
+        if cfg.fix_aspect_ratio is not None and (
+            not np.isfinite(cfg.fix_aspect_ratio) or cfg.fix_aspect_ratio <= 0
+        ):
+            raise ValueError("Aspect ratio must be finite and positive")
 
         if not 0 <= board.dictionary_id <= 16:
             raise ValueError("dictionary_id must be in 0..16")
@@ -107,6 +114,8 @@ class OpenCVGridBoardCameraCalibrationEngine(CameraCalibrationEngine):
 
             # frame expected BGR. If you standardize RGB elsewhere, convert before calling this engine.
             h, w = frame.shape[:2]
+            if img_size is not None and img_size != (w, h):
+                raise InvalidCalibrationError("All calibration frames must have the same resolution")
             img_size = (w, h)
 
             corners, ids, rejected = self._detector.detectMarkers(frame)
@@ -123,10 +132,22 @@ class OpenCVGridBoardCameraCalibrationEngine(CameraCalibrationEngine):
             if ids is None or len(ids) == 0:
                 continue
 
+            usable = np.isin(ids.flatten(), self._board.getIds())
+            corners = [corner for corner, keep in zip(corners, usable) if keep]
+            ids = ids[usable]
+            if len(ids) < 4:
+                continue
+            if any(
+                np.array_equal(ids, previous_ids)
+                and np.allclose(np.asarray(corners), np.asarray(previous_corners), atol=1)
+                for previous_ids, previous_corners in zip(all_ids_per_frame, all_corners_per_frame)
+            ):
+                continue
+
             all_corners_per_frame.append(corners)
             all_ids_per_frame.append(ids.copy())
 
-        if img_size is None or len(all_ids_per_frame) < 1:
+        if img_size is None or len(all_ids_per_frame) < self._cfg.min_views:
             raise NotEnoughFramesError()
 
         all_corners_concat: list[np.ndarray] = []

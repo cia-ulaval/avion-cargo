@@ -58,3 +58,21 @@ def test_collector_and_calibration_engine_use_the_same_opencv_dictionary(diction
 def test_calibration_engine_rejects_dictionary_outside_supported_range(dictionary_id: int) -> None:
     with pytest.raises(ValueError, match="dictionary_id must be in 0..16"):
         OpenCVGridBoardCameraCalibrationEngine(GridBoardSpec(4, 5, 0.03, 0.01, dictionary_id))
+
+
+def test_too_few_distinct_calibration_views_are_rejected():
+    from infrastructure.vision.opencv_gridboard_calibration_engine import NotEnoughFramesError
+    frames = make_board_frames(0)
+    engine = OpenCVGridBoardCameraCalibrationEngine(GridBoardSpec(4, 5, .03, .01, 0))
+    with pytest.raises(NotEnoughFramesError):
+        engine.calibrate_from_frames(frames[:2])
+    with pytest.raises(NotEnoughFramesError):
+        engine.calibrate_from_frames([frames[0]] * 10)
+
+
+def test_calibration_refuses_mixed_resolutions():
+    from domain.errors import InvalidCalibrationError
+    frames = make_board_frames(0)
+    engine = OpenCVGridBoardCameraCalibrationEngine(GridBoardSpec(4, 5, .03, .01, 0))
+    with pytest.raises(InvalidCalibrationError, match='same resolution'):
+        engine.calibrate_from_frames([frames[0], frames[1][:300]])
