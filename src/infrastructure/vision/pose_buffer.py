@@ -11,18 +11,18 @@ class PoseBuffer(Buffer):
         self._pose3D: Optional[Pose3D] = None
         self._uav_pose3D: Optional[Pose3D] = None
 
-    def set_value(self, pose: Pose3D) -> None:
+    def set_value(self, pose: Optional[Pose3D]) -> None:
         with self.lock:
             self._pose3D = pose
 
-    def set_uav_pose_value(self, uav_pose: Pose3D) -> None:
+    def set_uav_pose_value(self, uav_pose: Optional[Pose3D]) -> None:
         with self.lock:
             self._uav_pose3D = uav_pose
 
-    def get_value(self) -> Pose3D:
+    def get_value(self) -> Optional[Pose3D]:
         with self.lock:
             return self._pose3D
 
-    def get_uav_pose_value(self) -> Pose3D:
+    def get_uav_pose_value(self) -> Optional[Pose3D]:
         with self.lock:
             return self._uav_pose3D

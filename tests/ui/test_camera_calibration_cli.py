@@ -21,7 +21,7 @@ def test_cli_passes_the_same_dictionary_to_collection_and_calibration(
     service = Mock()
     service.calibrate.return_value = (sample_calibration_report, Path("calibration.npz"))
     create_service = Mock(return_value=service)
-    monkeypatch.setattr(camera_calibration_cli.CameraCalibrationService, "create", create_service)
+    monkeypatch.setattr(camera_calibration_cli, "build_camera_calibration_service", create_service)
     args = BOARD_OPTIONS + ([] if dictionary_id is None else ["-d", str(dictionary_id)])
 
     result = CliRunner().invoke(camera_calibration_cli.main, args)

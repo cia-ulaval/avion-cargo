@@ -6,22 +6,29 @@ from typing import Any, Optional
 from loguru import logger
 
 from application.tracking_service import TrackingService
+from domain.buffer import DroneStatusBufferPort, FrameBufferPort, PoseBufferPort
+from domain.content_streamer import ContentStreamer
 from domain.drone import Drone
 from domain.models import Pose3D
-from infrastructure.camera.frame_buffer import FrameBuffer
-from infrastructure.communication.drone_status_buffer import DroneStatusBuffer
-from infrastructure.communication.webrtc_content_streamer import WebRTCConfig, WebRTCContentStreamer
-from infrastructure.vision.pose_buffer import PoseBuffer
 
 
 class DroneAutolandingService:
-    def __init__(self, drone: Drone, tracker: TrackingService, content_streamer_config: WebRTCConfig):
+    def __init__(
+        self,
+        drone: Drone,
+        tracker: TrackingService,
+        *,
+        content_streamer: ContentStreamer,
+        frame_buffer: FrameBufferPort,
+        pose_buffer: PoseBufferPort,
+        drone_status_buffer: DroneStatusBufferPort,
+    ):
         self.drone = drone
         self.aruco_tracker = tracker
-        self.frame_buffer = FrameBuffer()
-        self.pose_buffer = PoseBuffer()
-        self.drone_status_buffer = DroneStatusBuffer()
-        self.content_streamer = WebRTCContentStreamer(self.frame_buffer, content_streamer_config)
+        self.frame_buffer = frame_buffer
+        self.pose_buffer = pose_buffer
+        self.drone_status_buffer = drone_status_buffer
+        self.content_streamer = content_streamer
         self._threads: dict[str, Thread] = dict()
         self._tracking_started: bool = False
 

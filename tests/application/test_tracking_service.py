@@ -1,13 +1,14 @@
 from dataclasses import dataclass, field
 from typing import Any
+from unittest.mock import Mock
 
 import numpy as np
 import pytest
 
 from application.tracking_service import TrackingService
+from domain.frame_annotator import FrameAnnotator
 from domain.models import CalibrationData, Pose3D, TargetedMarker
 from domain.tracking import TrackingStatus
-from infrastructure.vision.opencv_frame_manipution_tool import FrameManipulationTool
 
 
 @dataclass
@@ -65,9 +66,7 @@ def calibration_data() -> CalibrationData:
     )
 
 
-def test_tracking_returns_not_found_without_estimating_pose_or_drawing_when_marker_is_absent(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
+def test_tracking_returns_not_found_without_estimating_pose_or_drawing_when_marker_is_absent() -> None:
     frame = np.zeros((8, 8, 3), dtype=np.uint8)
     target = TargetedMarker(id=29, length=0.896, dictionary=0)
     detector = FakeDetector(detections=[])
@@ -76,8 +75,7 @@ def test_tracking_returns_not_found_without_estimating_pose_or_drawing_when_mark
         rotation_vectors=np.zeros((1, 1, 3)),
         translation_vectors=np.zeros((1, 1, 3)),
     )
-    monkeypatch.setattr(FrameManipulationTool, "draw_detected_markers", pytest.fail)
-    monkeypatch.setattr(FrameManipulationTool, "draw_axes_for_poses", pytest.fail)
+    annotator = Mock(spec=FrameAnnotator)
 
     service = TrackingService(
         camera=FakeCamera(frame),
@@ -85,6 +83,7 @@ def test_tracking_returns_not_found_without_estimating_pose_or_drawing_when_mark
         pose_estimator=pose_estimator,
         target=target,
         calibration=calibration_data(),
+        annotator=annotator,
     )
 
     returned_frame, result = service.track_target()
@@ -95,11 +94,10 @@ def test_tracking_returns_not_found_without_estimating_pose_or_drawing_when_mark
     assert result.uav_pose is None
     assert pose_estimator.calls == []
     assert detector.calls == [(frame, target)]
+    annotator.annotate.assert_not_called()
 
 
-def test_tracking_estimates_first_detection_draws_overlays_and_converts_pose_to_uav_axes(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
+def test_tracking_estimates_first_detection_draws_overlays_and_converts_pose_to_uav_axes() -> None:
     frame = np.zeros((12, 12, 3), dtype=np.uint8)
     first_corners = np.array([[[1.0, 1.0], [3.0, 1.0], [3.0, 3.0], [1.0, 3.0]]])
     ignored_corners = np.array([[[5.0, 5.0], [7.0, 5.0], [7.0, 7.0], [5.0, 7.0]]])
@@ -113,18 +111,9 @@ def test_tracking_estimates_first_detection_draws_overlays_and_converts_pose_to_
         rotation_vectors=rotation_vectors,
         translation_vectors=translation_vectors,
     )
-    draw_calls: list[tuple[str, tuple[Any, ...]]] = []
-
-    def draw_detected_markers(*args: Any, **_kwargs: Any) -> np.ndarray:
-        draw_calls.append(("markers", args))
-        return args[0]
-
-    def draw_axes_for_poses(*args: Any, **_kwargs: Any) -> np.ndarray:
-        draw_calls.append(("axes", args))
-        return args[0]
-
-    monkeypatch.setattr(FrameManipulationTool, "draw_detected_markers", draw_detected_markers)
-    monkeypatch.setattr(FrameManipulationTool, "draw_axes_for_poses", draw_axes_for_poses)
+    annotated_frame = frame.copy()
+    annotator = Mock(spec=FrameAnnotator)
+    annotator.annotate.return_value = annotated_frame
 
     service = TrackingService(
         camera=FakeCamera(frame),
@@ -132,11 +121,12 @@ def test_tracking_estimates_first_detection_draws_overlays_and_converts_pose_to_
         pose_estimator=pose_estimator,
         target=target,
         calibration=calibration,
+        annotator=annotator,
     )
 
     returned_frame, result = service.track_target()
 
-    assert returned_frame is frame
+    assert returned_frame is annotated_frame
     assert result.status is TrackingStatus.DETECTED
     assert result.marker_id == 41
     assert result.pose == Pose3D(x=3.0, y=-2.0, z=10.0)
@@ -148,10 +138,11 @@ def test_tracking_estimates_first_detection_draws_overlays_and_converts_pose_to_
     assert pose_estimator.calls[0]["center"] is True
     np.testing.assert_array_equal(pose_estimator.calls[0]["corners"], first_corners)
 
-    assert [name for name, _args in draw_calls] == ["markers", "axes"]
-    np.testing.assert_array_equal(draw_calls[0][1][1][0], first_corners)
-    np.testing.assert_array_equal(draw_calls[0][1][2], np.array([[41]], dtype=np.int32))
-    assert draw_calls[1][1][1] is calibration.camera_matrix
-    assert draw_calls[1][1][2] is calibration.dist_coeffs
-    assert draw_calls[1][1][3] is rotation_vectors
-    assert draw_calls[1][1][4] is translation_vectors
+    annotator.annotate.assert_called_once()
+    assert annotator.annotate.call_args.args[0] is frame
+    annotation = annotator.annotate.call_args.kwargs
+    assert annotation["marker_id"] == 41
+    np.testing.assert_array_equal(annotation["corners"], first_corners)
+    assert annotation["calibration"] is calibration
+    assert annotation["rotation_vectors"] is rotation_vectors
+    assert annotation["translation_vectors"] is translation_vectors

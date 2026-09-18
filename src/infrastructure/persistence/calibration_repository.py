@@ -5,10 +5,11 @@ from typing import Optional
 import cv2
 import numpy as np
 
+from domain.calibration_report_store import CalibrationReportStore
 from domain.models import CalibrationData, CalibrationReport
 
 
-class CalibrationRepository:
+class CalibrationRepository(CalibrationReportStore):
     def __init__(self):
         self.calibration_filepath: Optional[Path] = None
         self.default_calibration_filedir: Path = Path("calibration_results")

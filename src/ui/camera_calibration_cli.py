@@ -1,11 +1,11 @@
 import click
 from loguru import logger
 
-from application.camera_calibration_service import CameraCalibrationParameters, CameraCalibrationService
+from composition import CameraCalibrationParameters, build_camera, build_camera_calibration_service
 from domain.models import TargetedMarker
 from infrastructure.persistence.configuration_models import CameraConfiguration
 from infrastructure.vision.opencv_gridboard_calibration_engine import GridBoardCalibrationConfig, GridBoardSpec
-from ui.common_functions import build_camera
+from ui.calibration_report_presenter import show_calibration_report
 
 
 @click.command(context_settings={"help_option_names": ["-h", "--help"]})
@@ -74,13 +74,13 @@ def main(
         dictionary_id=dictionary_id,
     )
 
-    camera_calibrator = CameraCalibrationService.create(camera, camera_calibration_params)
+    camera_calibrator = build_camera_calibration_service(camera, camera_calibration_params)
 
     logger.info("Starting calibration...")
     calibration_report, calibration_filepath = camera_calibrator.calibrate()
 
     logger.success(f"Calibration finished: calibration report saved to {calibration_filepath}")
-    calibration_report.show()
+    show_calibration_report(calibration_report)
 
 
 if __name__ == "__main__":
