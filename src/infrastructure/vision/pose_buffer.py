@@ -7,8 +7,8 @@ from domain.models import Pose3D
 
 class PoseBuffer(Buffer):
     def __init__(self, max_age_s: float = 1.0) -> None:
-        if not 0 < max_age_s < float('inf'):
-            raise ValueError('max_age_s must be finite and positive')
+        if not 0 < max_age_s < float("inf"):
+            raise ValueError("max_age_s must be finite and positive")
         self.lock = Lock()
         self.max_age_s = max_age_s
         self._pose3D = None

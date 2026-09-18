@@ -11,16 +11,17 @@ from domain.tracking import TrackingResult
 
 class FrameBuffer(Buffer):
     def __init__(self, max_age_s: float = 1.0) -> None:
-        if not 0 < max_age_s < float('inf'):
-            raise ValueError('max_age_s must be finite and positive')
+        if not 0 < max_age_s < float("inf"):
+            raise ValueError("max_age_s must be finite and positive")
         self.lock = Lock()
         self.max_age_s = max_age_s
         self._frame = None
         self._metadata = None
         self._timestamp = 0.0
 
-    def set_value(self, frame: np.ndarray | None, metadata: dict[str, Any] | None = None,
-                  *, timestamp: float | None = None) -> None:
+    def set_value(
+        self, frame: np.ndarray | None, metadata: dict[str, Any] | None = None, *, timestamp: float | None = None
+    ) -> None:
         with self.lock:
             self._frame = None if frame is None else frame.copy()
             self._metadata = deepcopy(metadata)
@@ -31,5 +32,5 @@ class FrameBuffer(Buffer):
             if self._frame is None:
                 return None, None
             if not 0 <= time.monotonic() - self._timestamp < self.max_age_s:
-                return None, {**TrackingResult.not_found().to_dict(), 'stale': True}
+                return None, {**TrackingResult.not_found().to_dict(), "stale": True}
             return self._frame.copy(), deepcopy(self._metadata)

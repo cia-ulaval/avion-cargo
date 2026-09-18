@@ -20,6 +20,7 @@ def main(config_file_path, gz_simulation):
     autolander_config = config_reader.read()
 
     landing_service = build_landing_service(autolander_config, use_simulated_cam=gz_simulation)
+
     def interrupt(_signum, _frame):
         raise KeyboardInterrupt
 
@@ -40,7 +41,6 @@ def main(config_file_path, gz_simulation):
                 raise
         finally:
             signal.signal(signal.SIGTERM, previous_handler)
-
 
 
 if __name__ == "__main__":

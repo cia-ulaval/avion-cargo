@@ -5,9 +5,9 @@ from dataclasses import replace
 from threading import RLock
 from typing import Optional
 
+from loguru import logger
 from pymavlink import mavutil
 from pymavlink.dialects.v20 import ardupilotmega as mavlink2
-from loguru import logger
 
 from domain.drone import Drone, DroneMode, DroneStatus
 from domain.models import Pose3D
@@ -277,8 +277,17 @@ class DroneMavlinkBase(Drone):
             if self.status.mode == mode:
                 return
             self.connection.mav.command_long_send(
-                self._target_system, self._target_component, mavlink2.MAV_CMD_DO_SET_MODE, 0,
-                mavlink2.MAV_MODE_FLAG_CUSTOM_MODE_ENABLED, mapping[mode.value], 0, 0, 0, 0, 0,
+                self._target_system,
+                self._target_component,
+                mavlink2.MAV_CMD_DO_SET_MODE,
+                0,
+                mavlink2.MAV_MODE_FLAG_CUSTOM_MODE_ENABLED,
+                mapping[mode.value],
+                0,
+                0,
+                0,
+                0,
+                0,
             )
             logger.info("Requested flight mode {}; waiting for autopilot confirmation", mode.value)
             deadline = time.monotonic() + self.parameters.timeout

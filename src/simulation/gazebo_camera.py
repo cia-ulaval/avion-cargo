@@ -15,7 +15,7 @@ from domain.camera import Camera
 
 class _GazeboCameraNode(Node):
     def __init__(self, topic_name: str) -> None:
-        super().__init__('gazebo_camera_node')
+        super().__init__("gazebo_camera_node")
         self._last_frame = None
         self._captured_at_s = 0.0
         self._last_stamp_ns = None
@@ -43,22 +43,22 @@ class _GazeboCameraNode(Node):
 
     @staticmethod
     def _image_msg_to_bgr(msg: Image) -> np.ndarray:
-        channels = {'rgb8': 3, 'bgr8': 3, 'rgba8': 4, 'bgra8': 4, 'mono8': 1}.get(msg.encoding)
+        channels = {"rgb8": 3, "bgr8": 3, "rgba8": 4, "bgra8": 4, "mono8": 1}.get(msg.encoding)
         if channels is None:
-            raise RuntimeError(f'Unsupported encoding: {msg.encoding}')
+            raise RuntimeError(f"Unsupported encoding: {msg.encoding}")
         if msg.height <= 0 or msg.width <= 0 or msg.step < msg.width * channels:
-            raise RuntimeError('Invalid image dimensions or row stride')
+            raise RuntimeError("Invalid image dimensions or row stride")
         data = np.frombuffer(msg.data, dtype=np.uint8)
         expected_size = msg.height * msg.step
         if data.size != expected_size:
-            raise RuntimeError(f'Unexpected image size: got {data.size}, expected {expected_size}')
+            raise RuntimeError(f"Unexpected image size: got {data.size}, expected {expected_size}")
         rows = data.reshape(msg.height, msg.step)
-        frame = rows[:, :msg.width * channels].reshape(msg.height, msg.width, channels)
+        frame = rows[:, : msg.width * channels].reshape(msg.height, msg.width, channels)
         if channels == 1:
             frame = np.repeat(frame, 3, axis=2)
         else:
             frame = frame[:, :, :3]
-            if msg.encoding in ('rgb8', 'rgba8'):
+            if msg.encoding in ("rgb8", "rgba8"):
                 frame = frame[:, :, ::-1]
         return frame.copy()
 
@@ -74,10 +74,11 @@ class _GazeboCameraNode(Node):
 class GazeboCamera(Camera):
     """ROS 2 latest-image adapter; freshness uses host monotonic time, not /clock."""
 
-    def __init__(self, topic_name: str, fps: int = 10, first_frame_timeout_sec: float = 5.0,
-                 frame_timeout_sec: float = 1.0) -> None:
-        if fps <= 0 or not 0 < frame_timeout_sec < float('inf'):
-            raise ValueError('Camera fps and frame timeout must be positive')
+    def __init__(
+        self, topic_name: str, fps: int = 10, first_frame_timeout_sec: float = 5.0, frame_timeout_sec: float = 1.0
+    ) -> None:
+        if fps <= 0 or not 0 < frame_timeout_sec < float("inf"):
+            raise ValueError("Camera fps and frame timeout must be positive")
         self._topic_name = topic_name
         self._fps = fps
         self._first_frame_timeout_sec = first_frame_timeout_sec
@@ -102,19 +103,19 @@ class GazeboCamera(Camera):
             self._executor = SingleThreadedExecutor()
             self._executor.add_node(self._node)
             self._running = True
-            self._thread = threading.Thread(target=self._spin, name='autolander-ros-camera', daemon=True)
+            self._thread = threading.Thread(target=self._spin, name="autolander-ros-camera", daemon=True)
             self._thread.start()
             if not self._node.wait_first_frame(self._first_frame_timeout_sec):
-                raise TimeoutError(f'No image received on {self._topic_name} within {self._first_frame_timeout_sec}s')
+                raise TimeoutError(f"No image received on {self._topic_name} within {self._first_frame_timeout_sec}s")
             self._raise_failure()
-            logger.info('ROS camera ready on {} at {} Hz', self._topic_name, self._fps)
+            logger.info("ROS camera ready on {} at {} Hz", self._topic_name, self._fps)
         except BaseException:
             self.close()
             raise
 
     def _raise_failure(self):
         if self._failure is not None:
-            raise RuntimeError('ROS camera executor failed') from self._failure
+            raise RuntimeError("ROS camera executor failed") from self._failure
 
     def _spin(self) -> None:
         try:
@@ -123,7 +124,7 @@ class GazeboCamera(Camera):
         except Exception as error:
             if self._running:
                 self._failure = error
-                logger.exception('ROS camera executor failed')
+                logger.exception("ROS camera executor failed")
         finally:
             if self._node is not None:
                 self._node._first_frame_event.set()
@@ -137,7 +138,7 @@ class GazeboCamera(Camera):
         if self._thread is not None:
             self._thread.join(timeout=1.0)
             if self._thread.is_alive():
-                raise TimeoutError('ROS camera executor did not stop')
+                raise TimeoutError("ROS camera executor did not stop")
             self._thread = None
         if self._node is not None:
             self._node.destroy_node()
@@ -151,16 +152,16 @@ class GazeboCamera(Camera):
     def get_frame(self) -> np.ndarray:
         node = self._node
         if node is None or not self._running:
-            raise RuntimeError('GazeboCamera is not open')
+            raise RuntimeError("GazeboCamera is not open")
         self._raise_failure()
         if not node.wait_first_frame(self._frame_timeout_sec):
-            raise TimeoutError(f'No fresh image on {self._topic_name} within {self._frame_timeout_sec}s')
+            raise TimeoutError(f"No fresh image on {self._topic_name} within {self._frame_timeout_sec}s")
         self._raise_failure()
         if not self._running:
-            raise RuntimeError('GazeboCamera is closing')
+            raise RuntimeError("GazeboCamera is closing")
         frame, captured_at_s = node.take_latest_frame()
         if frame is None or time.monotonic() - captured_at_s >= self._frame_timeout_sec:
-            raise TimeoutError('ROS camera image has expired')
+            raise TimeoutError("ROS camera image has expired")
         self.last_capture_time_s = captured_at_s
         return frame
 

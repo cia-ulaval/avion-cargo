@@ -10,26 +10,36 @@ import pytest
 
 @pytest.fixture
 def camera_module(monkeypatch):
-    for name in ('rclpy', 'rclpy.executors', 'rclpy.node', 'rclpy.qos', 'sensor_msgs', 'sensor_msgs.msg'):
-        monkeypatch.setitem(__import__('sys').modules, name, ModuleType(name))
+    for name in ("rclpy", "rclpy.executors", "rclpy.node", "rclpy.qos", "sensor_msgs", "sensor_msgs.msg"):
+        monkeypatch.setitem(__import__("sys").modules, name, ModuleType(name))
+
     class Node:
         def __init__(self, _name):
             self.create_subscription = Mock()
-    sys.modules['rclpy.node'].Node = Node
-    sys.modules['rclpy.executors'].SingleThreadedExecutor = Mock()
-    sys.modules['rclpy.qos'].QoSProfile = lambda **kw: SimpleNamespace(**kw)
-    sys.modules['rclpy.qos'].HistoryPolicy = SimpleNamespace(KEEP_LAST=1)
-    sys.modules['rclpy.qos'].ReliabilityPolicy = SimpleNamespace(BEST_EFFORT=2)
-    sys.modules['sensor_msgs.msg'].Image = object
-    spec = importlib.util.spec_from_file_location('gazebo_under_test', Path(__file__).parents[2] / 'src/simulation/gazebo_camera.py')
+
+    sys.modules["rclpy.node"].Node = Node
+    sys.modules["rclpy.executors"].SingleThreadedExecutor = Mock()
+    sys.modules["rclpy.qos"].QoSProfile = lambda **kw: SimpleNamespace(**kw)
+    sys.modules["rclpy.qos"].HistoryPolicy = SimpleNamespace(KEEP_LAST=1)
+    sys.modules["rclpy.qos"].ReliabilityPolicy = SimpleNamespace(BEST_EFFORT=2)
+    sys.modules["sensor_msgs.msg"].Image = object
+    spec = importlib.util.spec_from_file_location(
+        "gazebo_under_test", Path(__file__).parents[2] / "src/simulation/gazebo_camera.py"
+    )
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     return module
 
 
-def message(encoding='rgb8', step=8, data=bytes([1, 2, 3, 4, 5, 6, 99, 99]), stamp=1):
-    return SimpleNamespace(encoding=encoding, height=1, width=2, step=step, data=data,
-                           header=SimpleNamespace(stamp=SimpleNamespace(sec=stamp, nanosec=0)))
+def message(encoding="rgb8", step=8, data=bytes([1, 2, 3, 4, 5, 6, 99, 99]), stamp=1):
+    return SimpleNamespace(
+        encoding=encoding,
+        height=1,
+        width=2,
+        step=step,
+        data=data,
+        header=SimpleNamespace(stamp=SimpleNamespace(sec=stamp, nanosec=0)),
+    )
 
 
 def test_padded_rgb_rows_decode_without_padding(camera_module):
@@ -38,12 +48,12 @@ def test_padded_rgb_rows_decode_without_padding(camera_module):
 
 
 def test_mono_images_expand_to_bgr(camera_module):
-    image = camera_module._GazeboCameraNode._image_msg_to_bgr(message('mono8', 3, bytes([3, 4, 99])))
+    image = camera_module._GazeboCameraNode._image_msg_to_bgr(message("mono8", 3, bytes([3, 4, 99])))
     np.testing.assert_array_equal(image, [[[3, 3, 3], [4, 4, 4]]])
 
 
 def test_qos_and_duplicate_source_timestamps(camera_module):
-    node = camera_module._GazeboCameraNode('/image')
+    node = camera_module._GazeboCameraNode("/image")
     qos = node.create_subscription.call_args.args[3]
     assert qos.depth == 1 and qos.reliability == 2
     node._on_image(message())
@@ -56,21 +66,21 @@ def test_qos_and_duplicate_source_timestamps(camera_module):
 
 
 def test_camera_never_reuses_an_old_frame(camera_module):
-    camera = camera_module.GazeboCamera('/image', frame_timeout_sec=.01)
+    camera = camera_module.GazeboCamera("/image", frame_timeout_sec=0.01)
     camera._running = True
-    camera._node = camera_module._GazeboCameraNode('/image')
+    camera._node = camera_module._GazeboCameraNode("/image")
     camera._node._on_image(message())
     camera.get_frame()
-    with pytest.raises(TimeoutError, match='fresh'):
+    with pytest.raises(TimeoutError, match="fresh"):
         camera.get_frame()
 
 
 def test_executor_failure_reaches_camera_consumer(camera_module):
-    camera = camera_module.GazeboCamera('/image')
+    camera = camera_module.GazeboCamera("/image")
     camera._running = True
-    camera._node = camera_module._GazeboCameraNode('/image')
+    camera._node = camera_module._GazeboCameraNode("/image")
     camera._executor = Mock()
-    camera._executor.spin_once.side_effect = RuntimeError('callback failed')
+    camera._executor.spin_once.side_effect = RuntimeError("callback failed")
     camera._spin()
-    with pytest.raises(RuntimeError, match='executor failed'):
+    with pytest.raises(RuntimeError, match="executor failed"):
         camera.get_frame()

@@ -1,6 +1,6 @@
-from dataclasses import dataclass
 import math
 import time
+from dataclasses import dataclass
 
 import cv2
 import numpy as np

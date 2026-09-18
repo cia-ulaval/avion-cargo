@@ -20,7 +20,9 @@ class Buffer(ABC):
 class FrameBufferPort(Protocol):
     """Share the latest image and its tracking metadata."""
 
-    def set_value(self, frame: np.ndarray | None, metadata: dict[str, Any] | None = None, *, timestamp: float | None = None) -> None: ...
+    def set_value(
+        self, frame: np.ndarray | None, metadata: dict[str, Any] | None = None, *, timestamp: float | None = None
+    ) -> None: ...
 
     def get_value(self) -> tuple[np.ndarray | None, dict[str, Any] | None]: ...
 

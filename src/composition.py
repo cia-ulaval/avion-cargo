@@ -1,7 +1,7 @@
 """Assemble application services with their concrete adapters."""
 
-from dataclasses import dataclass
 import os
+from dataclasses import dataclass
 from typing import Optional
 
 from application.camera_calibration_service import CameraCalibrationService

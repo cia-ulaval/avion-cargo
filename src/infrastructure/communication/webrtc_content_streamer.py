@@ -1,6 +1,6 @@
 import asyncio
-import json
 import hmac
+import json
 import ssl
 import time
 from dataclasses import dataclass
@@ -131,8 +131,12 @@ class WebRTCContentStreamer(ContentStreamer):
                 tls.load_cert_chain(self.configuration.tls_cert, self.configuration.tls_key)
             site = web.TCPSite(runner, host=self.configuration.host, port=self.configuration.port, ssl_context=tls)
             await site.start()
-            logger.info("WebRTC server ready at {}://{}:{}", "https" if tls else "http", self.configuration.host,
-                        self.configuration.port)
+            logger.info(
+                "WebRTC server ready at {}://{}:{}",
+                "https" if tls else "http",
+                self.configuration.host,
+                self.configuration.port,
+            )
             await self._shutdown_event.wait()
             if self._async_error is not None:
                 raise RuntimeError("WebRTC asynchronous task failed") from self._async_error

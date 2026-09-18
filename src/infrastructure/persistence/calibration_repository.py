@@ -56,7 +56,9 @@ class CalibrationRepository(CalibrationReportStore):
             return CalibrationData(
                 camera_matrix=data["camera_matrix"],
                 dist_coeffs=(
-                    data["camera_distortion_matrix"] if "camera_distortion_matrix" in data.files else data["dist_coeffs"]
+                    data["camera_distortion_matrix"]
+                    if "camera_distortion_matrix" in data.files
+                    else data["dist_coeffs"]
                 ),
                 camera_height=int(data["camera_height"] if "camera_height" in data.files else data["height"]),
                 camera_width=int(data["camera_width"] if "camera_width" in data.files else data["width"]),
@@ -76,7 +78,6 @@ class CalibrationRepository(CalibrationReportStore):
             )
         finally:
             fs.release()
-
 
     def _require_existing_calibration_file(self) -> None:
         if self.calibration_filepath is None or not self.calibration_filepath.exists():

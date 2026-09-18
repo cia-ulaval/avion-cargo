@@ -25,7 +25,10 @@ class TrackingResult:
 
     @staticmethod
     def detected(
-        pose: Pose3D, marker_id: int, uav_pose: Optional[Pose3D] = None, confidence: Optional[float] = None,
+        pose: Pose3D,
+        marker_id: int,
+        uav_pose: Optional[Pose3D] = None,
+        confidence: Optional[float] = None,
         captured_at_s: Optional[float] = None,
     ) -> "TrackingResult":
         return TrackingResult(

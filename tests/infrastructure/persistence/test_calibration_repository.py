@@ -30,10 +30,10 @@ def test_report_archive_preserves_quality_and_accepts_uppercase_extension(tmp_pa
     repo.default_calibration_filedir = tmp_path
     path = repo.save_report(sample_calibration_report)
     with np.load(path, allow_pickle=False) as archive:
-        assert str(archive['calibration_date']) == sample_calibration_report.calibration_date.isoformat()
-        assert float(archive['avg_reprojection_error']) == sample_calibration_report.avg_reprojection_error
-        assert float(archive['aspect_ratio']) == sample_calibration_report.aspect_ratio
-    uppercase = path.with_suffix('.NPZ')
+        assert str(archive["calibration_date"]) == sample_calibration_report.calibration_date.isoformat()
+        assert float(archive["avg_reprojection_error"]) == sample_calibration_report.avg_reprojection_error
+        assert float(archive["aspect_ratio"]) == sample_calibration_report.aspect_ratio
+    uppercase = path.with_suffix(".NPZ")
     path.rename(uppercase)
     loaded = repo.set_calibration_filepath(uppercase).load_calibration_data()
     np.testing.assert_array_equal(loaded.camera_matrix, sample_calibration_report.camera_matrix)

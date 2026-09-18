@@ -165,25 +165,29 @@ def test_land_mode_requires_heartbeat_confirmation_and_sends_correct_command(lin
     drone, connection, _ = link
     connection.incoming.append(heartbeat(mode=4))
     drone.connect()
-    connection.incoming.extend([
-        sourced(mavlink2.MAVLink_command_ack_message(mavlink2.MAV_CMD_DO_SET_MODE, mavlink2.MAV_RESULT_ACCEPTED)),
-        heartbeat(mode=9, system=99), heartbeat(mode=9),
-    ])
+    connection.incoming.extend(
+        [
+            sourced(mavlink2.MAVLink_command_ack_message(mavlink2.MAV_CMD_DO_SET_MODE, mavlink2.MAV_RESULT_ACCEPTED)),
+            heartbeat(mode=9, system=99),
+            heartbeat(mode=9),
+        ]
+    )
     drone.activate_land_mode()
-    command = [m for m in connection.outgoing if m.get_type() == 'COMMAND_LONG'][-1]
+    command = [m for m in connection.outgoing if m.get_type() == "COMMAND_LONG"][-1]
     assert command.command == mavlink2.MAV_CMD_DO_SET_MODE
     assert command.param1 == mavlink2.MAV_MODE_FLAG_CUSTOM_MODE_ENABLED
     assert command.param2 == 9
     assert drone.status.mode == DroneMode.LAND
 
 
-@pytest.mark.parametrize('denied', [False, True])
+@pytest.mark.parametrize("denied", [False, True])
 def test_mode_rejection_or_absent_confirmation_fails_explicitly(link, denied):
     drone, connection, _ = link
     connection.incoming.append(heartbeat(mode=4))
     drone.connect()
     if denied:
-        connection.incoming.append(sourced(mavlink2.MAVLink_command_ack_message(
-            mavlink2.MAV_CMD_DO_SET_MODE, mavlink2.MAV_RESULT_DENIED)))
+        connection.incoming.append(
+            sourced(mavlink2.MAVLink_command_ack_message(mavlink2.MAV_CMD_DO_SET_MODE, mavlink2.MAV_RESULT_DENIED))
+        )
     with pytest.raises(RuntimeError if denied else TimeoutError):
         drone.activate_land_mode()

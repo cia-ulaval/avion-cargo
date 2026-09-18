@@ -63,7 +63,8 @@ def calibration_data(size=8) -> CalibrationData:
     return CalibrationData(
         camera_matrix=np.array([[620.0, 0.0, 320.0], [0.0, 620.0, 240.0], [0.0, 0.0, 1.0]]),
         dist_coeffs=np.zeros(5),
-        camera_width=size, camera_height=size,
+        camera_width=size,
+        camera_height=size,
     )
 
 
@@ -151,8 +152,9 @@ def test_tracking_estimates_first_detection_draws_overlays_and_converts_pose_to_
 
 def test_wrong_capture_resolution_is_rejected_before_detection():
     detector = Mock()
-    service = TrackingService(FakeCamera(np.zeros((10, 10, 3))), detector, Mock(),
-                              TargetedMarker(0, .1, 0), calibration_data(8), Mock())
-    with pytest.raises(ValueError, match='does not match calibration'):
+    service = TrackingService(
+        FakeCamera(np.zeros((10, 10, 3))), detector, Mock(), TargetedMarker(0, 0.1, 0), calibration_data(8), Mock()
+    )
+    with pytest.raises(ValueError, match="does not match calibration"):
         service.track_target()
     detector.detect.assert_not_called()

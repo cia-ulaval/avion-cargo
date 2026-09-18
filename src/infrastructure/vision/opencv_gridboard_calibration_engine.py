@@ -65,9 +65,7 @@ class OpenCVGridBoardCameraCalibrationEngine(CameraCalibrationEngine):
         self._cfg = cfg
         if cfg.min_views < 6:
             raise ValueError("Calibration requires at least six distinct views")
-        if cfg.fix_aspect_ratio is not None and (
-            not np.isfinite(cfg.fix_aspect_ratio) or cfg.fix_aspect_ratio <= 0
-        ):
+        if cfg.fix_aspect_ratio is not None and (not np.isfinite(cfg.fix_aspect_ratio) or cfg.fix_aspect_ratio <= 0):
             raise ValueError("Aspect ratio must be finite and positive")
 
         if not 0 <= board.dictionary_id <= 16:

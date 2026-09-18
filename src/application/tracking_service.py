@@ -75,7 +75,9 @@ class TrackingService:
             translation_vectors=translation_vectors,
         )
 
-        return frame, TrackingResult.detected(pose=pose, marker_id=marker_id, uav_pose=self._to_uav_pose(pose), captured_at_s=captured_at_s)
+        return frame, TrackingResult.detected(
+            pose=pose, marker_id=marker_id, uav_pose=self._to_uav_pose(pose), captured_at_s=captured_at_s
+        )
 
     def get_target(self) -> TargetedMarker:
         return self.target
