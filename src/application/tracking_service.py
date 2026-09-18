@@ -48,6 +48,9 @@ class TrackingService:
             - infra exceptions if camera/detector fails unexpectedly.
         """
         frame = self.camera.get_frame()
+        expected_shape = (self.calibration.camera_height, self.calibration.camera_width)
+        if frame.shape[:2] != expected_shape:
+            raise ValueError(f"Camera frame {frame.shape[:2]} does not match calibration {expected_shape}")
         captured_at_s = getattr(self.camera, "last_capture_time_s", None)
         if not isinstance(captured_at_s, (int, float)):
             captured_at_s = time.monotonic()
@@ -60,6 +63,8 @@ class TrackingService:
         pose, rotation_vectors, translation_vectors = self.pose_estimator.estimate_pose(
             corners=corners, marker_length_m=self.target.length, calib=self.calibration, center=True
         )
+        if pose.z <= 0:
+            return frame, TrackingResult.not_found(captured_at_s=captured_at_s)
 
         frame = self.annotator.annotate(
             frame,

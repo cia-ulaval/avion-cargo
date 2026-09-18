@@ -47,3 +47,15 @@ def test_calibration_data_rejects_non_finite_intrinsics_before_pose_estimation()
 
     with pytest.raises(InvalidCalibrationError, match="non-finite"):
         CalibrationData(camera_matrix=camera_matrix, dist_coeffs=np.zeros(5))
+
+
+@pytest.mark.parametrize('matrix', [np.diag([0., 1., 1.]), np.diag([1., -1., 1.]), np.diag([1., 1., 2.])])
+def test_invalid_optical_matrix_is_rejected(matrix):
+    with pytest.raises(InvalidCalibrationError):
+        CalibrationData(matrix, np.zeros(5))
+
+
+@pytest.mark.parametrize('width', [0, -1, None, True, 2.5])
+def test_invalid_calibration_resolution_is_rejected(width):
+    with pytest.raises(InvalidCalibrationError):
+        CalibrationData(np.eye(3), np.zeros(5), camera_width=width)

@@ -59,10 +59,11 @@ class FakePoseEstimator:
         return self.pose, self.rotation_vectors, self.translation_vectors
 
 
-def calibration_data() -> CalibrationData:
+def calibration_data(size=8) -> CalibrationData:
     return CalibrationData(
         camera_matrix=np.array([[620.0, 0.0, 320.0], [0.0, 620.0, 240.0], [0.0, 0.0, 1.0]]),
         dist_coeffs=np.zeros(5),
+        camera_width=size, camera_height=size,
     )
 
 
@@ -103,7 +104,7 @@ def test_tracking_estimates_first_detection_draws_overlays_and_converts_pose_to_
     ignored_corners = np.array([[[5.0, 5.0], [7.0, 5.0], [7.0, 7.0], [5.0, 7.0]]])
     rotation_vectors = np.array([[[0.1, 0.2, 0.3]]])
     translation_vectors = np.array([[[3.0, -2.0, 10.0]]])
-    calibration = calibration_data()
+    calibration = calibration_data(12)
     target = TargetedMarker(id=None, length=0.896, dictionary=0)
     detector = FakeDetector(detections=[(41, first_corners), (99, ignored_corners)])
     pose_estimator = FakePoseEstimator(
@@ -146,3 +147,12 @@ def test_tracking_estimates_first_detection_draws_overlays_and_converts_pose_to_
     assert annotation["calibration"] is calibration
     assert annotation["rotation_vectors"] is rotation_vectors
     assert annotation["translation_vectors"] is translation_vectors
+
+
+def test_wrong_capture_resolution_is_rejected_before_detection():
+    detector = Mock()
+    service = TrackingService(FakeCamera(np.zeros((10, 10, 3))), detector, Mock(),
+                              TargetedMarker(0, .1, 0), calibration_data(8), Mock())
+    with pytest.raises(ValueError, match='does not match calibration'):
+        service.track_target()
+    detector.detect.assert_not_called()

@@ -43,6 +43,9 @@ class CalibrationData:
         k = np.asarray(self.camera_matrix)
         d = np.asarray(self.dist_coeffs)
 
+        if d.dtype.kind not in ("f", "i"):
+            raise InvalidCalibrationError("dist_coeffs must be numeric")
+
         if k.shape != (3, 3):
             raise InvalidCalibrationError(f"camera_matrix must be shape (3,3), got {k.shape}")
         if k.dtype.kind not in ("f", "i"):
@@ -60,6 +63,13 @@ class CalibrationData:
             raise InvalidCalibrationError("camera_matrix contains non-finite values")
         if not np.all(np.isfinite(d)):
             raise InvalidCalibrationError("dist_coeffs contains non-finite values")
+        if k[0, 0] <= 0 or k[1, 1] <= 0 or not np.allclose(k[2], [0, 0, 1]):
+            raise InvalidCalibrationError("camera_matrix needs positive focal lengths and a [0,0,1] final row")
+        if d.size not in (4, 5, 8, 12, 14):
+            raise InvalidCalibrationError("dist_coeffs must contain 4, 5, 8, 12 or 14 coefficients")
+        for dimension in (self.camera_width, self.camera_height):
+            if isinstance(dimension, bool) or not isinstance(dimension, (int, np.integer)) or dimension <= 0:
+                raise InvalidCalibrationError("Calibration image dimensions must be positive integers")
 
 
 @dataclass(frozen=True, slots=True)

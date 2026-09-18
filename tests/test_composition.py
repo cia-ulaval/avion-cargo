@@ -61,6 +61,7 @@ def test_tracking_assembly_detects_estimates_and_annotates_a_real_marker() -> No
     calibration = CalibrationData(
         camera_matrix=np.float64([[500, 0, 200], [0, 500, 200], [0, 0, 1]]),
         dist_coeffs=np.zeros(5),
+        camera_width=400, camera_height=400,
     )
     service = composition.build_tracking_service(
         camera, TargetedMarker(29, 0.1, 16), OpenCVArucoDetectorConfig(dictionary_id=16), calibration

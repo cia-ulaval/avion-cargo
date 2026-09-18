@@ -1,4 +1,6 @@
 from dataclasses import dataclass
+import math
+import time
 
 import cv2
 import numpy as np
@@ -22,6 +24,7 @@ class OpenCVCamera(Camera):
     rgb: bool = False  # OpenCV reads BGR by default
 
     _cap: cv2.VideoCapture | None = None
+    last_capture_time_s: float | None = None
 
     def open(self) -> None:
         if self._cap is not None and self._cap.isOpened():
@@ -29,11 +32,13 @@ class OpenCVCamera(Camera):
 
         self._cap = cv2.VideoCapture(self.source)
         if not self._cap.isOpened():
+            self.close()
             raise RuntimeError(f"Could not open video source: {self.source}")
 
         # Best effort settings (drivers may ignore)
         self._cap.set(cv2.CAP_PROP_FRAME_WIDTH, float(self.width))
         self._cap.set(cv2.CAP_PROP_FRAME_HEIGHT, float(self.height))
+        self._cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
         if self.fps is not None:
             self._cap.set(cv2.CAP_PROP_FPS, float(self.fps))
 
@@ -46,9 +51,11 @@ class OpenCVCamera(Camera):
         if self._cap is None or not self._cap.isOpened():
             self.open()
 
+        captured_at_s = time.monotonic()
         ok, frame = self._cap.read()
         if not ok or frame is None:
             raise RuntimeError("Failed to read frame from VideoCapture")
+        self.last_capture_time_s = captured_at_s
 
         # frame is BGR. Convert to RGB if you standardize on RGB.
         if self.rgb:
@@ -57,4 +64,5 @@ class OpenCVCamera(Camera):
         return frame
 
     def get_fps(self) -> int:
-        return int(self._cap.get(cv2.CAP_PROP_FPS))
+        actual = self._cap.get(cv2.CAP_PROP_FPS) if self._cap is not None else 0
+        return int(actual) if math.isfinite(actual) and actual >= 1 else (self.fps or 30)
