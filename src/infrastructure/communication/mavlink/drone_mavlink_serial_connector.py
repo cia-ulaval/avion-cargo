@@ -9,4 +9,6 @@ class DroneMavlinkSerialConnector(DroneMavlinkBase):
         super().__init__(params)
 
     def _init_mavlink_connection(self) -> None:
-        self.connection = mavutil.mavlink_connection(self.parameters.address, baud=self.parameters.baud_rate)
+        self.connection = mavutil.mavlink_connection(
+            self.parameters.address, baud=self.parameters.baud_rate, source_component=191
+        )

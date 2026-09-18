@@ -9,4 +9,6 @@ class DroneMavlinkUDPConnector(DroneMavlinkBase):
         super().__init__(params)
 
     def _init_mavlink_connection(self) -> None:
-        self.connection = mavutil.mavlink_connection(f"udp:{self.parameters.address}:{self.parameters.port}")
+        self.connection = mavutil.mavlink_connection(
+            f"udpin:{self.parameters.address}:{self.parameters.port}", source_component=191
+        )

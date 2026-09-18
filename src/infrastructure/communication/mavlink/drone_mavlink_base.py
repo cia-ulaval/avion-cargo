@@ -4,6 +4,7 @@ from abc import abstractmethod
 from typing import Optional
 
 from pymavlink import mavutil
+from pymavlink.dialects.v20 import ardupilotmega as mavlink2
 
 from domain.drone import Drone, DroneMode, DroneStatus
 from domain.models import Pose3D
@@ -47,9 +48,21 @@ class DroneMavlinkBase(Drone):
 
     def connect(self) -> None:
         self._init_mavlink_connection()
+        self._configure_mavlink2()
         self._wait_for_heartbeat()
         self._send_heartbeat()
         self._update_status()
+
+    def _configure_mavlink2(self) -> None:
+        """Select the wire encoder per connection, independent of import order/env."""
+        self._require_connected()
+        self.connection.mav = mavlink2.MAVLink(
+            self.connection,
+            srcSystem=self.connection.source_system,
+            srcComponent=self.connection.source_component,
+        )
+        self.connection.mav.robust_parsing = True
+        self.connection.WIRE_PROTOCOL_VERSION = "2.0"
 
     def get_status(self) -> DroneStatus:
         self._update_status()
@@ -129,7 +142,7 @@ class DroneMavlinkBase(Drone):
             0,
             0,
             0,
-            mavlink_version=2,
+            mavlink_version=3,  # Protocol-defined HEARTBEAT field, not wire version.
         )
 
     def _wait_for_heartbeat(self):
