@@ -10,7 +10,8 @@ export async function start() {
   setStreamState('connecting', 'Connecting');
 
   const connection = new RTCPeerConnection({
-    iceServers: [{ urls: 'stun:stun.l.google.com:19302' }],
+    // The observation station and companion use the same local network.
+    iceServers: [],
   });
   setPeerConnection(connection);
 

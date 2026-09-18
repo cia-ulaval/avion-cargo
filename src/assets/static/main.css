@@ -31,7 +31,7 @@ body {
 
 body {
   margin: 0;
-  font-family: "Sora", "Trebuchet MS", sans-serif;
+  font-family: system-ui, "Trebuchet MS", sans-serif;
   color: var(--text);
   background:
     radial-gradient(circle at top left, rgba(77, 183, 255, 0.08), transparent 28%),
