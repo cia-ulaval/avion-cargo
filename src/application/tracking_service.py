@@ -1,3 +1,4 @@
+import time
 from dataclasses import dataclass
 from typing import Optional, Tuple
 
@@ -50,10 +51,13 @@ class TrackingService:
             - infra exceptions if camera/detector fails unexpectedly.
         """
         frame = self.camera.get_frame()
+        captured_at_s = getattr(self.camera, "last_capture_time_s", None)
+        if not isinstance(captured_at_s, (int, float)):
+            captured_at_s = time.monotonic()
 
         detections = self.detector.detect(frame, self.target)
         if not detections:
-            return frame, TrackingResult.not_found()
+            return frame, TrackingResult.not_found(captured_at_s=captured_at_s)
 
         marker_id, corners = detections[0]
         pose, rotation_vectors, translation_vectors = self.pose_estimator.estimate_pose(
@@ -69,7 +73,7 @@ class TrackingService:
             translation_vectors=translation_vectors,
         )
 
-        return frame, TrackingResult.detected(pose=pose, marker_id=marker_id, uav_pose=self._to_uav_pose(pose))
+        return frame, TrackingResult.detected(pose=pose, marker_id=marker_id, uav_pose=self._to_uav_pose(pose), captured_at_s=captured_at_s)
 
     def get_target(self) -> TargetedMarker:
         return self.target
