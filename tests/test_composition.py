@@ -97,6 +97,7 @@ def test_landing_assembly_shares_frame_buffer_and_preserves_configuration(
     assert service.content_streamer.configuration.port == 8085
     assert service.content_streamer.configuration.stream_fps == 15
     assert service._threads == {}
+    assert service.telemetry_dps == 5
     drone.connect.assert_not_called()
 
 
@@ -133,7 +134,7 @@ def test_camera_assembly_selects_picamera_or_gazebo_without_importing_hardware(
     camera = composition.build_camera(config, use_simulated_cam=simulation)
 
     if simulation:
-        gazebo_module.GazeboCamera.assert_called_once_with("/camera/image")
+        gazebo_module.GazeboCamera.assert_called_once_with("/camera/image", fps=25)
         picamera_module.PiCameraAdapter.assert_not_called()
         assert camera is gazebo_module.GazeboCamera.return_value
     else:

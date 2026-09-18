@@ -50,7 +50,7 @@ def build_camera(
 
         from simulation.gazebo_camera import GazeboCamera
 
-        return GazeboCamera(camera_config.simulation_topic_name)
+        return GazeboCamera(camera_config.simulation_topic_name, fps=camera_config.fps)
 
     camera_height, camera_width = camera_config.height, camera_config.width
     if calibration_data:
@@ -158,4 +158,5 @@ def build_landing_service(config: AutolanderConfiguration, use_simulated_cam: bo
         frame_buffer=frame_buffer,
         pose_buffer=PoseBuffer(),
         drone_status_buffer=DroneStatusBuffer(),
+        telemetry_dps=config.streaming_config.data.dps,
     )
