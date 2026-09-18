@@ -1,7 +1,7 @@
 import time
 from dataclasses import asdict
 from threading import Thread
-from typing import Any, Optional
+from typing import Any
 
 from loguru import logger
 
@@ -9,7 +9,6 @@ from application.tracking_service import TrackingService
 from domain.buffer import DroneStatusBufferPort, FrameBufferPort, PoseBufferPort
 from domain.content_streamer import ContentStreamer
 from domain.drone import Drone
-from domain.models import Pose3D
 
 
 class DroneAutolandingService:
@@ -42,8 +41,7 @@ class DroneAutolandingService:
             self.frame_buffer.set_value(vis, tracking_result.to_dict())
             self.pose_buffer.set_value(tracking_result.pose)
 
-            uav_pose = self._to_uav_pose(tracking_result.pose)
-            self.pose_buffer.set_uav_pose_value(uav_pose)
+            self.pose_buffer.set_uav_pose_value(tracking_result.uav_pose)
 
             end_time = time.monotonic()
             elapsed_time = end_time - start_time
@@ -77,17 +75,6 @@ class DroneAutolandingService:
 
         return payload
 
-    @staticmethod
-    def _to_uav_pose(estimated_pose: Optional[Pose3D]) -> Optional[Pose3D]:
-        if estimated_pose is None:
-            return None
-
-        return Pose3D(
-            x=-estimated_pose.y,
-            y=estimated_pose.x,
-            z=estimated_pose.z,
-        )
-
     def _landing_target_loop(self):
         try:
             self.drone.activate_land_mode()
@@ -101,12 +88,9 @@ class DroneAutolandingService:
 
             uav_pose = self.pose_buffer.get_uav_pose_value()
             if uav_pose is not None:
-                altitude_to_use = drone_status.relative_altitude if drone_status.relative_altitude > 4.5 else uav_pose.z
-                new_uav_pose = Pose3D(x=uav_pose.x, y=uav_pose.y, z=altitude_to_use)
-                # logger.info(f"UAV pose sent is {new_uav_pose}")
                 target = self.aruco_tracker.get_target()
                 target_size = target.length, target.length
-                self.drone.land_on_target(new_uav_pose, target_size)
+                self.drone.land_on_target(uav_pose, target_size)
 
     def track_target(self):
         self._tracking_started = True

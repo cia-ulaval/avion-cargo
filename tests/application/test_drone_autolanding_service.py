@@ -74,11 +74,11 @@ def build_service(
 @pytest.mark.parametrize(
     ("reported_relative_altitude", "tracked_pose_z", "expected_z"),
     [
-        (6.2, 1.4, 6.2),
+        (6.2, 1.4, 1.4),
         (4.5, 1.4, 1.4),
     ],
 )
-def test_precision_landing_sends_uav_pose_with_altitude_selected_from_drone_status_when_reliable(
+def test_precision_landing_preserves_target_distance_regardless_of_relative_altitude(
     reported_relative_altitude: float,
     tracked_pose_z: float,
     expected_z: float,
