@@ -126,6 +126,8 @@ def test_telemetry_payload_merges_latest_tracking_metadata_with_current_drone_st
     assert payload["poses"]["estimated_pose_to_uav"] == {"x": -0.2, "y": 0.1, "z": 1.4}
     assert payload["drone"]["relative_altitude"] == pytest.approx(3.2)
     assert payload["drone"]["mode"] == drone_status.mode
+    assert payload["drone"]["altitude_msl_m"] == drone_status.relative_altitude_ms
+    assert payload["drone"]["vertical_speed_mps"] == drone_status.speed
 
 
 def test_telemetry_is_sent_through_the_injected_streamer(sample_drone_status) -> None:

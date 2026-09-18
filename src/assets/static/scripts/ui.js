@@ -102,7 +102,7 @@ export function renderDrone(drone) {
   const altitude = finiteNumber(drone.alt_m);
   const groundspeed = finiteNumber(drone.groundspeed_mps);
   const relativeAltitude = finiteNumber(drone.relative_altitude);
-  const verticalSpeed = finiteNumber(drone.speed);
+  const verticalSpeed = finiteNumber(drone.vertical_speed_mps ?? drone.speed);
   const latitude = finiteNumber(drone.latitude);
   const longitude = finiteNumber(drone.longitude);
   const headingDeg = finiteNumber(drone.heading_deg);

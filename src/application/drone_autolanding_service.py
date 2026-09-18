@@ -123,6 +123,10 @@ class DroneAutolandingService:
         if drone_status is not None:
             payload["drone"] = asdict(drone_status)
             payload["drone"]["connected"] = drone_status.connected
+            payload["drone"]["altitude_msl_m"] = drone_status.relative_altitude_ms
+            payload["drone"]["vertical_speed_mps"] = drone_status.speed
+            if not drone_status.last_signal_gpio_s:
+                payload["drone"]["last_signal_gpio_s"] = None
             payload["drone"].pop("last_heartbeat_monotonic_s", None)
 
         return payload
