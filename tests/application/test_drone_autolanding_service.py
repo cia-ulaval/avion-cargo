@@ -202,6 +202,7 @@ def test_failed_land_mode_request_prevents_target_emissions(sample_drone_status)
     drone = FakeDrone(sample_drone_status())
     drone.activate_land_mode = Mock(side_effect=TimeoutError("mode rejected"))
     service = build_service(drone)
+    service.pose_buffer.get_uav_pose_value.return_value = Pose3D(0, 0, 2)
     service._tracking_started = True
 
     with pytest.raises(TimeoutError, match="mode rejected"):
@@ -245,4 +246,16 @@ def test_expired_heartbeat_prevents_landing_target_emission(sample_drone_status)
     service.pose_buffer.get_uav_pose_value.return_value = Pose3D(0, 0, 2)
     service._tracking_started = True
     service._landing_target_loop()
+    assert not drone.land_calls
+
+
+def test_no_target_does_not_request_land(sample_drone_status):
+    drone = FakeDrone(sample_drone_status())
+    service = build_service(drone)
+    service.target_acquisition_timeout_s = .01
+    service._tracking_started = True
+    drone.get_status = Mock(return_value=drone.status)
+    with pytest.raises(TimeoutError, match='No fresh landing target'):
+        service.perform_precision_landing()
+    assert drone.land_mode_calls == 0
     assert not drone.land_calls

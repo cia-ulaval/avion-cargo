@@ -24,11 +24,14 @@ class DroneAutolandingService:
         drone_status_buffer: DroneStatusBufferPort,
         telemetry_dps: float = 5,
         shutdown_timeout_s: float = 5,
+        target_acquisition_timeout_s: float = 10,
     ):
         if not isfinite(telemetry_dps) or telemetry_dps <= 0:
             raise ValueError("telemetry_dps must be finite and positive")
         if not isfinite(shutdown_timeout_s) or shutdown_timeout_s <= 0:
             raise ValueError("shutdown_timeout_s must be finite and positive")
+        if not isfinite(target_acquisition_timeout_s) or target_acquisition_timeout_s <= 0:
+            raise ValueError("target_acquisition_timeout_s must be finite and positive")
         self.drone = drone
         self.aruco_tracker = tracker
         self.frame_buffer = frame_buffer
@@ -37,6 +40,7 @@ class DroneAutolandingService:
         self.content_streamer = content_streamer
         self.telemetry_dps = telemetry_dps
         self.shutdown_timeout_s = shutdown_timeout_s
+        self.target_acquisition_timeout_s = target_acquisition_timeout_s
         self._threads: dict[str, Thread] = dict()
         self._tracking_started: bool = False
         self._stop_event = Event()
@@ -134,6 +138,20 @@ class DroneAutolandingService:
     def _landing_target_loop(self):
         waiting_period = 1.0 / max(1, self.aruco_tracker.camera.get_fps())
         self._raise_worker_failure()
+        logger.info("Waiting for a fresh target below the vehicle before requesting LAND")
+        deadline = time.monotonic() + self.target_acquisition_timeout_s
+        while self._tracking_started:
+            self._raise_worker_failure()
+            pose = self.pose_buffer.get_uav_pose_value()
+            if pose is not None and pose.z > 0:
+                break
+            if time.monotonic() >= deadline:
+                raise TimeoutError("No fresh landing target acquired before the LAND request")
+            self.drone_status_buffer.set_value(self.drone.get_status())
+            self._stop_event.wait(waiting_period)
+        if not self._tracking_started:
+            self._raise_worker_failure()
+            return
         logger.info("Requesting LAND mode")
         self.drone.activate_land_mode()
         logger.info("Landing target emission active at {} Hz", 1 / waiting_period)
