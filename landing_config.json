@@ -1,14 +1,10 @@
 {
   "camera": {
-    "id" : 0,
+    "id": 0,
     "use_picamera": true,
     "fps": 25,
-    "calibration_filepath": "/home/pi/autolander/calibration_results/pi_camera_calibration.yaml",
-    "gz_simulation": {
-      "topic_name": "/NoEmptyPath/to/topic/here"
-    }
+    "calibration_filepath": "calibration_results/pi_camera_calibration.yaml"
   },
-
   "vision": {
     "targeted_marker": {
       "length": 0.896,
@@ -16,7 +12,6 @@
       "aruco_dictionary": 16
     }
   },
-
   "streaming": {
     "port": 8085,
     "data": {
@@ -26,11 +21,10 @@
       "fps": 15
     }
   },
-
   "drone_connection": {
     "use_serial": true,
-    "address": "127.0.0.1",
-    "port": 14550,
+    "address": "/dev/serial0",
+    "port": null,
     "baud_rate": 921600
   }
 }
