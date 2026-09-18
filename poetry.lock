@@ -219,7 +219,7 @@ version = "25.4.0"
 description = "Classes Without Boilerplate"
 optional = false
 python-versions = ">=3.9"
-groups = ["main"]
+groups = ["main", "raspberry-pi"]
 files = [
     {file = "attrs-25.4.0-py3-none-any.whl", hash = "sha256:adcf7e2a1fb3b36ac48d97835bb6d8ade15b8dcce26aba8bf1d14847b57a3373"},
     {file = "attrs-25.4.0.tar.gz", hash = "sha256:16d5969b87f0859ef33a48b35d55ac1be6e42ae49d5e853b597db70c35c57e11"},
@@ -231,7 +231,7 @@ version = "16.1.0"
 description = "Pythonic bindings for FFmpeg's libraries."
 optional = false
 python-versions = ">=3.10"
-groups = ["main"]
+groups = ["main", "raspberry-pi"]
 files = [
     {file = "av-16.1.0-cp310-cp310-macosx_11_0_x86_64.whl", hash = "sha256:2395748b0c34fe3a150a1721e4f3d4487b939520991b13e7b36f8926b3b12295"},
     {file = "av-16.1.0-cp310-cp310-macosx_14_0_arm64.whl", hash = "sha256:72d7ac832710a158eeb7a93242370aa024a7646516291c562ee7f14a7ea881fd"},
@@ -577,12 +577,12 @@ version = "0.4.6"
 description = "Cross-platform colored terminal text."
 optional = false
 python-versions = "!=3.0.*,!=3.1.*,!=3.2.*,!=3.3.*,!=3.4.*,!=3.5.*,!=3.6.*,>=2.7"
-groups = ["main", "dev"]
+groups = ["main", "dev", "raspberry-pi"]
 files = [
     {file = "colorama-0.4.6-py2.py3-none-any.whl", hash = "sha256:4f1d9991f5acc0ca119f9d443620b77f9d6b33703e51011c16baf57afb285fc6"},
     {file = "colorama-0.4.6.tar.gz", hash = "sha256:08695f5cb7ed6e0531a20572697297273c47b8cae5a63ffc6d6ed5c201be6e44"},
 ]
-markers = {main = "sys_platform == \"win32\" or platform_system == \"Windows\"", dev = "platform_system == \"Windows\" or sys_platform == \"win32\""}
+markers = {main = "sys_platform == \"win32\" or platform_system == \"Windows\"", dev = "platform_system == \"Windows\" or sys_platform == \"win32\"", raspberry-pi = "platform_system == \"Windows\""}
 
 [[package]]
 name = "colorzero"
@@ -873,17 +873,6 @@ test = ["certifi (>=2024)", "cryptography-vectors (==46.0.5)", "pretend (>=0.7)"
 test-randomorder = ["pytest-randomly"]
 
 [[package]]
-name = "cv-bridge"
-version = "1.13.0.post0"
-description = "This contains CvBridge, which converts between ROS Image messages and OpenCV images."
-optional = false
-python-versions = "*"
-groups = ["simulation"]
-files = [
-    {file = "cv_bridge-1.13.0.post0-py2.py3-none-any.whl", hash = "sha256:4e345eed822024963cab9e892f407c980e8578b0ab05f081d9ee25fb2e77996c"},
-]
-
-[[package]]
 name = "cycler"
 version = "0.12.1"
 description = "Composable style cycles"
@@ -921,29 +910,12 @@ trio = ["trio (>=0.30)"]
 wmi = ["wmi (>=1.5.1) ; platform_system == \"Windows\""]
 
 [[package]]
-name = "dronekit"
-version = "2.9.2"
-description = "Developer Tools for Drones."
-optional = false
-python-versions = "*"
-groups = ["simulation"]
-files = [
-    {file = "dronekit-2.9.2-py2-none-any.whl", hash = "sha256:2952badfea7d9d6f2092ad35e87443f3f72f6b0804f04580e0c39eef917f9eec"},
-    {file = "dronekit-2.9.2-py3-none-any.whl", hash = "sha256:97542ad03a7584287d878f2082f8533e41b2ba77881b06bfbd5594bfbd75434f"},
-    {file = "dronekit-2.9.2.tar.gz", hash = "sha256:53d037241a86bf366a385c5bad7949536a4715e49111204d78d936c11fac4b51"},
-]
-
-[package.dependencies]
-monotonic = ">=1.3"
-pymavlink = ">=2.2.20"
-
-[[package]]
 name = "fastcrc"
 version = "0.3.5"
 description = "A hyper-fast Python module for computing CRC(8, 16, 32, 64) checksum"
 optional = false
 python-versions = ">=3.7"
-groups = ["main", "simulation"]
+groups = ["main"]
 files = [
     {file = "fastcrc-0.3.5-cp310-cp310-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:45a04142b34d1a54891b16766955cc38fc85a2323094457e9a03f8d918a389df"},
     {file = "fastcrc-0.3.5-cp310-cp310-manylinux_2_17_armv7l.manylinux2014_armv7l.whl", hash = "sha256:e44a765e411a2bda54c186d689af383686c0d78010e10944c954e6e9bfcd09f7"},
@@ -1461,7 +1433,7 @@ version = "4.26.0"
 description = "An implementation of JSON Schema validation for Python"
 optional = false
 python-versions = ">=3.10"
-groups = ["main"]
+groups = ["raspberry-pi"]
 files = [
     {file = "jsonschema-4.26.0-py3-none-any.whl", hash = "sha256:d489f15263b8d200f8387e64b4c3a75f06629559fb73deb8fdfb525f2dab50ce"},
     {file = "jsonschema-4.26.0.tar.gz", hash = "sha256:0c26707e2efad8aa1bfc5b7ce170f3fccc2e4918ff85989ba9ffa9facb2be326"},
@@ -1483,7 +1455,7 @@ version = "2025.9.1"
 description = "The JSON Schema meta-schemas and vocabularies, exposed as a Registry"
 optional = false
 python-versions = ">=3.9"
-groups = ["main"]
+groups = ["raspberry-pi"]
 files = [
     {file = "jsonschema_specifications-2025.9.1-py3-none-any.whl", hash = "sha256:98802fee3a11ee76ecaca44429fda8a41bff98b00a0f2838151b113f210cc6fe"},
     {file = "jsonschema_specifications-2025.9.1.tar.gz", hash = "sha256:b540987f239e745613c7a9176f3edb72b832a4ac465cf02712288397832b5e8d"},
@@ -1625,7 +1597,7 @@ version = "5.3"
 description = "Python interface to libarchive"
 optional = false
 python-versions = "*"
-groups = ["main"]
+groups = ["raspberry-pi"]
 files = [
     {file = "libarchive_c-5.3-py3-none-any.whl", hash = "sha256:651550a6ec39266b78f81414140a1e04776c935e72dfc70f1d7c8e0a3672ffba"},
     {file = "libarchive_c-5.3.tar.gz", hash = "sha256:5ddb42f1a245c927e7686545da77159859d5d4c6d00163c59daff4df314dae82"},
@@ -1656,7 +1628,7 @@ version = "6.0.2"
 description = "Powerful and Pythonic XML processing library combining libxml2/libxslt with the ElementTree API."
 optional = false
 python-versions = ">=3.8"
-groups = ["main", "simulation"]
+groups = ["main"]
 files = [
     {file = "lxml-6.0.2-cp310-cp310-macosx_10_9_universal2.whl", hash = "sha256:e77dd455b9a16bbd2a5036a63ddbd479c19572af81b624e79ef422f929eef388"},
     {file = "lxml-6.0.2-cp310-cp310-macosx_10_9_x86_64.whl", hash = "sha256:5d444858b9f07cefff6455b983aea9a67f7462ba1f6cbe4a21e8bf6791bf2153"},
@@ -1898,18 +1870,6 @@ files = [
 ]
 
 [[package]]
-name = "monotonic"
-version = "1.6"
-description = "An implementation of time.monotonic() for Python 2 & < 3.3"
-optional = false
-python-versions = "*"
-groups = ["simulation"]
-files = [
-    {file = "monotonic-1.6-py2.py3-none-any.whl", hash = "sha256:68687e19a14f11f26d140dd5c86f3dba4bf5df58003000ed467e0e2a69bca96c"},
-    {file = "monotonic-1.6.tar.gz", hash = "sha256:3a55207bcfed53ddd5c5bae174524062935efed17792e9de2ad0205ce9ad63f7"},
-]
-
-[[package]]
 name = "multidict"
 version = "6.7.1"
 description = "multidict implementation"
@@ -2083,7 +2043,7 @@ version = "2.4.2"
 description = "Fundamental package for array computing in Python"
 optional = false
 python-versions = ">=3.11"
-groups = ["main"]
+groups = ["main", "raspberry-pi"]
 files = [
     {file = "numpy-2.4.2-cp311-cp311-macosx_10_9_x86_64.whl", hash = "sha256:e7e88598032542bd49af7c4747541422884219056c268823ef6e5e89851c8825"},
     {file = "numpy-2.4.2-cp311-cp311-macosx_11_0_arm64.whl", hash = "sha256:7edc794af8b36ca37ef5fcb5e0d128c7e0595c7b96a2318d1badb6fcd8ee86b1"},
@@ -2186,7 +2146,7 @@ version = "3.4.4"
 description = "Python bindings for the OpenEXR image file format"
 optional = false
 python-versions = ">=3.7"
-groups = ["main"]
+groups = ["raspberry-pi"]
 files = [
     {file = "openexr-3.4.4-cp310-cp310-macosx_10_15_universal2.whl", hash = "sha256:600ace6c8f0ffea81102b7467c09f0c6fa6a8434777bac2f56beacd02bc1cc24"},
     {file = "openexr-3.4.4-cp310-cp310-macosx_10_15_x86_64.whl", hash = "sha256:3b030a29ec42b9beb7d47711cf25201f46a7eef7ce162772ca7e3e74045bd926"},
@@ -2281,7 +2241,7 @@ version = "0.3.34"
 description = "The libcamera-based Python interface to Raspberry Pi cameras, based on the original Picamera library"
 optional = false
 python-versions = ">=3.9"
-groups = ["main"]
+groups = ["raspberry-pi"]
 files = [
     {file = "picamera2-0.3.34-py3-none-any.whl", hash = "sha256:08635c902b43cfa6349b2dec460005f92bf4d97655caf3cd57b06fc3bb8b19c5"},
     {file = "picamera2-0.3.34.tar.gz", hash = "sha256:fa923c2d25a124b1b591b332e10836a08690a1cf6bd233bb25862466d881229d"},
@@ -2310,7 +2270,7 @@ version = "4.0.9"
 description = "Python utility for creating Adobe DNG files from RAW image data."
 optional = false
 python-versions = ">=3.6"
-groups = ["main"]
+groups = ["raspberry-pi"]
 files = [
     {file = "pidng-4.0.9.tar.gz", hash = "sha256:560eb008086f8a715fd9e1ab998817a7d4c8500a7f161b9ce6af5ab27501f82c"},
 ]
@@ -2324,7 +2284,7 @@ version = "1.1.3"
 description = "To simplify exif manipulations with python. Writing, reading, and more..."
 optional = false
 python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*, !=3.4.*"
-groups = ["main"]
+groups = ["raspberry-pi"]
 files = [
     {file = "piexif-1.1.3-py2.py3-none-any.whl", hash = "sha256:3bc435d171720150b81b15d27e05e54b8abbde7b4242cddd81ef160d283108b6"},
     {file = "piexif-1.1.3.zip", hash = "sha256:83cb35c606bf3a1ea1a8f0a25cb42cf17e24353fd82e87ae3884e74a302a5f1b"},
@@ -2336,7 +2296,7 @@ version = "12.1.0"
 description = "Python Imaging Library (fork)"
 optional = false
 python-versions = ">=3.10"
-groups = ["main"]
+groups = ["main", "raspberry-pi"]
 files = [
     {file = "pillow-12.1.0-cp310-cp310-macosx_10_10_x86_64.whl", hash = "sha256:fb125d860738a09d363a88daa0f59c4533529a90e564785e20fe875b200b6dbd"},
     {file = "pillow-12.1.0-cp310-cp310-macosx_11_0_arm64.whl", hash = "sha256:cad302dc10fac357d3467a74a9561c90609768a6f73a1923b0fd851b6486f8b0"},
@@ -2708,7 +2668,7 @@ version = "2.4.49"
 description = "Python MAVLink code"
 optional = false
 python-versions = "*"
-groups = ["main", "simulation"]
+groups = ["main"]
 files = [
     {file = "pymavlink-2.4.49-cp310-cp310-macosx_10_9_universal2.whl", hash = "sha256:e7c92b066ff05587dbdbc517f20eb7f98f2aa13916223fcd6daed54a8d1b7bc5"},
     {file = "pymavlink-2.4.49-cp310-cp310-macosx_10_9_x86_64.whl", hash = "sha256:be3607975eb7392b89a847c6810a4b5e2e3ea6935c7875dfb1289de39ccb4aea"},
@@ -2920,7 +2880,7 @@ version = "1.8.1"
 description = "Python(ic) interface to the linux prctl syscall"
 optional = false
 python-versions = "*"
-groups = ["main"]
+groups = ["raspberry-pi"]
 files = [
     {file = "python-prctl-1.8.1.tar.gz", hash = "sha256:b4ca9a25a7d4f1ace4fffd1f3a2e64ef5208fe05f929f3edd5e27081ca7e67ce"},
 ]
@@ -2986,7 +2946,7 @@ version = "0.37.0"
 description = "JSON Referencing + Python"
 optional = false
 python-versions = ">=3.10"
-groups = ["main"]
+groups = ["raspberry-pi"]
 files = [
     {file = "referencing-0.37.0-py3-none-any.whl", hash = "sha256:381329a9f99628c9069361716891d34ad94af76e461dcb0335825aecc7692231"},
     {file = "referencing-0.37.0.tar.gz", hash = "sha256:44aefc3142c5b842538163acb373e24cce6632bd54bdb01b21ad5863489f50d8"},
@@ -3026,7 +2986,7 @@ version = "0.30.0"
 description = "Python bindings to Rust's persistent data structures (rpds)"
 optional = false
 python-versions = ">=3.10"
-groups = ["main"]
+groups = ["raspberry-pi"]
 files = [
     {file = "rpds_py-0.30.0-cp310-cp310-macosx_10_12_x86_64.whl", hash = "sha256:679ae98e00c0e8d68a7fda324e16b90fd5260945b45d3b824c892cec9eea3288"},
     {file = "rpds_py-0.30.0-cp310-cp310-macosx_11_0_arm64.whl", hash = "sha256:4cc2206b76b4f576934f0ed374b10d7ca5f457858b157ca52064bdfc26b9fc00"},
@@ -3200,7 +3160,7 @@ version = "1.9.0"
 description = "A simple package for fast JPEG encoding and decoding."
 optional = false
 python-versions = ">=3.9"
-groups = ["main"]
+groups = ["raspberry-pi"]
 files = [
     {file = "simplejpeg-1.9.0-cp310-cp310-macosx_10_9_x86_64.whl", hash = "sha256:3c114fec003c34eaeb9c945c3bf552bbaa510d67340f18556a683634b1892df0"},
     {file = "simplejpeg-1.9.0-cp310-cp310-macosx_11_0_arm64.whl", hash = "sha256:598c187e2c22a0f27ebec497f749b0b3dd3757baebe11a928434b6f447715386"},
@@ -3290,7 +3250,7 @@ version = "4.67.3"
 description = "Fast, Extensible Progress Meter"
 optional = false
 python-versions = ">=3.7"
-groups = ["main"]
+groups = ["raspberry-pi"]
 files = [
     {file = "tqdm-4.67.3-py3-none-any.whl", hash = "sha256:ee1e4c0e59148062281c49d80b25b67771a127c85fc9676d3be5f243206826bf"},
     {file = "tqdm-4.67.3.tar.gz", hash = "sha256:7d825f03f89244ef73f1d4ce193cb1774a8179fd96f31d7e1dcde62092b960bb"},
@@ -3312,11 +3272,12 @@ version = "4.15.0"
 description = "Backported and Experimental Type Hints for Python 3.9+"
 optional = false
 python-versions = ">=3.9"
-groups = ["main"]
+groups = ["main", "raspberry-pi"]
 files = [
     {file = "typing_extensions-4.15.0-py3-none-any.whl", hash = "sha256:f0fa19c6845758ab08074a0cfa8b7aecb71c999ca73d62883bc25cc018c4e548"},
     {file = "typing_extensions-4.15.0.tar.gz", hash = "sha256:0cea48d173cc12fa28ecabc3b837ea3cf6f38c6d1136f85cbaaf598984861466"},
 ]
+markers = {raspberry-pi = "python_version < \"3.13\""}
 
 [[package]]
 name = "videodev2"
@@ -3324,7 +3285,7 @@ version = "0.0.4"
 description = "Python ctypes bindings for Video4Linux2 (V4L2) API"
 optional = false
 python-versions = ">=3.6"
-groups = ["main"]
+groups = ["raspberry-pi"]
 files = [
     {file = "videodev2-0.0.4-py3-none-any.whl", hash = "sha256:d35f7ab39ddb06d50fec96a99bfc8d5b8b525bc7ea03788259d386393f1a64ba"},
     {file = "videodev2-0.0.4.tar.gz", hash = "sha256:c34ba70491d148c23a08cbacd8efabeb413cff5baa943a7548ac4abd1eb19e2a"},
@@ -3497,4 +3458,4 @@ propcache = ">=0.2.1"
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.11,<3.14"
-content-hash = "45938c7ac976df122a3bb54aceff0550401b874854d490ddcbe465da653f4947"
+content-hash = "194bc49f4ca4e109ab4a8e0bad386d34b71dc0db94f905edff4153a5053456f3"
