@@ -124,6 +124,7 @@ class AutolanderConfigurationReader:
             port=port,
             data=StreamingDataConfiguration(dps=dps),
             video=StreamingVideoConfiguration(fps=video_fps),
+            host=streaming.get("host", "127.0.0.1"),
         )
 
     def _parse_drone_connection(self, raw: dict[str, Any]) -> DroneConnectionConfiguration:

@@ -1,5 +1,7 @@
 import asyncio
 import json
+import hmac
+import ssl
 import time
 from dataclasses import dataclass
 from pathlib import Path
@@ -7,8 +9,8 @@ from threading import Event
 from typing import Any, Dict, Optional, Set
 
 import numpy as np
-from aiohttp import web
-from aiortc import RTCPeerConnection, RTCSessionDescription
+from aiohttp import BasicAuth, web
+from aiortc import RTCConfiguration, RTCPeerConnection, RTCSessionDescription
 from aiortc.mediastreams import VideoStreamTrack
 from av import VideoFrame
 from loguru import logger
@@ -46,9 +48,13 @@ class _VideoBufferTrack(VideoStreamTrack):
 
 @dataclass(slots=True)
 class WebRTCConfig:
-    host: str = "0.0.0.0"
+    host: str = "127.0.0.1"
     port: int = 8080
     stream_fps: int = 30
+    password: str | None = None
+    tls_cert: str | None = None
+    tls_key: str | None = None
+    max_peers: int = 4
 
 
 SRC_ASSETS_BASE_DIR = Path(__file__).resolve().parent.parent.parent / "assets"
@@ -106,7 +112,7 @@ class WebRTCContentStreamer(ContentStreamer):
         self._shutdown_event = asyncio.Event()
         self._loop.set_exception_handler(self._handle_async_error)
 
-        app = web.Application()
+        app = web.Application(middlewares=[self._authenticate])
         app.router.add_static("/static/", path=SRC_ASSETS_STATIC_DIR, name="static")
         app.router.add_get("/", self._index)
         app.router.add_post("/offer", self._offer)
@@ -117,9 +123,16 @@ class WebRTCContentStreamer(ContentStreamer):
             if self._stop_requested.is_set():
                 return
             await runner.setup()
-            site = web.TCPSite(runner, host=self.configuration.host, port=self.configuration.port)
+            tls = None
+            if bool(self.configuration.tls_cert) != bool(self.configuration.tls_key):
+                raise ValueError("Both TLS certificate and key must be provided")
+            if self.configuration.tls_cert:
+                tls = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+                tls.load_cert_chain(self.configuration.tls_cert, self.configuration.tls_key)
+            site = web.TCPSite(runner, host=self.configuration.host, port=self.configuration.port, ssl_context=tls)
             await site.start()
-            logger.info("WebRTC server ready at http://{}:{}", self.configuration.host, self.configuration.port)
+            logger.info("WebRTC server ready at {}://{}:{}", "https" if tls else "http", self.configuration.host,
+                        self.configuration.port)
             await self._shutdown_event.wait()
             if self._async_error is not None:
                 raise RuntimeError("WebRTC asynchronous task failed") from self._async_error
@@ -136,6 +149,20 @@ class WebRTCContentStreamer(ContentStreamer):
     async def _index(_request: web.Request) -> web.FileResponse:
         return web.FileResponse(path=INDEX_HTML_FILE)
 
+    @web.middleware
+    async def _authenticate(self, request, handler):
+        if self.configuration.password:
+            try:
+                auth = BasicAuth.decode(request.headers.get("Authorization", ""))
+                valid = auth.login == "autolander" and hmac.compare_digest(
+                    auth.password.encode(), self.configuration.password.encode()
+                )
+            except ValueError:
+                valid = False
+            if not valid:
+                raise web.HTTPUnauthorized(headers={"WWW-Authenticate": 'Basic realm="Autolander"'})
+        return await handler(request)
+
     async def _offer(self, request: web.Request) -> web.Response:
         try:
             params = await request.json()
@@ -145,7 +172,9 @@ class WebRTCContentStreamer(ContentStreamer):
         except (ValueError, TypeError) as error:
             raise web.HTTPBadRequest(text="Invalid WebRTC offer") from error
 
-        peer_connection = RTCPeerConnection()
+        if len(self.peer_connections) >= self.configuration.max_peers:
+            raise web.HTTPServiceUnavailable(text="Too many WebRTC sessions")
+        peer_connection = RTCPeerConnection(RTCConfiguration(iceServers=[]))
         self.peer_connections.add(peer_connection)
 
         @peer_connection.on("connectionstatechange")

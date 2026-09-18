@@ -140,6 +140,8 @@ class ConfigurationValidator:
     def _validate_streaming(self, root: dict[str, Any]) -> None:
         streaming = self._req_obj(root, "streaming", "root")
         self._req_int(streaming, "port", "streaming", min_=1, max_=65535)
+        if "host" in streaming:
+            self._validate_host_like(self._req_str(streaming, "host", "streaming", allow_empty=False), "streaming.host")
 
         data = self._req_obj(streaming, "data", "streaming")
         self._req_int(data, "dps", "streaming.data", min_=1, max_=240)
@@ -149,7 +151,7 @@ class ConfigurationValidator:
 
         self._no_extra_keys(data, {"dps"}, "streaming.data")
         self._no_extra_keys(video, {"fps"}, "streaming.video")
-        self._no_extra_keys(streaming, {"port", "data", "video"}, "streaming")
+        self._no_extra_keys(streaming, {"host", "port", "data", "video"}, "streaming")
 
     def _validate_drone_connection(self, root: dict[str, Any]) -> None:
         dc = self._req_obj(root, "drone_connection", "root")

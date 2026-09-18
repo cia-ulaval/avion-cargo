@@ -1,6 +1,7 @@
 """Assemble application services with their concrete adapters."""
 
 from dataclasses import dataclass
+import os
 from typing import Optional
 
 from application.camera_calibration_service import CameraCalibrationService
@@ -146,9 +147,12 @@ def build_landing_service(config: AutolanderConfiguration, use_simulated_cam: bo
     streamer = WebRTCContentStreamer(
         frame_buffer,
         WebRTCConfig(
-            host="0.0.0.0",
+            host=config.streaming_config.host,
             port=config.streaming_config.port,
             stream_fps=config.streaming_config.video.fps,
+            password=os.getenv("AUTOLANDER_HTTP_PASSWORD"),
+            tls_cert=os.getenv("AUTOLANDER_TLS_CERT"),
+            tls_key=os.getenv("AUTOLANDER_TLS_KEY"),
         ),
     )
     return DroneAutolandingService(

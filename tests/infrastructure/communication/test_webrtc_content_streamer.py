@@ -89,3 +89,26 @@ def test_failed_offer_closes_and_removes_its_peer(monkeypatch):
         asyncio.run(streamer._offer(request))
     peer.close.assert_awaited_once()
     assert not streamer.peer_connections
+
+
+@pytest.mark.parametrize('authorized', [True, False])
+def test_http_password_protects_page_assets_and_offer(authorized):
+    from aiohttp import BasicAuth
+    config = streamer_module.WebRTCConfig(password='test-password')
+    streamer = streamer_module.WebRTCContentStreamer(FrameBuffer(), config)
+    request = Mock(headers={'Authorization': BasicAuth('autolander', 'test-password' if authorized else 'wrong').encode()})
+    handler = AsyncMock(return_value='page')
+    if authorized:
+        assert asyncio.run(streamer._authenticate(request, handler)) == 'page'
+    else:
+        with pytest.raises(web.HTTPUnauthorized):
+            asyncio.run(streamer._authenticate(request, handler))
+        handler.assert_not_called()
+
+
+def test_sessions_are_bounded_before_creating_peer():
+    streamer = streamer_module.WebRTCContentStreamer(FrameBuffer())
+    streamer.peer_connections = {object() for _ in range(streamer.configuration.max_peers)}
+    request = Mock(json=AsyncMock(return_value={'sdp': 'test', 'type': 'offer'}))
+    with pytest.raises(web.HTTPServiceUnavailable):
+        asyncio.run(streamer._offer(request))

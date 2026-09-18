@@ -33,6 +33,7 @@ class StreamingConfiguration:
     port: int
     data: StreamingDataConfiguration
     video: StreamingVideoConfiguration
+    host: str = "127.0.0.1"
 
 
 @dataclass(frozen=True, slots=True)
