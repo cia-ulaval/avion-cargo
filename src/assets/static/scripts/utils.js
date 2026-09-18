@@ -2,12 +2,16 @@ export function isPlainObject(value) {
   return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
 }
 
+export function finiteNumber(value) {
+  return typeof value === 'number' && Number.isFinite(value) ? value : Number.NaN;
+}
+
 export function formatMetric(value, unit = '', digits = 2) {
-  if (!Number.isFinite(Number(value))) {
+  if (!Number.isFinite(finiteNumber(value))) {
     return '--';
   }
 
-  return `${Number(value).toFixed(digits)}${unit}`;
+  return `${value.toFixed(digits)}${unit}`;
 }
 
 export function formatDegrees(value) {
@@ -15,22 +19,22 @@ export function formatDegrees(value) {
 }
 
 export function formatLatLon(value, axis) {
-  if (!Number.isFinite(Number(value))) {
+  if (!Number.isFinite(finiteNumber(value))) {
     return '--';
   }
 
   const positive = axis === 'lat' ? 'N' : 'E';
   const negative = axis === 'lat' ? 'S' : 'W';
-  const suffix = Number(value) >= 0 ? positive : negative;
-  return `${Math.abs(Number(value)).toFixed(5)} deg ${suffix}`;
+  const suffix = value >= 0 ? positive : negative;
+  return `${Math.abs(value).toFixed(5)} deg ${suffix}`;
 }
 
 export function formatAgeFromSeconds(timestampSeconds) {
-  if (!Number.isFinite(Number(timestampSeconds)) || Number(timestampSeconds) <= 0) {
+  if (!Number.isFinite(finiteNumber(timestampSeconds)) || finiteNumber(timestampSeconds) <= 0) {
     return '--';
   }
 
-  const ageSeconds = Math.max(0, Date.now() / 1000 - Number(timestampSeconds));
+  const ageSeconds = Math.max(0, Date.now() / 1000 - finiteNumber(timestampSeconds));
   if (ageSeconds < 1) {
     return 'now';
   }
@@ -51,7 +55,7 @@ export function formatFreshnessFromMs(ageMs) {
 }
 
 export function gpsFixLabel(value) {
-  const fixType = Number(value);
+  const fixType = finiteNumber(value);
   if (!Number.isFinite(fixType)) {
     return '--';
   }
