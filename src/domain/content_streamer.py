@@ -11,3 +11,8 @@ class ContentStreamer(ABC):
     @abstractmethod
     def send_data(self, data: Dict[str, Any]) -> None:
         raise NotImplementedError()
+
+    @abstractmethod
+    def stop(self) -> None:
+        """Request server shutdown without blocking the calling thread."""
+        raise NotImplementedError()
