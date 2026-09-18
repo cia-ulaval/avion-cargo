@@ -53,3 +53,12 @@ def test_reader_resolves_relative_calibration_paths_from_the_config_file_directo
     config = AutolanderConfigurationReader(config_path).read()
 
     assert config.camera_config.calibration_filepath == calibration_file.resolve()
+
+
+def test_reader_preserves_configured_camera_mount(tmp_path, valid_config_data):
+    valid_config_data['camera']['mount'] = {
+        'rotation': [[1, 0, 0], [0, 1, 0], [0, 0, 1]], 'translation_m': [0.1, 0.2, 0.3],
+    }
+    config = AutolanderConfigurationReader(write_config(tmp_path, valid_config_data)).read()
+    from domain.models import Pose3D
+    assert config.camera_config.mount.to_body(Pose3D(1, 2, 3)) == Pose3D(1.1, 2.2, 3.3)

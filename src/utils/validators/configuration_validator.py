@@ -4,6 +4,7 @@ import re
 from pathlib import Path
 from typing import Any, Optional
 
+from domain.camera_mount import CameraMount
 from utils.validators.validation_error import ValidationError
 
 
@@ -114,7 +115,14 @@ class ConfigurationValidator:
             gz_simulation = self._req_obj(camera, "gz_simulation", "camera")
             self._req_str(gz_simulation, "topic_name", "camera.gz_simulation", allow_empty=False)
             self._no_extra_keys(gz_simulation, {"topic_name"}, "camera.gz_simulation")
-        self._no_extra_keys(camera, {"id", "use_picamera", "fps", "calibration_filepath", "gz_simulation"}, "camera")
+        if "mount" in camera:
+            mount = self._req_obj(camera, "mount", "camera")
+            self._no_extra_keys(mount, {"rotation", "translation_m"}, "camera.mount")
+            try:
+                CameraMount(**mount)
+            except (ValueError, TypeError) as error:
+                raise ValidationError(str(error), "camera.mount") from error
+        self._no_extra_keys(camera, {"id", "use_picamera", "fps", "calibration_filepath", "gz_simulation", "mount"}, "camera")
 
     def _validate_vision(self, root: dict[str, Any]) -> None:
         vision = self._req_obj(root, "vision", "root")

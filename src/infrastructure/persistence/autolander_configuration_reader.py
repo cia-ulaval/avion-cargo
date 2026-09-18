@@ -2,6 +2,7 @@ import json
 from pathlib import Path
 from typing import Any, Optional
 
+from domain.camera_mount import CameraMount
 from domain.models import TargetedMarker
 from infrastructure.persistence.configuration_models import (
     AutolanderConfiguration,
@@ -95,6 +96,7 @@ class AutolanderConfigurationReader:
             fps=fps,
             calibration_filepath=resolved_calibration_path,
             simulation_topic_name=gz_simulation.get("topic_name"),
+            mount=CameraMount(**camera.get("mount", {})),
         )
 
     def _parse_targeted_marker(self, raw: dict[str, Any]) -> TargetedMarker:

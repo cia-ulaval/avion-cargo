@@ -5,6 +5,7 @@ from typing import Optional, Tuple
 import numpy as np
 
 from domain.camera import Camera
+from domain.camera_mount import CameraMount
 from domain.frame_annotator import FrameAnnotator
 from domain.marker_detector import MarkerDetector
 from domain.models import CalibrationData, Pose3D, TargetedMarker
@@ -29,17 +30,13 @@ class TrackingService:
     target: TargetedMarker
     calibration: CalibrationData
     annotator: FrameAnnotator
+    camera_mount: CameraMount = CameraMount()
 
-    @staticmethod
-    def _to_uav_pose(estimated_pose: Optional[Pose3D]) -> Optional[Pose3D]:
+    def _to_uav_pose(self, estimated_pose: Optional[Pose3D]) -> Optional[Pose3D]:
         if estimated_pose is None:
             return None
 
-        return Pose3D(
-            x=-estimated_pose.y,
-            y=estimated_pose.x,
-            z=estimated_pose.z,
-        )
+        return self.camera_mount.to_body(estimated_pose)
 
     def track_target(self) -> Tuple[np.ndarray, TrackingResult]:
         """

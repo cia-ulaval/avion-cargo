@@ -2,6 +2,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional
 
+from domain.camera_mount import CameraMount
 from domain.models import TargetedMarker
 
 
@@ -14,6 +15,7 @@ class CameraConfiguration:
     height: Optional[int] = 480
     calibration_filepath: Optional[Path] = None
     simulation_topic_name: Optional[str] = None
+    mount: CameraMount = CameraMount()
 
 
 @dataclass(frozen=True, slots=True)
