@@ -69,22 +69,27 @@ class DroneMavlinkBase(Drone):
         return self.status
 
     def land_on_target(self, uav_pose: Pose3D, target_size: tuple[float, float]) -> None:
-        const = math.pi / 180
-        h_fov, v_fov = 53.5 * const, 41.41 * const
-        x_ang = (uav_pose.x - 640 * 0.5) * h_fov / 640
-        y_ang = (uav_pose.y - 480 * 0.5) * v_fov / 480
+        """Send the MAVLink 2 position branch, expressed in metres in BODY_FRD.
 
-        distance = math.sqrt(uav_pose.x**2 + uav_pose.y**2 + uav_pose.z**2)
+        Image angles/sizes cannot be recovered from a body-frame translation
+        for an arbitrary camera mounting. Leave these unused legacy fields at
+        zero; ArduPilot consumes x/y/z and distance when position_valid is one.
+        ``target_size`` remains in the domain API but is not an angular size.
+        """
+        self._require_connected()
+        distance = math.hypot(uav_pose.x, uav_pose.y, uav_pose.z)
+        if not math.isfinite(distance) or uav_pose.z <= 0:
+            raise ValueError("Landing target must be finite and below the vehicle (BODY_FRD z > 0)")
 
         self.connection.mav.landing_target_send(
             int(time.time() * 1_000_000),  # time_usec
             0,  # target_num
             mavutil.mavlink.MAV_FRAME_BODY_FRD,  # frame
-            x_ang,  # angle_x
-            y_ang,  # angle_y
+            0.0,  # angle_x: not provided by the position branch
+            0.0,  # angle_y
             distance,  # distance
-            target_size[0],  # size_x
-            target_size[1],  # size_y
+            0.0,  # size_x: angular size unknown
+            0.0,  # size_y
             uav_pose.x,  # x
             uav_pose.y,  # y
             uav_pose.z,  # z
