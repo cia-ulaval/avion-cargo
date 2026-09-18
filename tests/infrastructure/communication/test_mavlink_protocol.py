@@ -30,7 +30,7 @@ def test_mavlink2_extensions_survive_without_environment_variable(monkeypatch):
     drone = connected_drone()
     # Receiving a MAVLink 1 heartbeat must not downgrade our outbound messages.
     drone.connection.auto_mavlink_version(bytes([0xFE]))
-    drone.land_on_target(Pose3D(0.3, 0.2, 2.0), (0.4, 0.4))
+    drone.send_landing_target(Pose3D(0.3, 0.2, 2.0), (0.4, 0.4))
     message = last_packet(drone)
     assert message.get_type() == "LANDING_TARGET"
     assert message.get_srcComponent() == 191
@@ -50,7 +50,7 @@ def test_companion_heartbeat_uses_protocol_defined_version_field():
 
 def test_position_branch_keeps_metric_values_and_omits_unknown_image_angles():
     drone = connected_drone()
-    drone.land_on_target(Pose3D(0.3, -0.2, 2.0), (0.4, 0.4))
+    drone.send_landing_target(Pose3D(0.3, -0.2, 2.0), (0.4, 0.4))
     message = last_packet(drone)
     assert (message.x, message.y, message.z) == pytest.approx((0.3, -0.2, 2.0))
     assert message.distance == pytest.approx(math.sqrt(4.13))
@@ -62,11 +62,11 @@ def test_position_branch_keeps_metric_values_and_omits_unknown_image_angles():
 def test_target_at_or_above_vehicle_is_not_transmitted(z):
     drone = connected_drone()
     with pytest.raises(ValueError, match="below the vehicle"):
-        drone.land_on_target(Pose3D(0.2, 0.3, z), (0.4, 0.4))
+        drone.send_landing_target(Pose3D(0.2, 0.3, z), (0.4, 0.4))
     drone.connection.write.assert_not_called()
 
 
 def test_target_requires_a_connection():
     drone = DroneMavlinkUDPConnector(MavlinkConnectionParams("127.0.0.1", 14550))
     with pytest.raises(RuntimeError, match="not connected"):
-        drone.land_on_target(Pose3D(0, 0, 2), (0.4, 0.4))
+        drone.send_landing_target(Pose3D(0, 0, 2), (0.4, 0.4))

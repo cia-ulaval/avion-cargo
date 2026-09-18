@@ -9,7 +9,7 @@ from domain.models import Pose3D
 from infrastructure.communication.mavlink import DroneMavlinkUDPConnector, MavlinkConnectionParams
 
 
-def test_udp_connection_mode_confirmation_and_landing_target():
+def test_udp_publishes_target_without_changing_flight_mode():
     with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as reservation:
         reservation.bind(("127.0.0.1", 0))
         port = reservation.getsockname()[1]
@@ -19,6 +19,7 @@ def test_udp_connection_mode_confirmation_and_landing_target():
     stop = Event()
     target_received = Event()
     received = []
+    commands = []
     errors = []
 
     class Sender:
@@ -43,9 +44,8 @@ def test_udp_connection_mode_confirmation_and_landing_target():
                 except socket.timeout:
                     continue
                 for message in decoder.parse_buffer(packet) or []:
-                    if message.get_type() == "COMMAND_LONG" and message.command == mavlink2.MAV_CMD_DO_SET_MODE:
-                        mode = int(message.param2)
-                        encoder.command_ack_send(message.command, mavlink2.MAV_RESULT_ACCEPTED)
+                    if message.get_type() == "COMMAND_LONG":
+                        commands.append(message.command)
                     elif message.get_type() == "LANDING_TARGET":
                         received.append(message)
                         target_received.set()
@@ -58,8 +58,7 @@ def test_udp_connection_mode_confirmation_and_landing_target():
     try:
         drone.connect()
         assert drone.get_status().connected
-        drone.activate_land_mode()
-        drone.land_on_target(Pose3D(0.5, -0.25, 2), (0.4, 0.4))
+        drone.send_landing_target(Pose3D(0.5, -0.25, 2), (0.4, 0.4))
         assert target_received.wait(2)
         target = received[-1]
         assert (target.x, target.y, target.z) == (0.5, -0.25, 2)
@@ -72,3 +71,4 @@ def test_udp_connection_mode_confirmation_and_landing_target():
         controller.close()
     assert not thread.is_alive()
     assert not errors
+    assert commands and set(commands) == {mavlink2.MAV_CMD_SET_MESSAGE_INTERVAL}

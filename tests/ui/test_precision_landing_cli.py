@@ -29,12 +29,12 @@ def test_landing_cli_assembles_then_connects_and_starts_services(
         call.drone.connect(),
         call.track_target(),
         call.stream_video(),
-        call.perform_precision_landing(),
+        call.publish_target_positions(),
         call.stop(),
     ]
 
 
-@pytest.mark.parametrize("stage", ["drone.connect", "track_target", "stream_video", "perform_precision_landing"])
+@pytest.mark.parametrize("stage", ["drone.connect", "track_target", "stream_video", "publish_target_positions"])
 def test_cli_failure_is_nonzero_and_always_closes_resources(monkeypatch, tmp_path, valid_config_data, stage):
     service = Mock()
     operation = service
@@ -49,7 +49,7 @@ def test_cli_failure_is_nonzero_and_always_closes_resources(monkeypatch, tmp_pat
 
 def test_cli_interrupt_closes_resources(monkeypatch, tmp_path, valid_config_data):
     service = Mock()
-    service.perform_precision_landing.side_effect = KeyboardInterrupt
+    service.publish_target_positions.side_effect = KeyboardInterrupt
     monkeypatch.setattr(precision_landing_cli, "build_landing_service", Mock(return_value=service))
     result = CliRunner().invoke(precision_landing_cli.main, [str(write_config(tmp_path, valid_config_data))])
     assert result.exit_code != 0

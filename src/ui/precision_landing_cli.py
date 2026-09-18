@@ -30,7 +30,7 @@ def main(config_file_path, gz_simulation):
         landing_service.drone.connect()
         landing_service.track_target()
         landing_service.stream_video()
-        landing_service.perform_precision_landing()
+        landing_service.publish_target_positions()
     finally:
         already_failing = sys.exc_info()[0] is not None
         try:

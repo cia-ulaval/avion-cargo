@@ -73,6 +73,8 @@ class DroneStatus:
 
 
 class Drone(ABC):
+    """Receive vehicle telemetry and send target measurements, without flight control."""
+
     def close(self) -> None:
         """Release the connection; adapters owning a transport override this."""
 
@@ -85,25 +87,6 @@ class Drone(ABC):
         raise NotImplementedError()
 
     @abstractmethod
-    def land_on_target(self, position: Pose3D, target_size: tuple[float, float]):
-        raise NotImplementedError()
-
-    @abstractmethod
-    def switch_mode(self, mode: DroneMode) -> None:
-        raise NotImplementedError()
-
-    @abstractmethod
-    def activate_land_mode(self):
-        raise NotImplementedError()
-
-    def activate_precision_landing_mode(self):
-        raise NotImplementedError()
-
-    def activate_guided_mode(self):
-        raise NotImplementedError()
-
-    def arm(self):
-        raise NotImplementedError()
-
-    def takeoff(self):
+    def send_landing_target(self, position: Pose3D, target_size: tuple[float, float]):
+        """Send a LANDING_TARGET measurement; this message does not select a flight mode."""
         raise NotImplementedError()

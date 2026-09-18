@@ -39,19 +39,15 @@ class FakeTracker:
 class FakeDrone:
     status: Any
     service: autolanding_module.DroneAutolandingService | None = None
-    land_mode_calls: int = 0
-    land_calls: list[tuple[Pose3D, tuple[float, float]]] = field(default_factory=list)
-
-    def activate_land_mode(self) -> None:
-        self.land_mode_calls += 1
+    target_messages: list[tuple[Pose3D, tuple[float, float]]] = field(default_factory=list)
 
     def get_status(self) -> Any:
         assert self.service is not None
         self.service._tracking_started = False
         return self.status
 
-    def land_on_target(self, position: Pose3D, target_size: tuple[float, float]) -> None:
-        self.land_calls.append((position, target_size))
+    def send_landing_target(self, position: Pose3D, target_size: tuple[float, float]) -> None:
+        self.target_messages.append((position, target_size))
 
     def close(self) -> None:
         return None
@@ -86,7 +82,7 @@ def build_service(
         (4.5, 1.4, 1.4),
     ],
 )
-def test_precision_landing_preserves_target_distance_regardless_of_relative_altitude(
+def test_target_publication_preserves_target_distance_regardless_of_relative_altitude(
     reported_relative_altitude: float,
     tracked_pose_z: float,
     expected_z: float,
@@ -97,10 +93,9 @@ def test_precision_landing_preserves_target_distance_regardless_of_relative_alti
     service.pose_buffer.get_uav_pose_value.return_value = Pose3D(x=0.2, y=-0.3, z=tracked_pose_z)
     service._tracking_started = True
 
-    service._landing_target_loop()
+    service._target_publication_loop()
 
-    assert drone.land_mode_calls == 1
-    assert drone.land_calls == [(Pose3D(x=0.2, y=-0.3, z=expected_z), (0.896, 0.896))]
+    assert drone.target_messages == [(Pose3D(x=0.2, y=-0.3, z=expected_z), (0.896, 0.896))]
 
 
 def test_telemetry_payload_merges_latest_tracking_metadata_with_current_drone_status(sample_drone_status) -> None:
@@ -163,15 +158,15 @@ def test_landing_target_transmission_is_paced_without_incoming_messages(monkeypa
     service._stop_event = Mock()
 
     def wait_one_cycle(_delay):
-        if len(drone.land_calls) == 3:
+        if len(drone.target_messages) == 3:
             service._tracking_started = False
 
     service._stop_event.wait.side_effect = wait_one_cycle
     service._tracking_started = True
 
-    service._landing_target_loop()
+    service._target_publication_loop()
 
-    assert len(drone.land_calls) == 3
+    assert len(drone.target_messages) == 3
     assert service._stop_event.wait.call_count == 3
     service._stop_event.wait.assert_called_with(pytest.approx(1 / 30))
 
@@ -191,24 +186,11 @@ def test_worker_failure_reaches_main_loop_and_requests_shutdown(sample_drone_sta
     assert service._stop_event.wait(2)
 
     with pytest.raises(RuntimeError, match=worker) as failure:
-        service.perform_precision_landing()
+        service.publish_target_positions()
 
     assert failure.value.__cause__ is original_error
     assert not service._tracking_started
     service.stop()
-
-
-def test_failed_land_mode_request_prevents_target_emissions(sample_drone_status) -> None:
-    drone = FakeDrone(sample_drone_status())
-    drone.activate_land_mode = Mock(side_effect=TimeoutError("mode rejected"))
-    service = build_service(drone)
-    service.pose_buffer.get_uav_pose_value.return_value = Pose3D(0, 0, 2)
-    service._tracking_started = True
-
-    with pytest.raises(TimeoutError, match="mode rejected"):
-        service.perform_precision_landing()
-
-    assert not drone.land_calls
 
 
 def test_shutdown_closes_every_resource_even_if_one_fails(sample_drone_status) -> None:
@@ -245,17 +227,36 @@ def test_expired_heartbeat_prevents_landing_target_emission(sample_drone_status)
     service = build_service(drone)
     service.pose_buffer.get_uav_pose_value.return_value = Pose3D(0, 0, 2)
     service._tracking_started = True
-    service._landing_target_loop()
-    assert not drone.land_calls
+    service._target_publication_loop()
+    assert not drone.target_messages
 
 
-def test_no_target_does_not_request_land(sample_drone_status):
+@pytest.mark.parametrize("visible_cycles", [set(), {5}, {0, 1, 10, 11}])
+def test_publication_continues_for_minutes_without_target_or_after_target_loss(
+    monkeypatch, sample_drone_status, visible_cycles
+):
     drone = FakeDrone(sample_drone_status())
     service = build_service(drone)
-    service.target_acquisition_timeout_s = 0.01
-    service._tracking_started = True
     drone.get_status = Mock(return_value=drone.status)
-    with pytest.raises(TimeoutError, match="No fresh landing target"):
-        service.perform_precision_landing()
-    assert drone.land_mode_calls == 0
-    assert not drone.land_calls
+    pose = Pose3D(0.2, -0.3, 2)
+    service.pose_buffer.get_uav_pose_value.side_effect = [
+        pose if cycle in visible_cycles else None for cycle in range(12)
+    ]
+    elapsed = [0.0]
+    monkeypatch.setattr(autolanding_module.time, "monotonic", lambda: elapsed[0])
+    service._stop_event = Mock()
+
+    def advance_clock(_delay):
+        elapsed[0] += 30
+        if elapsed[0] >= 360:
+            service.request_stop()
+
+    service._stop_event.wait.side_effect = advance_clock
+    service._tracking_started = True
+
+    service.publish_target_positions()
+
+    assert elapsed[0] == 360
+    assert drone.get_status.call_count == 12
+    assert service.drone_status_buffer.set_value.call_count == 12
+    assert drone.target_messages == [(pose, (0.896, 0.896))] * len(visible_cycles)

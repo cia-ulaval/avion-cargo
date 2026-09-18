@@ -24,14 +24,11 @@ class DroneAutolandingService:
         drone_status_buffer: DroneStatusBufferPort,
         telemetry_dps: float = 5,
         shutdown_timeout_s: float = 5,
-        target_acquisition_timeout_s: float = 10,
     ):
         if not isfinite(telemetry_dps) or telemetry_dps <= 0:
             raise ValueError("telemetry_dps must be finite and positive")
         if not isfinite(shutdown_timeout_s) or shutdown_timeout_s <= 0:
             raise ValueError("shutdown_timeout_s must be finite and positive")
-        if not isfinite(target_acquisition_timeout_s) or target_acquisition_timeout_s <= 0:
-            raise ValueError("target_acquisition_timeout_s must be finite and positive")
         self.drone = drone
         self.aruco_tracker = tracker
         self.frame_buffer = frame_buffer
@@ -40,7 +37,6 @@ class DroneAutolandingService:
         self.content_streamer = content_streamer
         self.telemetry_dps = telemetry_dps
         self.shutdown_timeout_s = shutdown_timeout_s
-        self.target_acquisition_timeout_s = target_acquisition_timeout_s
         self._threads: dict[str, Thread] = dict()
         self._tracking_started: bool = False
         self._stop_event = Event()
@@ -135,26 +131,10 @@ class DroneAutolandingService:
 
         return payload
 
-    def _landing_target_loop(self):
+    def _target_publication_loop(self):
         waiting_period = 1.0 / max(1, self.aruco_tracker.camera.get_fps())
         self._raise_worker_failure()
-        logger.info("Waiting for a fresh target below the vehicle before requesting LAND")
-        deadline = time.monotonic() + self.target_acquisition_timeout_s
-        while self._tracking_started:
-            self._raise_worker_failure()
-            pose = self.pose_buffer.get_uav_pose_value()
-            if pose is not None and pose.z > 0:
-                break
-            if time.monotonic() >= deadline:
-                raise TimeoutError("No fresh landing target acquired before the LAND request")
-            self.drone_status_buffer.set_value(self.drone.get_status())
-            self._stop_event.wait(waiting_period)
-        if not self._tracking_started:
-            self._raise_worker_failure()
-            return
-        logger.info("Requesting LAND mode")
-        self.drone.activate_land_mode()
-        logger.info("Landing target emission active at {} Hz", 1 / waiting_period)
+        logger.info("Target position publication active at {} Hz; waiting for detections", 1 / waiting_period)
 
         while self._tracking_started:
             start_time = time.monotonic()
@@ -166,7 +146,7 @@ class DroneAutolandingService:
             if uav_pose is not None and drone_status.connected:
                 target = self.aruco_tracker.get_target()
                 target_size = target.length, target.length
-                self.drone.land_on_target(uav_pose, target_size)
+                self.drone.send_landing_target(uav_pose, target_size)
 
             self._stop_event.wait(max(0, waiting_period - (time.monotonic() - start_time)))
         self._raise_worker_failure()
@@ -190,12 +170,13 @@ class DroneAutolandingService:
             raise RuntimeError("Video streaming is already started")
         self._start_worker("streaming", self.content_streamer.stream_video)
 
-    def perform_precision_landing(self):
+    def publish_target_positions(self):
+        """Publish available target measurements until stopped, with no flight commands."""
         self._raise_worker_failure()
         if not self._tracking_started:
-            raise SystemError("The target's tracking is not started yet. Cannot start precision landing")
+            raise SystemError("Target tracking must be started before publishing positions")
 
-        self._landing_target_loop()
+        self._target_publication_loop()
 
     def stop_streaming(self):
         self.content_streamer.stop()

@@ -22,6 +22,7 @@
 à l’aide de tags ArUco et d’une caméra sur **Raspberry Pi**.  
 
 Le dépôt inclut des scripts pour calibrer la caméra et estimer la pose (distance/orientation) d’un tag détecté.
+Autolander acquiert les images, calcule et transmet la position de la cible. Il ne choisit aucun mode de vol ; l’absence de cible laisse l’acquisition et le streaming actifs sans timeout de détection.
 
 
 ## Prérequis
