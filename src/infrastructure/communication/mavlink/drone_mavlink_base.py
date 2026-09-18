@@ -153,7 +153,7 @@ class DroneMavlinkBase(Drone):
         )
 
     def activate_land_mode(self) -> None:
-        pass
+        self.switch_mode(DroneMode.LAND)
 
     def _require_connected(self) -> None:
         if self.connection is None:
@@ -177,6 +177,8 @@ class DroneMavlinkBase(Drone):
     def _handle_message(self, message) -> None:
         message_type = message.get_type()
         if message_type == "HEARTBEAT":
+            self._vehicle_type = message.type
+            self._autopilot = message.autopilot
             self.status.mode = DroneMode.from_str(mavutil.mode_string_v10(message))
             self.status.armed = bool(message.base_mode & mavlink2.MAV_MODE_FLAG_SAFETY_ARMED)
             self.status.last_heartbeat_s = time.time()
@@ -263,4 +265,35 @@ class DroneMavlinkBase(Drone):
         raise TimeoutError(f"No autopilot heartbeat from {self.parameters.address} within {self.parameters.timeout}s")
 
     def switch_mode(self, mode: DroneMode) -> None:
-        pass
+        with self._lock:
+            self._require_connected()
+            if not self.status.connected:
+                raise RuntimeError("Cannot change mode without a fresh autopilot heartbeat")
+            if self._autopilot != mavlink2.MAV_AUTOPILOT_ARDUPILOTMEGA:
+                raise ValueError("Mode changes currently support ArduPilot only")
+            mapping = mavutil.mode_mapping_byname(self._vehicle_type) or {}
+            if mode == DroneMode.UNKNOWN or mode.value not in mapping:
+                raise ValueError(f"Mode {mode.value} is unavailable for this vehicle")
+            if self.status.mode == mode:
+                return
+            self.connection.mav.command_long_send(
+                self._target_system, self._target_component, mavlink2.MAV_CMD_DO_SET_MODE, 0,
+                mavlink2.MAV_MODE_FLAG_CUSTOM_MODE_ENABLED, mapping[mode.value], 0, 0, 0, 0, 0,
+            )
+            logger.info("Requested flight mode {}; waiting for autopilot confirmation", mode.value)
+            deadline = time.monotonic() + self.parameters.timeout
+            while time.monotonic() < deadline:
+                self._maintain_heartbeat()
+                message = self.connection.recv_match(
+                    blocking=True, timeout=min(0.2, max(0, deadline - time.monotonic()))
+                )
+                if message is None or not self._is_from_autopilot(message):
+                    continue
+                if message.get_type() == "COMMAND_ACK" and message.command == mavlink2.MAV_CMD_DO_SET_MODE:
+                    if message.result not in (mavlink2.MAV_RESULT_ACCEPTED, mavlink2.MAV_RESULT_IN_PROGRESS):
+                        raise RuntimeError(f"Autopilot rejected {mode.value}: MAV_RESULT={message.result}")
+                self._handle_message(message)
+                if message.get_type() == "HEARTBEAT" and self.status.mode == mode:
+                    logger.info("Autopilot confirmed mode {}", mode.value)
+                    return
+            raise TimeoutError(f"Autopilot did not confirm {mode.value} within {self.parameters.timeout}s")
