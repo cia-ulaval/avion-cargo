@@ -4,54 +4,36 @@ from pathlib import Path
 
 from loguru import logger
 
-PATHS_MUST_BE_SKIPPED: list[str] = [".git", ".github", "docs"]
+PATHS_MUST_BE_SKIPPED = {".git", ".github", "docs", ".venv", "venv", "env", "ENV", ".tox", ".nox", "node_modules"}
 
 
 class ProjectCleaner:
     def __init__(self, project_root_path: Path) -> None:
-        self.project_root_path = project_root_path
+        self.project_root_path = project_root_path.resolve()
 
     @staticmethod
-    def __is_only_pycache(path: Path | str) -> bool:
-        try:
-            items = os.listdir(path)
-            return len(items) == 1 and items[0] == "__pycache__"
+    def _protected(path: Path) -> bool:
+        return path.is_symlink() or path.name in PATHS_MUST_BE_SKIPPED or (path / "pyvenv.cfg").exists()
 
-        except Exception:
-            return False
+    def clean(self) -> None:
+        root = self.project_root_path
+        if self._protected(root):
+            logger.info("Skipping protected directory: {}", root)
+            return
 
-    @staticmethod
-    def __should_skip__(path: str) -> bool:
-        for pathname in PATHS_MUST_BE_SKIPPED:
-            if pathname in path.split(os.sep):
-                return True
-        return False
+        # Prune protected trees before traversing them, including custom virtual environments.
+        visited = []
+        for dirpath, dirnames, _ in os.walk(root, topdown=True, followlinks=False):
+            current = Path(dirpath)
+            dirnames[:] = [name for name in dirnames if not self._protected(current / name)]
+            if "__pycache__" in dirnames:
+                cache = current / "__pycache__"
+                logger.info("Removing {}", cache)
+                shutil.rmtree(cache)
+                dirnames.remove("__pycache__")
+            visited.append(current)
 
-    @staticmethod
-    def __is_empty_dir__(path: Path | str) -> bool:
-        try:
-            return os.path.isdir(path) and not os.listdir(path)
-
-        except Exception:
-            return False
-
-    def __remove_pycache_and_empty_parents(self, root_path: Path | str) -> None:
-        for dirpath, dir_names, filenames in os.walk(root_path, topdown=False):
-            if self.__should_skip__(dirpath):
-                continue
-
-            if "__pycache__" in dir_names:
-                pycache_path = os.path.join(dirpath, "__pycache__")
-                logger.info(f"Removing {pycache_path}")
-                shutil.rmtree(pycache_path)
-
-            if self.__is_only_pycache(dirpath):
-                logger.info(f"Removing parent of __pycache__: {dirpath}")
-                shutil.rmtree(dirpath, ignore_errors=True)
-
-            elif self.__is_empty_dir__(dirpath):
-                logger.info(f"Removing empty directory: {dirpath}")
-                shutil.rmtree(dirpath, ignore_errors=True)
-
-    def clean(self):
-        self.__remove_pycache_and_empty_parents(self.project_root_path)
+        for directory in reversed(visited):
+            if directory != root and not any(directory.iterdir()):
+                logger.info("Removing empty directory: {}", directory)
+                directory.rmdir()
