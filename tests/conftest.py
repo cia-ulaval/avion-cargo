@@ -1,4 +1,5 @@
 import json
+import time
 from copy import deepcopy
 from datetime import datetime
 from pathlib import Path
@@ -95,7 +96,7 @@ def sample_drone_status() -> Any:
     def make_status(
         *,
         relative_altitude: float = 6.0,
-        last_heartbeat_s: float = 10.0,
+        last_heartbeat_s: float | None = None,
     ) -> DroneStatus:
         return DroneStatus(
             mode=DroneMode.LAND,
@@ -105,7 +106,7 @@ def sample_drone_status() -> Any:
             battery_remaining_pct=73,
             gps_fix_type=3,
             armed=True,
-            last_heartbeat_s=last_heartbeat_s,
+            last_heartbeat_s=time.time() if last_heartbeat_s is None else last_heartbeat_s,
             last_signal_gpio_s=9.5,
             speed=1.0,
             relative_altitude=relative_altitude,

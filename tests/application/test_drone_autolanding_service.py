@@ -1,4 +1,5 @@
 from dataclasses import dataclass, field
+from threading import Event, Thread
 from typing import Any
 from unittest.mock import Mock
 
@@ -20,6 +21,9 @@ class FakeTrackerCamera:
 
     def get_fps(self) -> int:
         return self.fps
+
+    def close(self) -> None:
+        return None
 
 
 @dataclass
@@ -48,6 +52,9 @@ class FakeDrone:
 
     def land_on_target(self, position: Pose3D, target_size: tuple[float, float]) -> None:
         self.land_calls.append((position, target_size))
+
+    def close(self) -> None:
+        return None
 
 
 def build_service(
@@ -171,3 +178,69 @@ def test_landing_target_transmission_is_paced_without_incoming_messages(monkeypa
 def test_invalid_telemetry_cadence_is_rejected(sample_drone_status, dps) -> None:
     with pytest.raises(ValueError, match="telemetry_dps"):
         build_service(FakeDrone(sample_drone_status()), telemetry_dps=dps)
+
+
+@pytest.mark.parametrize("worker", ["tracking", "telemetry", "streaming"])
+def test_worker_failure_reaches_main_loop_and_requests_shutdown(sample_drone_status, worker) -> None:
+    service = build_service(FakeDrone(sample_drone_status()))
+    original_error = OSError(f"{worker} failed")
+    service._tracking_started = True
+    service._start_worker(worker, Mock(side_effect=original_error))
+    assert service._stop_event.wait(2)
+
+    with pytest.raises(RuntimeError, match=worker) as failure:
+        service.perform_precision_landing()
+
+    assert failure.value.__cause__ is original_error
+    assert not service._tracking_started
+    service.stop()
+
+
+def test_failed_land_mode_request_prevents_target_emissions(sample_drone_status) -> None:
+    drone = FakeDrone(sample_drone_status())
+    drone.activate_land_mode = Mock(side_effect=TimeoutError("mode rejected"))
+    service = build_service(drone)
+    service._tracking_started = True
+
+    with pytest.raises(TimeoutError, match="mode rejected"):
+        service.perform_precision_landing()
+
+    assert not drone.land_calls
+
+
+def test_shutdown_closes_every_resource_even_if_one_fails(sample_drone_status) -> None:
+    service = build_service(FakeDrone(sample_drone_status()))
+    service.aruco_tracker.camera.close = Mock(side_effect=OSError("camera close failed"))
+    service.drone.close = Mock()
+
+    with pytest.raises(RuntimeError, match="resource cleanup failed"):
+        service.stop()
+
+    service.content_streamer.stop.assert_called_once()
+    service.drone.close.assert_called_once()
+    service.stop()
+    service.drone.close.assert_called_once()
+
+
+def test_shutdown_is_bounded_when_a_driver_cannot_be_interrupted(sample_drone_status) -> None:
+    service = build_service(FakeDrone(sample_drone_status()))
+    blocked = Event()
+    service.shutdown_timeout_s = 0.05
+    thread = Thread(target=blocked.wait, name="stuck-camera", daemon=True)
+    service._threads["tracking"] = thread
+    thread.start()
+    try:
+        with pytest.raises(TimeoutError, match="tracking"):
+            service.stop()
+    finally:
+        blocked.set()
+        thread.join(timeout=1)
+
+
+def test_expired_heartbeat_prevents_landing_target_emission(sample_drone_status):
+    drone = FakeDrone(sample_drone_status(last_heartbeat_s=1))
+    service = build_service(drone)
+    service.pose_buffer.get_uav_pose_value.return_value = Pose3D(0, 0, 2)
+    service._tracking_started = True
+    service._landing_target_loop()
+    assert not drone.land_calls

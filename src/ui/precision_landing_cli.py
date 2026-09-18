@@ -1,3 +1,5 @@
+import signal
+import sys
 from pathlib import Path
 
 import click
@@ -12,17 +14,33 @@ from infrastructure.persistence.autolander_configuration_reader import Autolande
 @click.option(
     "--gz-simulation", default=False, is_flag=True, help="Run simulation using Gazebo Camera", show_default=True
 )
-@logger.catch
+@logger.catch(reraise=True)
 def main(config_file_path, gz_simulation):
     config_reader = AutolanderConfigurationReader(Path(config_file_path))
     autolander_config = config_reader.read()
 
     landing_service = build_landing_service(autolander_config, use_simulated_cam=gz_simulation)
-    landing_service.drone.connect()
-    landing_service.track_target()
-    landing_service.stream_video()
-    landing_service.perform_precision_landing()
-    landing_service.stop()
+    def interrupt(_signum, _frame):
+        raise KeyboardInterrupt
+
+    previous_handler = signal.signal(signal.SIGTERM, interrupt)
+    try:
+        logger.info("Configuration loaded from {}", config_file_path)
+        landing_service.drone.connect()
+        landing_service.track_target()
+        landing_service.stream_video()
+        landing_service.perform_precision_landing()
+    finally:
+        already_failing = sys.exc_info()[0] is not None
+        try:
+            landing_service.stop()
+        except Exception:
+            logger.exception("Landing service cleanup failed")
+            if not already_failing:
+                raise
+        finally:
+            signal.signal(signal.SIGTERM, previous_handler)
+
 
 
 if __name__ == "__main__":
