@@ -43,49 +43,55 @@ class LiveFrameCollector(FrameCollector):
         self.cfg = cfg
 
     def collect(self) -> List[np.ndarray]:
-        self.camera.open()
+        if self.cfg.headless:
+            raise ValueError("Interactive calibration capture requires a display")
+        try:
+            self.camera.open()
 
-        frames: List[np.ndarray] = []
-        frame_i = 0
+            frames: List[np.ndarray] = []
+            frame_i = 0
 
-        print("Live calibration capture")
-        print("  Press 'c' to capture current frame (if markers detected)")
-        print("  Press 'ESC' to finish and calibrate")
+            print("Live calibration capture")
+            print("  Press 'c' to capture current frame (if markers detected)")
+            print("  Press 'ESC' to finish and calibrate")
 
-        while True:
-            frame = self.camera.get_frame()
-            frame_i += 1
+            while True:
+                frame = self.camera.get_frame()
+                frame_i += 1
 
-            detections = self.detector.detect(frame, self.target)
-            vis = frame.copy() if self.cfg.show_overlays else frame
+                detections = self.detector.detect(frame, self.target)
+                vis = frame.copy() if self.cfg.show_overlays else frame
 
-            if self.cfg.show_overlays and len(detections) > 0:
-                corners_list = [c for (_mid, c) in detections]
-                ids_arr = np.array([[mid] for (mid, _c) in detections], dtype=np.int32)
-                FrameManipulationTool.draw_detected_markers(vis, corners_list, ids_arr)
+                if self.cfg.show_overlays and len(detections) > 0:
+                    corners_list = [c for (_mid, c) in detections]
+                    ids_arr = np.array([[mid] for (mid, _c) in detections], dtype=np.int32)
+                    FrameManipulationTool.draw_detected_markers(vis, corners_list, ids_arr)
 
-            if self.cfg.show_overlays:
-                msg = f"Captures: {len(frames)} | 'c' capture | ESC finish"
-                FrameManipulationTool.write_text_on_frame(vis, msg, Color.BLUE)
+                if self.cfg.show_overlays:
+                    msg = f"Captures: {len(frames)} | 'c' capture | ESC finish"
+                    FrameManipulationTool.write_text_on_frame(vis, msg, Color.BLUE)
 
-            if not self.cfg.headless:
-                cv2.imshow(self.cfg.window_name, vis)
-                key = cv2.waitKey(self.cfg.waitkey_ms) & 0xFF
-            else:
-                key = 255
-
-            if key == 27:
-                break
-
-            # capture
-            if key == ord("c"):
-                if len(detections) > 0:
-                    print(f"[CAPTURE] frame {frame_i} ({len(detections)} markers)")
-                    frames.append(frame.copy())
+                if not self.cfg.headless:
+                    cv2.imshow(self.cfg.window_name, vis)
+                    key = cv2.waitKey(self.cfg.waitkey_ms) & 0xFF
                 else:
-                    print("[SKIP] no markers detected")
+                    key = 255
 
-        if not self.cfg.headless:
-            cv2.destroyAllWindows()
+                if key == 27:
+                    break
+
+                # capture
+                if key == ord("c"):
+                    if len(detections) > 0:
+                        print(f"[CAPTURE] frame {frame_i} ({len(detections)} markers)")
+                        frames.append(frame.copy())
+                    else:
+                        print("[SKIP] no markers detected")
+
+        finally:
+            try:
+                self.camera.close()
+            finally:
+                cv2.destroyAllWindows()
 
         return frames

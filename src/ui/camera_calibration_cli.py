@@ -30,7 +30,7 @@ from ui.calibration_report_presenter import show_calibration_report
 @click.option("--width", default=640, show_default=True, type=int)
 @click.option("--height", default=480, show_default=True, type=int)
 @click.option("--fps", default=30, show_default=True, type=int)
-@logger.catch
+@logger.catch(reraise=True)
 def main(
     markers_x,
     markers_y,
