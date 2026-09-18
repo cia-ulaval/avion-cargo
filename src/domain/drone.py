@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from enum import Enum
+import time
 
 from domain.models import Pose3D
 
@@ -52,20 +53,29 @@ class DroneStatus:
     latitude: float
     longitude: float
     relative_altitude_ms: float
-    heading_deg: float
+    heading_deg: float | None
+    last_heartbeat_monotonic_s: float | None = None
+    heartbeat_timeout_s: float = 3.0
 
     @property
     def connected(self) -> bool:
-        return self.last_heartbeat_s > 0
+        if self.last_heartbeat_monotonic_s is not None:
+            age = time.monotonic() - self.last_heartbeat_monotonic_s
+        else:
+            age = self.heartbeat_age_s(time.time())
+        return self.last_heartbeat_s > 0 and 0 <= age < self.heartbeat_timeout_s
 
     def heartbeat_age_s(self, now_s: float) -> float:
         return now_s - self.last_heartbeat_s if self.last_heartbeat_s else float("inf")
 
     def should_drop(self, now_s: float, window_s: float = 1.0) -> bool:
-        return (now_s - self.last_signal_gpio_s) < window_s
+        return self.last_signal_gpio_s > 0 and 0 <= (now_s - self.last_signal_gpio_s) < window_s
 
 
 class Drone(ABC):
+    def close(self) -> None:
+        """Release the connection; adapters owning a transport override this."""
+
     @abstractmethod
     def connect(self):
         raise NotImplementedError()
