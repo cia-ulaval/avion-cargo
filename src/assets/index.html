@@ -38,41 +38,26 @@
       </div>
 
       <div class="topbar-actions">
-        <button class="icon-chip" id="startButton" type="button">Start</button>
-        <button class="icon-chip icon-chip-muted" id="stopButton" type="button">Stop</button>
+        <button class="icon-chip" id="startButton" type="button">Start stream</button>
+        <button class="icon-chip icon-chip-muted" id="stopButton" type="button" title="Close this browser stream; tracking and MAVLink remain active">Stop stream</button>
       </div>
     </header>
 
     <div class="workspace">
       <aside class="side-nav card" aria-label="Primary navigation">
-        <button class="nav-button nav-button-active" type="button" aria-label="Live stream">
-          <span class="nav-icon">LV</span>
-          <span class="nav-label">Live</span>
-        </button>
-        <button class="nav-button nav-button-unactive" type="button" aria-label="Camera">
-          <i data-lucide="camera"></i>
-          <span class="nav-label">Cam</span>
-        </button>
-        <button class="nav-button nav-button-unactive" type="button" aria-label="Target tracking">
-          <i data-lucide="crosshair"></i>
-          <span class="nav-label">Track</span>
-        </button>
-        <button class="nav-button nav-button-unactive" type="button" aria-label="Map">
-          <i data-lucide="map-pinned"></i>
-          <span class="nav-label">Map</span>
-        </button>
-        <button class="nav-button nav-button-unactive" type="button" aria-label="Settings">
-          <i data-lucide="settings"></i>
-          <span class="nav-label">Cfg</span>
-        </button>
-        <button class="nav-button nav-button-power nav-button-unactive" type="button" aria-label="Power">
-          <i data-lucide="power"></i>
-          <span class="nav-label">Power</span>
-        </button>
+        <a class="nav-button nav-button-active" href="#live-view" aria-label="Live stream">
+          <span class="nav-icon">LV</span><span class="nav-label">Live</span>
+        </a>
+        <a class="nav-button" href="#target-map" aria-label="Target map">
+          <span class="nav-icon">MAP</span><span class="nav-label">Map</span>
+        </a>
+        <a class="nav-button" href="#drone-status" aria-label="Drone status">
+          <span class="nav-icon">FC</span><span class="nav-label">Status</span>
+        </a>
       </aside>
 
       <main class="main-column">
-        <section class="video-panel card">
+        <section class="video-panel card" id="live-view">
           <div class="panel-head">
             <div>
               <p class="eyebrow">Approach view</p>
@@ -141,12 +126,13 @@
             <div class="connection-copy">
               <span class="dot dot-live" id="connection-dot"></span>
               <span id="st">Stopped</span>
+              <span class="meta-label">Stream controls affect this browser only. Use the flight controller to command the vehicle.</span>
             </div>
           </div>
         </section>
 
         <section class="lower-grid">
-          <article class="card support-card map-card">
+          <article class="card support-card map-card" id="target-map">
             <div class="support-card-head">
               <div>
                 <p class="eyebrow">Relative pose</p>
@@ -212,7 +198,7 @@
       </main>
 
       <aside class="right-rail">
-        <section class="card status-card">
+        <section class="card status-card" id="drone-status">
           <div class="support-card-head">
             <div>
               <p class="eyebrow">Vehicle state</p>
@@ -272,19 +258,19 @@
         <section class="card modes-card">
           <div class="support-card-head">
             <div>
-              <p class="eyebrow">Mode selector</p>
+              <p class="eyebrow">Reported flight mode</p>
               <h2>Flight modes</h2>
             </div>
-            <span class="mini-pill">Available modes</span>
+            <span class="mini-pill">Read only</span>
           </div>
           <div class="mode-grid">
-            <button class="mode-button" data-mode="STABILIZE" type="button">STABILIZE</button>
-            <button class="mode-button" data-mode="ALT_HOLD" type="button">ALT HOLD</button>
-            <button class="mode-button" data-mode="LOITER" type="button">LOITER</button>
-            <button class="mode-button" data-mode="GUIDED" type="button">GUIDED</button>
-            <button class="mode-button" data-mode="AUTO" type="button">AUTO</button>
-            <button class="mode-button" data-mode="RTL" type="button">RTL</button>
-            <button class="mode-button" data-mode="LAND" type="button">LAND</button>
+            <span class="mode-button" data-mode="STABILIZE">STABILIZE</span>
+            <span class="mode-button" data-mode="ALT_HOLD">ALT HOLD</span>
+            <span class="mode-button" data-mode="LOITER">LOITER</span>
+            <span class="mode-button" data-mode="GUIDED">GUIDED</span>
+            <span class="mode-button" data-mode="AUTO">AUTO</span>
+            <span class="mode-button" data-mode="RTL">RTL</span>
+            <span class="mode-button" data-mode="LAND">LAND</span>
           </div>
         </section>
 
