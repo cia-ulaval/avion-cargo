@@ -23,6 +23,7 @@
 
 Le dépôt inclut des scripts pour calibrer la caméra et estimer la pose (distance/orientation) d’un tag détecté.
 
+
 ## Prérequis
 
 Pour exécuter ou contribuer à ce projet, assurez-vous d’avoir installé :
@@ -74,7 +75,8 @@ Pour exécuter le programme ou certains scripts du projet, installez d’abord l
 #### 2.1 Installation des dépendances
 
 ```shell
-poetry install
+poetry install --with dev              # développement sur ordinateur
+poetry install --with raspberry-pi     # matériel Raspberry Pi
 ```
 
 #### 2.2 Calibration de la caméra
@@ -104,19 +106,19 @@ Pour ce, il vous faudra un fichier de configuration qui fournit au logiciel cert
 Pour lancer [autolander](#) pour operer un l'atterrissage sur ArUco:
 
 ```shell
-poetry run precion_landing [PATH_TO_CONFIGURATION_FILE]
+poetry run precision_landing [PATH_TO_CONFIGURATION_FILE]
 ```
 
 Par exemple, si le fichier de config est à la racine et s'appelle [landing_config.json](landing_config.json): 
 
 ```shell
-poetry run precion_landing landing_config.json
+poetry run precision_landing landing_config.json
 ```
 
 Pour plus d’informations sur la commande `precision_landing`:
 
 ```shell
-poetry run precion_landing --help
+poetry run precision_landing --help
 ```
 
 #### 2.3.2 Paramètres et valeurs à mettre à jour dans le Flight Controller
@@ -179,7 +181,7 @@ Le fichier de configuration est nécessaire pour faire l'atterrissage de précis
     "targeted_marker": {
       "length": "taille réelle du côté du marqueur ArUco en mètres. Exemple : 0.896 pour un marqueur de 89.6 cm.",
       "id": "identifiant entier du marqueur ArUco cible à détecter.",
-      "aruco_dictionary": "identifiant entier du dictionnaire ArUco utilisé pour générer et détecter le marqueur. Valeur entre 0 et 4 voir la table recapitulative en 6"
+      "aruco_dictionary": "identifiant entier du dictionnaire ArUco utilisé pour générer et détecter le marqueur. Valeur entre 0 et 16, voir la table récapitulative en 6"
     }
   },
 
@@ -212,13 +214,25 @@ Le tableau suivant présente la correspondance entre les identifiants numérique
 
 | ID | Nom du dictionnaire | Taille de grille    | Nombre de marqueurs | Remarque                                                                         |
 |----|---------------------|---------------------|---------------------|----------------------------------------------------------------------------------|
-| 0  | DICT_4X4_50         | 4 × 4               | 50                  | Dictionnaire compact, utile si peu d’identifiants sont nécessaires               |
-| 1  | DICT_5X5_50         | 5 × 5               | 50                  | Plus de bits que 4x4, meilleure capacité de distinction                          |
-| 2  | DICT_6X6_50         | 6 × 6               | 50                  | Plus robuste pour des usages exigeant une meilleure unicité visuelle             |
-| 3  | DICT_7X7_50         | 7 × 7               | 50                  | Très riche en information, mais plus exigeant en qualité d’image                 |
-| 4  | DICT_ARUCO_ORIGINAL | Variable historique | Variable historique | Dictionnaire ArUco original, utilisé pour compatibilité avec d’anciens marqueurs |
+| 0 | DICT_4X4_50 | 4 × 4 | 50 | Identifiant OpenCV |
+| 1 | DICT_4X4_100 | 4 × 4 | 100 | Identifiant OpenCV |
+| 2 | DICT_4X4_250 | 4 × 4 | 250 | Identifiant OpenCV |
+| 3 | DICT_4X4_1000 | 4 × 4 | 1000 | Identifiant OpenCV |
+| 4 | DICT_5X5_50 | 5 × 5 | 50 | Identifiant OpenCV |
+| 5 | DICT_5X5_100 | 5 × 5 | 100 | Identifiant OpenCV |
+| 6 | DICT_5X5_250 | 5 × 5 | 250 | Identifiant OpenCV |
+| 7 | DICT_5X5_1000 | 5 × 5 | 1000 | Identifiant OpenCV |
+| 8 | DICT_6X6_50 | 6 × 6 | 50 | Identifiant OpenCV |
+| 9 | DICT_6X6_100 | 6 × 6 | 100 | Identifiant OpenCV |
+| 10 | DICT_6X6_250 | 6 × 6 | 250 | Identifiant OpenCV |
+| 11 | DICT_6X6_1000 | 6 × 6 | 1000 | Identifiant OpenCV |
+| 12 | DICT_7X7_50 | 7 × 7 | 50 | Identifiant OpenCV |
+| 13 | DICT_7X7_100 | 7 × 7 | 100 | Identifiant OpenCV |
+| 14 | DICT_7X7_250 | 7 × 7 | 250 | Identifiant OpenCV |
+| 15 | DICT_7X7_1000 | 7 × 7 | 1000 | Identifiant OpenCV |
+| 16 | DICT_ARUCO_ORIGINAL | 5 × 5 | 1 024 | Dictionnaire historique |
 
-### 5. Notes
+### 7. Notes
 
 Le code ayant été conçu spécifiquement pour fonctionner sur Raspberry Pi, son comportement sur d’autres plateformes
 n’a pas été testé de manière rigoureuse.
