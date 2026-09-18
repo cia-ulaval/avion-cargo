@@ -1,4 +1,6 @@
-#!/bin/bash
+#!/usr/bin/env bash
+set -euo pipefail
 
-isort .
+cd "$(dirname "${BASH_SOURCE[0]}")/.."
+isort --settings-path pyproject.toml .
 black .
