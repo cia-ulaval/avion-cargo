@@ -51,7 +51,7 @@ class FakeDrone:
 
 
 def build_service(
-    drone: FakeDrone, streamer: ContentStreamer | None = None
+    drone: FakeDrone, streamer: ContentStreamer | None = None, *, telemetry_dps: float = 5
 ) -> autolanding_module.DroneAutolandingService:
     frame_buffer = Mock(spec=FrameBufferPort)
     frame_buffer.get_value.return_value = (None, None)
@@ -66,6 +66,7 @@ def build_service(
         frame_buffer=frame_buffer,
         pose_buffer=pose_buffer,
         drone_status_buffer=status_buffer,
+        telemetry_dps=telemetry_dps,
     )
     drone.service = service
     return service
@@ -130,3 +131,43 @@ def test_telemetry_is_sent_through_the_injected_streamer(sample_drone_status) ->
     service._telemetry_loop()
 
     streamer.send_data.assert_called_once_with({"marker_id": 29})
+
+
+def test_telemetry_cadence_uses_configured_dps_instead_of_camera_fps(monkeypatch, sample_drone_status) -> None:
+    service = build_service(FakeDrone(sample_drone_status()), telemetry_dps=4)
+    monkeypatch.setattr(autolanding_module.time, "monotonic", lambda: 0)
+    service._stop_event = Mock()
+    service._stop_event.wait.side_effect = lambda _delay: setattr(service, "_tracking_started", False)
+    service._tracking_started = True
+
+    service._telemetry_loop()
+
+    service._stop_event.wait.assert_called_once_with(0.25)
+
+
+def test_landing_target_transmission_is_paced_without_incoming_messages(monkeypatch, sample_drone_status) -> None:
+    drone = FakeDrone(sample_drone_status())
+    service = build_service(drone)
+    monkeypatch.setattr(autolanding_module.time, "monotonic", lambda: 0)
+    drone.get_status = Mock(return_value=drone.status)
+    service.pose_buffer.get_uav_pose_value.return_value = Pose3D(x=0, y=0, z=2)
+    service._stop_event = Mock()
+
+    def wait_one_cycle(_delay):
+        if len(drone.land_calls) == 3:
+            service._tracking_started = False
+
+    service._stop_event.wait.side_effect = wait_one_cycle
+    service._tracking_started = True
+
+    service._landing_target_loop()
+
+    assert len(drone.land_calls) == 3
+    assert service._stop_event.wait.call_count == 3
+    service._stop_event.wait.assert_called_with(pytest.approx(1 / 30))
+
+
+@pytest.mark.parametrize("dps", [0, -1, float("nan"), float("inf")])
+def test_invalid_telemetry_cadence_is_rejected(sample_drone_status, dps) -> None:
+    with pytest.raises(ValueError, match="telemetry_dps"):
+        build_service(FakeDrone(sample_drone_status()), telemetry_dps=dps)

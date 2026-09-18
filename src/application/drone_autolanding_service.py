@@ -1,6 +1,7 @@
 import time
 from dataclasses import asdict
-from threading import Thread
+from math import isfinite
+from threading import Event, Thread
 from typing import Any
 
 from loguru import logger
@@ -21,15 +22,20 @@ class DroneAutolandingService:
         frame_buffer: FrameBufferPort,
         pose_buffer: PoseBufferPort,
         drone_status_buffer: DroneStatusBufferPort,
+        telemetry_dps: float = 5,
     ):
+        if not isfinite(telemetry_dps) or telemetry_dps <= 0:
+            raise ValueError("telemetry_dps must be finite and positive")
         self.drone = drone
         self.aruco_tracker = tracker
         self.frame_buffer = frame_buffer
         self.pose_buffer = pose_buffer
         self.drone_status_buffer = drone_status_buffer
         self.content_streamer = content_streamer
+        self.telemetry_dps = telemetry_dps
         self._threads: dict[str, Thread] = dict()
         self._tracking_started: bool = False
+        self._stop_event = Event()
 
     def _tracking_target_loop(self):
         waiting_period = 1.0 / max(1, self.aruco_tracker.camera.get_fps())
@@ -48,10 +54,10 @@ class DroneAutolandingService:
             remaining_time = waiting_period - elapsed_time
 
             if remaining_time > 0:
-                time.sleep(remaining_time)
+                self._stop_event.wait(remaining_time)
 
     def _telemetry_loop(self):
-        waiting_period = 1.0 / max(1, self.aruco_tracker.camera.get_fps())
+        waiting_period = 1.0 / self.telemetry_dps
 
         while self._tracking_started:
             start_time = time.monotonic()
@@ -63,7 +69,7 @@ class DroneAutolandingService:
             remaining_time = waiting_period - elapsed_time
 
             if remaining_time > 0:
-                time.sleep(remaining_time)
+                self._stop_event.wait(remaining_time)
 
     def _build_telemetry_payload(self) -> dict[str, Any]:
         _frame, tracking_metadata = self.frame_buffer.get_value()
@@ -76,15 +82,16 @@ class DroneAutolandingService:
         return payload
 
     def _landing_target_loop(self):
+        waiting_period = 1.0 / max(1, self.aruco_tracker.camera.get_fps())
         try:
             self.drone.activate_land_mode()
         except Exception as e:
             logger.warning(f"Could not activate LAND mode: {e}")
 
         while self._tracking_started:
+            start_time = time.monotonic()
             drone_status = self.drone.get_status()
             self.drone_status_buffer.set_value(drone_status)
-            # logger.info(f"Drone status: {drone_status}")
 
             uav_pose = self.pose_buffer.get_uav_pose_value()
             if uav_pose is not None:
@@ -92,7 +99,10 @@ class DroneAutolandingService:
                 target_size = target.length, target.length
                 self.drone.land_on_target(uav_pose, target_size)
 
+            self._stop_event.wait(max(0, waiting_period - (time.monotonic() - start_time)))
+
     def track_target(self):
+        self._stop_event.clear()
         self._tracking_started = True
         self.aruco_tracker.camera.open()
         tracking_thread = Thread(target=self._tracking_target_loop, daemon=True)
@@ -125,6 +135,7 @@ class DroneAutolandingService:
         if not self._tracking_started:
             return
         self._tracking_started = False
+        self._stop_event.set()
         tracking_thread = self._threads.get("tracking")
         telemetry_thread = self._threads.get("telemetry")
         tracking_thread.join()
