@@ -1,4 +1,5 @@
 import json
+import math
 import re
 from pathlib import Path
 from typing import Any, Optional
@@ -95,7 +96,7 @@ class ConfigurationValidator:
         self._req_bool(camera, "use_picamera", "camera")
         self._req_int(camera, "fps", "camera", min_=1, max_=240)
 
-        calib = self._req_str(camera, "calibration_filepath", "camera", allow_empty=True)
+        calib = self._req_str(camera, "calibration_filepath", "camera", allow_empty=False)
         if calib != "":
             calib_path = (self.config_path.parent / calib).resolve() if not Path(calib).is_absolute() else Path(calib)
             if not calib_path.exists():
@@ -109,8 +110,10 @@ class ConfigurationValidator:
                     "camera.calibration_filepath",
                 )
 
-        gz_simulation = self._req_obj(camera, "gz_simulation", "camera")
-        self._req_str(gz_simulation, "topic_name", "gz_simulation", allow_empty=False)
+        if "gz_simulation" in camera:
+            gz_simulation = self._req_obj(camera, "gz_simulation", "camera")
+            self._req_str(gz_simulation, "topic_name", "camera.gz_simulation", allow_empty=False)
+            self._no_extra_keys(gz_simulation, {"topic_name"}, "camera.gz_simulation")
         self._no_extra_keys(camera, {"id", "use_picamera", "fps", "calibration_filepath", "gz_simulation"}, "camera")
 
     def _validate_vision(self, root: dict[str, Any]) -> None:
@@ -118,8 +121,11 @@ class ConfigurationValidator:
         tm = self._req_obj(vision, "targeted_marker", "vision")
 
         self._req_number(tm, "length", "vision.targeted_marker", min_exclusive=0.0)
-        self._req_int(tm, "id", "vision.targeted_marker", min_=0)
-        self._req_int(tm, "aruco_dictionary", "vision.targeted_marker", min_=0, max_=16)
+        marker_id = self._req_int(tm, "id", "vision.targeted_marker", min_=0)
+        dictionary = self._req_int(tm, "aruco_dictionary", "vision.targeted_marker", min_=0, max_=16)
+        capacity = 1024 if dictionary == 16 else (50, 100, 250, 1000)[dictionary % 4]
+        if marker_id >= capacity:
+            raise ValidationError(f"Marker ID must be < {capacity} for this dictionary", "vision.targeted_marker.id")
         self._no_extra_keys(tm, {"length", "id", "aruco_dictionary"}, "vision.targeted_marker")
         self._no_extra_keys(vision, {"targeted_marker"}, "vision")
 
@@ -236,6 +242,8 @@ class ConfigurationValidator:
         if not isinstance(v, (int, float)) or isinstance(v, bool):
             raise ValidationError("Expected a number", f"{parent_path}.{key}")
         fv = float(v)
+        if not math.isfinite(fv):
+            raise ValidationError("Must be finite", f"{parent_path}.{key}")
         if min_inclusive is not None and fv < min_inclusive:
             raise ValidationError(f"Must be >= {min_inclusive}", f"{parent_path}.{key}")
         if min_exclusive is not None and fv <= min_exclusive:

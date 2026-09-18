@@ -83,3 +83,23 @@ def test_validator_rejects_aruco_dictionaries_outside_supported_opencv_range(
         ConfigurationValidator(config_path).validate()
 
     assert error.value.path == "vision.targeted_marker.aruco_dictionary"
+
+
+def test_real_camera_does_not_require_a_simulation_topic(tmp_path, valid_config_data):
+    del valid_config_data["camera"]["gz_simulation"]
+    ConfigurationValidator(write_config(tmp_path, valid_config_data)).validate()
+
+
+@pytest.mark.parametrize(
+    "path,value",
+    [
+        (("camera", "calibration_filepath"), ""),
+        (("vision", "targeted_marker", "length"), float("nan")),
+        (("vision", "targeted_marker", "length"), float("inf")),
+        (("vision", "targeted_marker", "id"), 50),
+        (("camera", "gz_simulation"), {"topic_name": "/image", "typo": True}),
+    ],
+)
+def test_invalid_configuration_fails_before_startup(tmp_path, valid_config_data, path, value):
+    with pytest.raises(ValidationError):
+        ConfigurationValidator(write_config(tmp_path, changed_config(valid_config_data, *path, value=value))).validate()

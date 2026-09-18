@@ -83,6 +83,10 @@ class TargetedMarker:
         if not 0 <= self.dictionary <= 16:
             raise ValueError("dictionary must be between 0 and 16")
 
+        capacity = 1024 if self.dictionary == 16 else (50, 100, 250, 1000)[self.dictionary % 4]
+        if self.id is not None and (isinstance(self.id, bool) or not isinstance(self.id, int) or self.id >= capacity):
+            raise ValueError(f"id must be an integer below {capacity} for dictionary {self.dictionary}")
+
 
 @dataclass(frozen=True, slots=True)
 class CalibrationReport:
