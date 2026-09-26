@@ -21,226 +21,16 @@
 **AUTOLANDER** est un projet de vision numérique embarquée visant à faciliter l’atterrissage de précision pour drones
 à l’aide de tags ArUco et d’une caméra sur **Raspberry Pi**.  
 
-Le dépôt inclut des scripts pour calibrer la caméra et estimer la pose (distance/orientation) d’un tag détecté.
-Autolander acquiert les images, calcule et transmet la position de la cible. Il ne choisit aucun mode de vol ; l’absence de cible laisse l’acquisition et le streaming actifs sans timeout de détection.
+Le logiciel détecte la cible, estime sa position et la transmet au contrôleur de vol via MAVLink.
+Il diffuse également la vidéo et la télémétrie dans un navigateur.
 
+## Documentation
 
-## Scénario de simulation
+Consultez le **[wiki du projet](https://github.com/cia-ulaval/avion-cargo/wiki)** pour l’installation,
+la calibration de la caméra, les essais en simulation, l’utilisation sur Raspberry Pi et la configuration.
 
-Le dossier [simulation](simulation/README.md) contient le monde Iris avec sa cible ArUco, la caméra modifiée et la configuration de l'essai. Son guide reprend les quatre terminaux pour lancer ArduPilot SITL, Gazebo, le pont d'images ROS 2 et Autolander.
-
-## Prérequis
-
-Pour exécuter ou contribuer à ce projet, assurez-vous d’avoir installé :
-
-1. [Python 3 (>= 3.11, < 3.14)][python-installation-url]
-2. [Poetry (>= 2.1.3)][poetry-installation-url]
-
-> :information_source: Sur Raspberry Pi, il est possible que vous deviez installer des dépendances système supplémentaires.
-> Elles sont généralement indiquées dans les messages d’erreur lors de l’installation ou de l’exécution.
-
----
-
-## Commandes
-
-### 1. Ajouter et supprimer des dépendances
-
-#### 1.1 Ajouter une dépendance
-
-##### 1.1.1 Ajout d’une dépendance « principale »
-
-```shell
-poetry add <nom_de_la_dependance>
-```
-
-##### 1.1.2 Ajout d’une dépendance dans un groupe
-
-```shell
-poetry add --group <nom_du_groupe> <nom_de_la_dependance>
-```
-
-Par exemple, la commande `poetry add --group dev flake8` ajoute l’outil `flake8` dans le groupe `dev`.
-
-#### 1.2 Supprimer une dépendance
-
-```shell
-poetry remove <nom_de_la_dependance>
-```
-
-> À l’ajout ou à la suppression d’une dépendance, les fichiers
-> [pyproject.toml](pyproject.toml) et [poetry.lock](poetry.lock) sont modifiés automatiquement.
-> C'est normal.
-
----
-
-### 2. Exécution du programme et des scripts
-
-Pour exécuter le programme ou certains scripts du projet, installez d’abord les dépendances requises (à la racine du dépôt).
-
-#### 2.1 Installation des dépendances
-
-```shell
-poetry install --with dev              # développement sur ordinateur
-poetry install --with raspberry-pi     # matériel Raspberry Pi
-```
-
-#### 2.2 Calibration de la caméra
-
-Il est important de calibrer la caméra afin d’obtenir la matrice intrinsèque et les coefficients de distorsion.  
-Une bonne calibration, pour l’estimation de pose, devrait idéalement fournir une erreur de reprojection
-$\leq$ 1 px.
-
-Pour plus d’informations sur le script de calibration :
-
-```shell
-poetry run calibrate_camera --help
-```
-
-L’option `-d` utilise les identifiants OpenCV de `0` à `16`, identiques pour la collecte et le calcul de calibration.
-La valeur par défaut `16` correspond à `DICT_ARUCO_ORIGINAL` ; choisir le dictionnaire de la mire imprimée
-(par exemple `-d 0` pour `DICT_4X4_50`).
-
-#### 2.3 Atterrissage de précision
-
-#### 2.3.1 Commande pour l'ordinateur de bord
-
-Après avoir obtenu une bonne calibration de la caméra, vous pouvez opérer l'atterrissage de précision.
-
-Pour ce, il vous faudra un fichier de configuration qui fournit au logiciel certaines informations pour son fonctionnement voir la section sur le [fichier de configuration](#5-le-fichier-de-configuration).
-
-Pour lancer [autolander](#) pour operer un l'atterrissage sur ArUco:
-
-```shell
-poetry run precision_landing [PATH_TO_CONFIGURATION_FILE]
-```
-
-Par exemple, si le fichier de config est à la racine et s'appelle [landing_config.json](landing_config.json): 
-
-```shell
-poetry run precision_landing landing_config.json
-```
-
-Pour plus d’informations sur la commande `precision_landing`:
-
-```shell
-poetry run precision_landing --help
-```
-
-#### 2.3.2 Paramètres et valeurs à mettre à jour dans le Flight Controller
-
-:information_source: Pour plus d'information sur l'atterrissage de précicion avec Ardupilot, lire [Precision Landing and Loiter](https://ardupilot.org/copter/docs/precision-landing-and-loiter.html)
-
----
-
-### 3. Activer l’environnement virtuel Poetry dans le terminal courant
-
-Activer l’environnement virtuel Poetry dans la session courante permet d’utiliser les commandes sans `poetry run [nom_commande]`.  
-Une fois activé, les scripts définis dans [pyproject.toml](pyproject.toml) (section `[tool.poetry.scripts]`) deviennent accessibles comme des commandes système.
-
-```shell
-eval "$(poetry env activate)"
-```
-
-Ensuite, par exemple :
-
-```shell
-calibrate_camera --help
-```
-
----
-
-### 4. Maintenance de la base de code
-
-Les outils [black][black-python-tool-url], [flake8][flake8-python-tool-url] et [isort][isort-python-tool-url] ont été ajoutés au projet pour permettre de maintenir propre la base de code sur ce dépôt. 
-
-#### 4.1. Appliquer le formatage de style dans le projet 
-
-```shell
-poetry run fmt
-```
-
-#### 4.2. Vérifier le formatage de style
-
-```shell
-poetry run fmt-check # ou
-flake8 . # exécuter à la racine du projet
-```
-
-### 5. Le fichier de configuration
-
-Le fichier de configuration est nécessaire pour faire l'atterrissage de précision. C'est un fichier `json` avant la structure suivante :
-
-```text
-{
-  "camera": {
-    "id": "entier représentant l'identifiant de la caméra. Généralement 0 pour la caméra par défaut du système.",
-    "use_picamera": "booléen. true pour utiliser Picamera2 sur Raspberry Pi, false pour utiliser OpenCV / caméra système classique.",
-    "fps": "nombre entier représentant le framerate souhaité pour la capture vidéo.",
-    "calibration_filepath": "chemin absolu ou relatif vers le fichier de calibration de la caméra (formats supportés : .npz ou .yaml).",
-    "gz_simulation": {
-      "topic_name": "chaîne de caractères représentant le nom du topic Gazebo à utiliser pour récupérer les images de la caméra simulée. Utile seulement en simulation."
-    }
-  },
-
-  "vision": {
-    "targeted_marker": {
-      "length": "taille réelle du côté du marqueur ArUco en mètres. Exemple : 0.896 pour un marqueur de 89.6 cm.",
-      "id": "identifiant entier du marqueur ArUco cible à détecter.",
-      "aruco_dictionary": "identifiant entier du dictionnaire ArUco utilisé pour générer et détecter le marqueur. Valeur entre 0 et 16, voir la table récapitulative en 6"
-    }
-  },
-
-  "streaming": {
-    "port": "port réseau utilisé pour exposer le flux de streaming ou le serveur associé.",
-    "data": {
-      "dps": "fréquence d'envoi des données de télémétrie ou de tracking, en données par seconde."
-    },
-    "video": {
-      "fps": "framerate du flux vidéo diffusé. Peut être différent du fps de capture caméra."
-    }
-  },
-
-  "drone_connection": {
-    "use_serial": "booléen. true pour utiliser une connexion série UART, false pour utiliser une connexion réseau UDP/TCP selon l'implémentation.",
-    "address": "adresse IP de la cible pour la connexion réseau. Par défaut : 127.0.0.1",
-    "port": "port réseau utilisé pour la connexion au drone ou au simulateur. Par défaut : 14550",
-    "baud_rate": "vitesse de communication série en bauds. Utilisée si use_serial = true. Par défaut: 921600."
-  }
-}
-```
-
->:information_source: Le fichier de configuration recommandé pour RaspberryPi est [landing_config.json](landing_config.json)  
->
->:warning: La structure de ce fichier doit être respectée.
-
-### 6. Table recapitulative pour dictionnaires ArUco
-
-Le tableau suivant présente la correspondance entre les identifiants numériques et les noms des dictionnaires ArUco pris en charge :
-
-| ID | Nom du dictionnaire | Taille de grille    | Nombre de marqueurs | Remarque                                                                         |
-|----|---------------------|---------------------|---------------------|----------------------------------------------------------------------------------|
-| 0 | DICT_4X4_50 | 4 × 4 | 50 | Identifiant OpenCV |
-| 1 | DICT_4X4_100 | 4 × 4 | 100 | Identifiant OpenCV |
-| 2 | DICT_4X4_250 | 4 × 4 | 250 | Identifiant OpenCV |
-| 3 | DICT_4X4_1000 | 4 × 4 | 1000 | Identifiant OpenCV |
-| 4 | DICT_5X5_50 | 5 × 5 | 50 | Identifiant OpenCV |
-| 5 | DICT_5X5_100 | 5 × 5 | 100 | Identifiant OpenCV |
-| 6 | DICT_5X5_250 | 5 × 5 | 250 | Identifiant OpenCV |
-| 7 | DICT_5X5_1000 | 5 × 5 | 1000 | Identifiant OpenCV |
-| 8 | DICT_6X6_50 | 6 × 6 | 50 | Identifiant OpenCV |
-| 9 | DICT_6X6_100 | 6 × 6 | 100 | Identifiant OpenCV |
-| 10 | DICT_6X6_250 | 6 × 6 | 250 | Identifiant OpenCV |
-| 11 | DICT_6X6_1000 | 6 × 6 | 1000 | Identifiant OpenCV |
-| 12 | DICT_7X7_50 | 7 × 7 | 50 | Identifiant OpenCV |
-| 13 | DICT_7X7_100 | 7 × 7 | 100 | Identifiant OpenCV |
-| 14 | DICT_7X7_250 | 7 × 7 | 250 | Identifiant OpenCV |
-| 15 | DICT_7X7_1000 | 7 × 7 | 1000 | Identifiant OpenCV |
-| 16 | DICT_ARUCO_ORIGINAL | 5 × 5 | 1 024 | Dictionnaire historique |
-
-### 7. Notes
-
-Le code ayant été conçu spécifiquement pour fonctionner sur Raspberry Pi, son comportement sur d’autres plateformes
-n’a pas été testé de manière rigoureuse.
+Les commandes d’installation, d’exécution, de gestion des dépendances, de formatage et de tests sont regroupées dans
+**[Commandes pour développeurs](https://github.com/cia-ulaval/avion-cargo/wiki/Commandes-pour-developpeurs)**.
 
 ------------------------------------------------------------------------------------------------------------------------
 
@@ -268,9 +58,6 @@ n’a pas été testé de manière rigoureuse.
 
 <!-- BADGES LINKS -->
 
-[project-statement-shield]: https://img.shields.io/badge/Project%20statement-grey?style=for-the-badge
-[project-statement-url]: https://projet2025.qualitelogicielle.ca/introduction/
-
 [python-shield]: https://img.shields.io/badge/Made%20with-Python-3776AB?style=for-the-badge&logo=python&logoColor=yellow
 [python-url]: https://www.python.org/
 
@@ -279,11 +66,3 @@ n’a pas été testé de manière rigoureuse.
 
 [rpi-shield]: https://img.shields.io/badge/Made%20for-Raspberry%20Pi-C51A4A?style=for-the-badge&logo=raspberrypi&logoColor=red
 [rpi-url]: https://www.raspberrypi.com/
-
-<!-- Docs links -->
-
-[python-installation-url]: https://www.python.org/downloads/
-[poetry-installation-url]: https://python-poetry.org/docs/#installation
-[black-python-tool-url]: https://github.com/psf/black
-[flake8-python-tool-url]: https://flake8.pycqa.org/en/latest/user/
-[isort-python-tool-url]: https://pycqa.github.io/isort/
