@@ -25,6 +25,10 @@ Le dépôt inclut des scripts pour calibrer la caméra et estimer la pose (dista
 Autolander acquiert les images, calcule et transmet la position de la cible. Il ne choisit aucun mode de vol ; l’absence de cible laisse l’acquisition et le streaming actifs sans timeout de détection.
 
 
+## Scénario de simulation
+
+Le dossier [simulation](simulation/README.md) contient le monde Iris avec sa cible ArUco, la caméra modifiée et la configuration de l'essai. Son guide reprend les quatre terminaux pour lancer ArduPilot SITL, Gazebo, le pont d'images ROS 2 et Autolander.
+
 ## Prérequis
 
 Pour exécuter ou contribuer à ce projet, assurez-vous d’avoir installé :

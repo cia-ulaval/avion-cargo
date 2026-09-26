@@ -118,3 +118,6 @@ secrets/
 tmp/
 temp/
 *.tmp
+
+# Texture du scénario Gazebo versionné
+!simulation/worlds/markers/aruco.png

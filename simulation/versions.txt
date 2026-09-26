@@ -1,0 +1,8 @@
+# Révisions présentes lors de la copie du scénario, le 2026-09-25.
+# Les réglages locaux de caméra sont conservés dans models/gimbal_small_3d/model.sdf.
+ardupilot=2d14165ec51cebfa0e0f1eddfc7bd1f96ecaacdc
+ardupilot_gazebo=65937b77aace16735df6f192badb0e6b4eddd056
+autolander=317360feaff482a8d89e2756af4f2289ce0e50f7
+ubuntu=24.04
+ros_distro=jazzy
+gazebo_distribution=harmonic
