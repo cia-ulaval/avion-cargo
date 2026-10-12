@@ -1,0 +1,804 @@
+diff --git a/README.md b/README.md
+index 1a18a69..6e48323 100644
+--- a/README.md
++++ b/README.md
+@@ -32,6 +32,13 @@ la calibration de la caméra, les essais en simulation, l’utilisation sur Rasp
+ Les commandes d’installation, d’exécution, de gestion des dépendances, de formatage et de tests sont regroupées dans
+ **[Commandes pour développeurs](https://github.com/cia-ulaval/avion-cargo/wiki/Commandes-pour-developpeurs)**.
+ 
++## Type de marqueur
++
++Le champ `vision.targeted_marker.type` accepte `aruco` (valeur par défaut pour les anciens fichiers de configuration) ou `faruco`.
++Pour ArUco, configurez `id` et `aruco_dictionary` comme auparavant. Pour FArUco, configurez `fractal_id` et `fractal_type` (`FRACTAL_2L_6`, `FRACTAL_3L_6`, `FRACTAL_4L_6` ou `FRACTAL_5L_6`). Le champ `length` indique dans les deux cas le côté physique du marqueur extérieur, en mètres.
++
++FArUco est une dépendance optionnelle. Sur la machine cible, installez d’abord les dépendances système de compilation et OpenCV requises par [FArUco Bridge](https://github.com/PladsElsker/faruco-bridge), puis exécutez `poetry lock` et `poetry install --with faruco`. Le générateur amont ne prend actuellement en charge qu’un seul ID fractal intégré; configurez `fractal_id` avec l’ID réellement renvoyé par le bridge.
++
+ ------------------------------------------------------------------------------------------------------------------------
+ 
+ > Équipe Avion Cargo  
+diff --git a/autolanding_config.json b/autolanding_config.json
+index b457ad2..2ee7328 100644
+--- a/autolanding_config.json
++++ b/autolanding_config.json
+@@ -12,7 +12,8 @@
+     "targeted_marker": {
+       "length": 0.896,
+       "id": 29,
+-      "aruco_dictionary": 16
++      "aruco_dictionary": 16,
++      "type": "aruco"
+     }
+   },
+   "streaming": {
+diff --git a/landing_config.json b/landing_config.json
+index d624894..df3c2f9 100644
+--- a/landing_config.json
++++ b/landing_config.json
+@@ -9,7 +9,8 @@
+     "targeted_marker": {
+       "length": 0.896,
+       "id": 29,
+-      "aruco_dictionary": 16
++      "aruco_dictionary": 16,
++      "type": "aruco"
+     }
+   },
+   "streaming": {
+diff --git a/pyproject.toml b/pyproject.toml
+index 55878b9..d841150 100644
+--- a/pyproject.toml
++++ b/pyproject.toml
+@@ -47,6 +47,12 @@ optional = true
+ [tool.poetry.group.raspberry-pi.dependencies]
+ picamera2 = ">=0.3.33,<0.4.0"
+ 
++[tool.poetry.group.faruco]
++optional = true
++
++[tool.poetry.group.faruco.dependencies]
++faruco-bridge = { git = "https://github.com/PladsElsker/faruco-bridge.git", branch = "main" }
++
+ [tool.black]
+ line-length = 120
+ target-version = ["py312"]
+diff --git a/simulation/config/autolanding_config.json b/simulation/config/autolanding_config.json
+index 39f2c46..b19067c 100644
+--- a/simulation/config/autolanding_config.json
++++ b/simulation/config/autolanding_config.json
+@@ -12,7 +12,8 @@
+     "targeted_marker": {
+       "length": 0.896,
+       "id": 29,
+-      "aruco_dictionary": 16
++      "aruco_dictionary": 16,
++      "type": "aruco"
+     }
+   },
+   "streaming": {
+diff --git a/src/application/drone_autolanding_service.py b/src/application/drone_autolanding_service.py
+index 8f407c7..97ca96b 100644
+--- a/src/application/drone_autolanding_service.py
++++ b/src/application/drone_autolanding_service.py
+@@ -217,11 +217,16 @@ class DroneAutolandingService:
+ 
+         # Drivers can block while closing. All resources get a shutdown request
+         # and share a single bounded deadline, even if another close fails.
+-        for name, close in (
++        resources = [
+             ("streaming", self.content_streamer.stop),
+             ("camera", self.aruco_tracker.camera.close),
+-            ("drone", self.drone.close),
+-        ):
++        ]
++        detector = getattr(self.aruco_tracker, "detector", None)
++        if detector is not None:
++            resources.append(("marker detector", detector.close))
++        resources.append(("drone", self.drone.close))
++
++        for name, close in resources:
+             thread = Thread(target=close_resource, args=(name, close), name=f"autolander-close-{name}", daemon=True)
+             self._threads[f"close-{name}"] = thread
+             thread.start()
+diff --git a/src/application/tracking_service.py b/src/application/tracking_service.py
+index 7b9664f..ba1dd47 100644
+--- a/src/application/tracking_service.py
++++ b/src/application/tracking_service.py
+@@ -7,6 +7,7 @@ import numpy as np
+ from domain.camera import Camera
+ from domain.camera_mount import CameraMount
+ from domain.frame_annotator import FrameAnnotator
++from domain.marker_detection import MarkerDetection
+ from domain.marker_detector import MarkerDetector
+ from domain.models import CalibrationData, Pose3D, TargetedMarker
+ from domain.pose_estimator import PoseEstimator
+@@ -59,10 +60,25 @@ class TrackingService:
+         if not detections:
+             return frame, TrackingResult.not_found(captured_at_s=captured_at_s)
+ 
+-        marker_id, corners = detections[0]
+-        pose, rotation_vectors, translation_vectors = self.pose_estimator.estimate_pose(
+-            corners=corners, marker_length_m=self.target.length, calib=self.calibration, center=True
+-        )
++        detection = detections[0]
++        # Accept tuple detections from older/custom adapters during migration.
++        if isinstance(detection, MarkerDetection):
++            marker_id, corners = detection.marker_id, detection.corners
++        else:
++            marker_id, corners = detection
++            detection = None
++
++        if detection is not None and detection.translation_vectors is not None:
++            # FArUco has already estimated pose from all nested-marker
++            # correspondences. Do not replace that estimate with a four-corner PnP.
++            rotation_vectors = detection.rotation_vectors
++            translation_vectors = detection.translation_vectors
++            x, y, z = np.asarray(translation_vectors).reshape(-1)[:3]
++            pose = Pose3D(x=float(x), y=float(y), z=float(z))
++        else:
++            pose, rotation_vectors, translation_vectors = self.pose_estimator.estimate_pose(
++                corners=corners, marker_length_m=self.target.length, calib=self.calibration, center=True
++            )
+         if pose.z <= 0:
+             return frame, TrackingResult.not_found(captured_at_s=captured_at_s)
+ 
+diff --git a/src/composition.py b/src/composition.py
+index 168133e..ff0672a 100644
+--- a/src/composition.py
++++ b/src/composition.py
+@@ -20,6 +20,7 @@ from infrastructure.persistence.configuration_models import (
+     CameraConfiguration,
+     DroneConnectionConfiguration,
+ )
++from infrastructure.vision.faruco_detector import FArUcoDetector
+ from infrastructure.vision.live_frame_collector import LiveFrameCollector, LiveFrameCollectorConfig
+ from infrastructure.vision.opencv_aruco_detector import OpenCVArucoDetector, OpenCVArucoDetectorConfig
+ from infrastructure.vision.opencv_frame_annotator import OpenCVFrameAnnotator
+@@ -110,13 +111,18 @@ def build_camera_calibration_service(
+ def build_tracking_service(
+     camera: Camera,
+     target: TargetedMarker,
+-    detector_config: OpenCVArucoDetectorConfig,
++    detector_config: Optional[OpenCVArucoDetectorConfig],
+     calibration_data: CalibrationData,
+     camera_mount: CameraMount = CameraMount(),
+ ) -> TrackingService:
++    if target.marker_type == "faruco":
++        detector = FArUcoDetector(target, calibration_data)
++    else:
++        detector = OpenCVArucoDetector(detector_config or OpenCVArucoDetectorConfig(dictionary_id=target.dictionary))
++
+     return TrackingService(
+         camera=camera,
+-        detector=OpenCVArucoDetector(detector_config),
++        detector=detector,
+         pose_estimator=OpenCVPoseEstimator(),
+         target=target,
+         calibration=calibration_data,
+@@ -139,7 +145,11 @@ def build_landing_service(config: AutolanderConfiguration, use_simulated_cam: bo
+     tracker = build_tracking_service(
+         camera=camera,
+         target=config.targeted_marker,
+-        detector_config=OpenCVArucoDetectorConfig(dictionary_id=config.targeted_marker.dictionary),
++        detector_config=(
++            OpenCVArucoDetectorConfig(dictionary_id=config.targeted_marker.dictionary)
++            if config.targeted_marker.marker_type == "aruco"
++            else None
++        ),
+         calibration_data=calibration,
+         camera_mount=config.camera_config.mount,
+     )
+diff --git a/src/domain/marker_detection.py b/src/domain/marker_detection.py
+new file mode 100644
+index 0000000..382e57b
+--- /dev/null
++++ b/src/domain/marker_detection.py
+@@ -0,0 +1,19 @@
++from dataclasses import dataclass
++from typing import Optional
++
++import numpy as np
++
++
++@dataclass(frozen=True, slots=True)
++class MarkerDetection:
++    """A detected marker, optionally including a pose estimated by its detector."""
++
++    marker_id: int
++    corners: np.ndarray
++    rotation_vectors: Optional[np.ndarray] = None
++    translation_vectors: Optional[np.ndarray] = None
++    reprojection_error_px: Optional[float] = None
++
++    def __post_init__(self) -> None:
++        if (self.rotation_vectors is None) != (self.translation_vectors is None):
++            raise ValueError("rotation_vectors and translation_vectors must be provided together")
+diff --git a/src/domain/marker_detector.py b/src/domain/marker_detector.py
+index 2136201..07a4990 100644
+--- a/src/domain/marker_detector.py
++++ b/src/domain/marker_detector.py
+@@ -3,13 +3,14 @@ from typing import List
+ 
+ import numpy as np
+ 
++from domain.marker_detection import MarkerDetection
+ from domain.models import TargetedMarker
+ 
+ 
+ class MarkerDetector(ABC):
+     @abstractmethod
+-    def detect(self, frame: np.ndarray, target: TargetedMarker) -> List[tuple[int, np.ndarray]]:
+-        """
+-        Returns list of (marker_id, corners).
+-        corners typically shape: (1,4,2) float32
+-        """
++    def detect(self, frame: np.ndarray, target: TargetedMarker) -> List[MarkerDetection]:
++        """Return detections for the configured target, including outer image corners."""
++
++    def close(self) -> None:
++        """Release detector resources. Stateless detectors need not override this."""
+diff --git a/src/domain/models.py b/src/domain/models.py
+index 49ce867..fc27ebe 100644
+--- a/src/domain/models.py
++++ b/src/domain/models.py
+@@ -8,6 +8,14 @@ import numpy as np
+ from domain.errors import InvalidCalibrationError, InvalidMarkerLengthError, InvalidPoseError
+ 
+ 
++SUPPORTED_FRACTAL_TYPES = (
++    "FRACTAL_2L_6",
++    "FRACTAL_3L_6",
++    "FRACTAL_4L_6",
++    "FRACTAL_5L_6",
++)
++
++
+ @dataclass(frozen=True, slots=True)
+ class Pose3D:
+     """3D translation (in meters) expressed in the camera coordinate system."""
+@@ -74,28 +82,38 @@ class CalibrationData:
+ 
+ @dataclass(frozen=True, slots=True)
+ class TargetedMarker:
+-    """Defines which marker/target we want to track and its real size."""
++    """Defines the marker type, identity, and physical outer side length."""
+ 
+-    id: Optional[int]  # None => accept any marker (first detected)
+-    length: float  # side length in meters
+-    dictionary: int
++    id: Optional[int]  # None => accept any detected marker
++    length: float  # outer side length in meters
++    dictionary: int = 16  # used only for conventional ArUco markers
++    marker_type: str = "aruco"
++    fractal_type: Optional[str] = None
+ 
+     def __post_init__(self) -> None:
+-        if self.id is not None and self.id < 0:
+-            raise ValueError("id must be >= 0 or None")
++        if self.id is not None and (
++            isinstance(self.id, bool) or not isinstance(self.id, int) or self.id < 0
++        ):
++            raise ValueError("id must be an integer >= 0 or None")
+ 
+         if not np.isfinite(self.length) or self.length <= 0.0:
+             raise InvalidMarkerLengthError(f"marker_length_m must be > 0, got {self.length}")
+ 
+-        if not isinstance(self.dictionary, int) or isinstance(self.dictionary, bool):
+-            raise ValueError("dictionary must be an integer")
+-
+-        if not 0 <= self.dictionary <= 16:
+-            raise ValueError("dictionary must be between 0 and 16")
+-
+-        capacity = 1024 if self.dictionary == 16 else (50, 100, 250, 1000)[self.dictionary % 4]
+-        if self.id is not None and (isinstance(self.id, bool) or not isinstance(self.id, int) or self.id >= capacity):
+-            raise ValueError(f"id must be an integer below {capacity} for dictionary {self.dictionary}")
++        if self.marker_type == "aruco":
++            if self.fractal_type is not None:
++                raise ValueError("fractal_type is only valid when marker_type is 'faruco'")
++            if not isinstance(self.dictionary, int) or isinstance(self.dictionary, bool):
++                raise ValueError("dictionary must be an integer")
++            if not 0 <= self.dictionary <= 16:
++                raise ValueError("dictionary must be between 0 and 16")
++            capacity = 1024 if self.dictionary == 16 else (50, 100, 250, 1000)[self.dictionary % 4]
++            if self.id is not None and self.id >= capacity:
++                raise ValueError(f"id must be an integer below {capacity} for dictionary {self.dictionary}")
++        elif self.marker_type == "faruco":
++            if self.fractal_type not in SUPPORTED_FRACTAL_TYPES:
++                raise ValueError(f"fractal_type must be one of {SUPPORTED_FRACTAL_TYPES}")
++        else:
++            raise ValueError("marker_type must be either 'aruco' or 'faruco'")
+ 
+ 
+ @dataclass(frozen=True, slots=True)
+diff --git a/src/infrastructure/persistence/autolander_configuration_reader.py b/src/infrastructure/persistence/autolander_configuration_reader.py
+index 5af6ca8..7f6b53f 100644
+--- a/src/infrastructure/persistence/autolander_configuration_reader.py
++++ b/src/infrastructure/persistence/autolander_configuration_reader.py
+@@ -103,11 +103,30 @@ class AutolanderConfigurationReader:
+         vision = self._require_dict(self._require(raw, "vision", "root"), "vision")
+         tm = self._require_dict(self._require(vision, "targeted_marker", "vision"), "vision.targeted_marker")
+ 
++        marker_type = tm.get("type", "aruco")
+         length = float(self._require(tm, "length", "vision.targeted_marker"))
+-        marker_id = int(self._require(tm, "id", "vision.targeted_marker"))
+-        aruco_dictionary = int(self._require(tm, "aruco_dictionary", "vision.targeted_marker"))
+ 
+-        return TargetedMarker(length=length, id=marker_id, dictionary=aruco_dictionary)
++        if marker_type == "aruco":
++            marker_id = int(self._require(tm, "id", "vision.targeted_marker"))
++            aruco_dictionary = int(self._require(tm, "aruco_dictionary", "vision.targeted_marker"))
++            return TargetedMarker(
++                length=length,
++                id=marker_id,
++                dictionary=aruco_dictionary,
++                marker_type="aruco",
++            )
++
++        if marker_type == "faruco":
++            fractal_id = int(self._require(tm, "fractal_id", "vision.targeted_marker"))
++            fractal_type = str(self._require(tm, "fractal_type", "vision.targeted_marker"))
++            return TargetedMarker(
++                length=length,
++                id=fractal_id,
++                marker_type="faruco",
++                fractal_type=fractal_type,
++            )
++
++        raise ValueError(f"Unsupported marker type at 'vision.targeted_marker.type': {marker_type!r}")
+ 
+     def _parse_streaming(self, raw: dict[str, Any]) -> StreamingConfiguration:
+         streaming = self._require_dict(self._require(raw, "streaming", "root"), "streaming")
+diff --git a/src/infrastructure/vision/faruco_detector.py b/src/infrastructure/vision/faruco_detector.py
+new file mode 100644
+index 0000000..35b618f
+--- /dev/null
++++ b/src/infrastructure/vision/faruco_detector.py
+@@ -0,0 +1,74 @@
++"""Adapter from FArUco Bridge detections to AvionCargo's marker model."""
++
++from typing import Any, List, Optional
++
++import numpy as np
++
++from domain.marker_detection import MarkerDetection
++from domain.marker_detector import MarkerDetector
++from domain.models import CalibrationData, TargetedMarker
++
++
++class FArUcoDetector(MarkerDetector):
++    """Detect a configured fractal marker and reuse its multi-point pose estimate."""
++
++    def __init__(
++        self,
++        target: TargetedMarker,
++        calibration: CalibrationData,
++        bridge_detector: Optional[Any] = None,
++    ) -> None:
++        if target.marker_type != "faruco" or target.fractal_type is None:
++            raise ValueError("FArUcoDetector requires a TargetedMarker configured for 'faruco'")
++
++        if bridge_detector is None:
++            try:
++                from faruco_bridge import Detector
++            except ImportError as error:
++                raise RuntimeError(
++                    "FArUco support requires the optional 'faruco-bridge' dependency; "
++                    "install it with 'poetry install --with faruco'."
++                ) from error
++
++            bridge_detector = Detector(
++                fractal_type=target.fractal_type,
++                marker_size_m=target.length,
++                camera_matrix=calibration.camera_matrix,
++                dist_coeffs=calibration.dist_coeffs,
++                include_points=False,
++            )
++
++        self._bridge_detector = bridge_detector
++
++    def detect(self, frame: np.ndarray, target: TargetedMarker) -> List[MarkerDetection]:
++        if target.marker_type != "faruco":
++            raise ValueError("FArUcoDetector cannot detect a conventional ArUco target")
++
++        result = self._bridge_detector.detect(frame, include_points=False)
++        detections: List[MarkerDetection] = []
++        for marker in result.markers:
++            if target.id is not None and marker.id != target.id:
++                continue
++
++            rotation_vectors = None
++            translation_vectors = None
++            if marker.rvec is not None and marker.tvec is not None:
++                # Normalize bridge vectors to the (N, 1, 3) layout used by the
++                # existing OpenCV annotator.
++                rotation_vectors = np.asarray(marker.rvec, dtype=np.float64).reshape(1, 1, 3)
++                translation_vectors = np.asarray(marker.tvec, dtype=np.float64).reshape(1, 1, 3)
++
++            detections.append(
++                MarkerDetection(
++                    marker_id=int(marker.id),
++                    corners=np.asarray(marker.corners, dtype=np.float32).reshape(1, 4, 2),
++                    rotation_vectors=rotation_vectors,
++                    translation_vectors=translation_vectors,
++                    reprojection_error_px=marker.reprojection_error_px,
++                )
++            )
++
++        return detections
++
++    def close(self) -> None:
++        self._bridge_detector.close()
+diff --git a/src/infrastructure/vision/live_frame_collector.py b/src/infrastructure/vision/live_frame_collector.py
+index f8f448c..9b2e858 100644
+--- a/src/infrastructure/vision/live_frame_collector.py
++++ b/src/infrastructure/vision/live_frame_collector.py
+@@ -63,8 +63,8 @@ class LiveFrameCollector(FrameCollector):
+                 vis = frame.copy() if self.cfg.show_overlays else frame
+ 
+                 if self.cfg.show_overlays and len(detections) > 0:
+-                    corners_list = [c for (_mid, c) in detections]
+-                    ids_arr = np.array([[mid] for (mid, _c) in detections], dtype=np.int32)
++                    corners_list = [detection.corners for detection in detections]
++                    ids_arr = np.array([[detection.marker_id] for detection in detections], dtype=np.int32)
+                     FrameManipulationTool.draw_detected_markers(vis, corners_list, ids_arr)
+ 
+                 if self.cfg.show_overlays:
+diff --git a/src/infrastructure/vision/opencv_aruco_detector.py b/src/infrastructure/vision/opencv_aruco_detector.py
+index 2a122a4..d9f8215 100644
+--- a/src/infrastructure/vision/opencv_aruco_detector.py
++++ b/src/infrastructure/vision/opencv_aruco_detector.py
+@@ -1,9 +1,10 @@
+ from dataclasses import dataclass
+-from typing import List, Tuple
++from typing import List
+ 
+ import cv2
+ import numpy as np
+ 
++from domain.marker_detection import MarkerDetection
+ from domain.marker_detector import MarkerDetector
+ from domain.models import TargetedMarker
+ 
+@@ -24,16 +25,16 @@ class OpenCVArucoDetector(MarkerDetector):
+             params.cornerRefinementMethod = cv2.aruco.CORNER_REFINE_SUBPIX
+         self._detector = cv2.aruco.ArucoDetector(self._dict, params)
+ 
+-    def detect(self, frame: np.ndarray, target: TargetedMarker) -> List[Tuple[int, np.ndarray]]:
++    def detect(self, frame: np.ndarray, target: TargetedMarker) -> List[MarkerDetection]:
+         corners, ids, _ = self._detector.detectMarkers(frame)
+         if ids is None or len(ids) == 0:
+             return []
+ 
+         ids_flat = ids.flatten().tolist()
+-        results: List[Tuple[int, np.ndarray]] = []
++        results: List[MarkerDetection] = []
+ 
+         for marker_id, c in zip(ids_flat, corners):
+             if target.id is None or marker_id == target.id:
+-                results.append((int(marker_id), c))
++                results.append(MarkerDetection(marker_id=int(marker_id), corners=c))
+ 
+         return results
+diff --git a/src/utils/validators/configuration_validator.py b/src/utils/validators/configuration_validator.py
+index 608bbc1..c5340f5 100644
+--- a/src/utils/validators/configuration_validator.py
++++ b/src/utils/validators/configuration_validator.py
+@@ -5,6 +5,7 @@ from pathlib import Path
+ from typing import Any, Optional
+ 
+ from domain.camera_mount import CameraMount
++from domain.models import SUPPORTED_FRACTAL_TYPES
+ from utils.validators.validation_error import ValidationError
+ 
+ 
+@@ -131,12 +132,30 @@ class ConfigurationValidator:
+         tm = self._req_obj(vision, "targeted_marker", "vision")
+ 
+         self._req_number(tm, "length", "vision.targeted_marker", min_exclusive=0.0)
+-        marker_id = self._req_int(tm, "id", "vision.targeted_marker", min_=0)
+-        dictionary = self._req_int(tm, "aruco_dictionary", "vision.targeted_marker", min_=0, max_=16)
+-        capacity = 1024 if dictionary == 16 else (50, 100, 250, 1000)[dictionary % 4]
+-        if marker_id >= capacity:
+-            raise ValidationError(f"Marker ID must be < {capacity} for this dictionary", "vision.targeted_marker.id")
+-        self._no_extra_keys(tm, {"length", "id", "aruco_dictionary"}, "vision.targeted_marker")
++        marker_type = tm.get("type", "aruco")
++        if not isinstance(marker_type, str):
++            raise ValidationError("Expected a string", "vision.targeted_marker.type")
++
++        if marker_type == "aruco":
++            marker_id = self._req_int(tm, "id", "vision.targeted_marker", min_=0)
++            dictionary = self._req_int(tm, "aruco_dictionary", "vision.targeted_marker", min_=0, max_=16)
++            capacity = 1024 if dictionary == 16 else (50, 100, 250, 1000)[dictionary % 4]
++            if marker_id >= capacity:
++                raise ValidationError(
++                    f"Marker ID must be < {capacity} for this dictionary", "vision.targeted_marker.id"
++                )
++            self._no_extra_keys(tm, {"type", "length", "id", "aruco_dictionary"}, "vision.targeted_marker")
++        elif marker_type == "faruco":
++            self._req_int(tm, "fractal_id", "vision.targeted_marker", min_=0)
++            fractal_type = self._req_str(tm, "fractal_type", "vision.targeted_marker", allow_empty=False)
++            if fractal_type not in SUPPORTED_FRACTAL_TYPES:
++                raise ValidationError(
++                    f"Must be one of {SUPPORTED_FRACTAL_TYPES}", "vision.targeted_marker.fractal_type"
++                )
++            self._no_extra_keys(tm, {"type", "length", "fractal_id", "fractal_type"}, "vision.targeted_marker")
++        else:
++            raise ValidationError("Must be either 'aruco' or 'faruco'", "vision.targeted_marker.type")
++
+         self._no_extra_keys(vision, {"targeted_marker"}, "vision")
+ 
+     def _validate_streaming(self, root: dict[str, Any]) -> None:
+diff --git a/tests/application/test_tracking_service.py b/tests/application/test_tracking_service.py
+index 70787ca..3edacd6 100644
+--- a/tests/application/test_tracking_service.py
++++ b/tests/application/test_tracking_service.py
+@@ -7,6 +7,7 @@ import pytest
+ 
+ from application.tracking_service import TrackingService
+ from domain.frame_annotator import FrameAnnotator
++from domain.marker_detection import MarkerDetection
+ from domain.models import CalibrationData, Pose3D, TargetedMarker
+ from domain.tracking import TrackingStatus
+ 
+@@ -25,10 +26,10 @@ class FakeCamera:
+ 
+ @dataclass
+ class FakeDetector:
+-    detections: list[tuple[int, np.ndarray]]
++    detections: list[Any]
+     calls: list[tuple[np.ndarray, TargetedMarker]] = field(default_factory=list)
+ 
+-    def detect(self, frame: np.ndarray, target: TargetedMarker) -> list[tuple[int, np.ndarray]]:
++    def detect(self, frame: np.ndarray, target: TargetedMarker) -> list[Any]:
+         self.calls.append((frame, target))
+         return self.detections
+ 
+@@ -158,3 +159,45 @@ def test_wrong_capture_resolution_is_rejected_before_detection():
+     with pytest.raises(ValueError, match="does not match calibration"):
+         service.track_target()
+     detector.detect.assert_not_called()
++
++
++def test_tracking_uses_detector_provided_faruco_pose_without_reestimating_from_outer_corners() -> None:
++    frame = np.zeros((12, 12, 3), dtype=np.uint8)
++    corners = np.array([[[1.0, 1.0], [10.0, 1.0], [10.0, 10.0], [1.0, 10.0]]], dtype=np.float32)
++    rotation_vectors = np.array([[[0.1, 0.2, 0.3]]], dtype=np.float64)
++    translation_vectors = np.array([[[3.0, -2.0, 10.0]]], dtype=np.float64)
++    detection = MarkerDetection(
++        marker_id=7,
++        corners=corners,
++        rotation_vectors=rotation_vectors,
++        translation_vectors=translation_vectors,
++        reprojection_error_px=0.2,
++    )
++    target = TargetedMarker(
++        id=7, length=0.896, marker_type="faruco", fractal_type="FRACTAL_3L_6"
++    )
++    detector = FakeDetector(detections=[detection])
++    pose_estimator = FakePoseEstimator(
++        pose=Pose3D(100.0, 100.0, 100.0),
++        rotation_vectors=np.zeros((1, 1, 3)),
++        translation_vectors=np.zeros((1, 1, 3)),
++    )
++    annotator = Mock(spec=FrameAnnotator)
++    service = TrackingService(
++        camera=FakeCamera(frame),
++        detector=detector,
++        pose_estimator=pose_estimator,
++        target=target,
++        calibration=calibration_data(12),
++        annotator=annotator,
++    )
++
++    _, result = service.track_target()
++
++    assert result.status is TrackingStatus.DETECTED
++    assert result.marker_id == 7
++    assert result.pose == Pose3D(x=3.0, y=-2.0, z=10.0)
++    assert pose_estimator.calls == []
++    annotation = annotator.annotate.call_args.kwargs
++    assert annotation["rotation_vectors"] is rotation_vectors
++    assert annotation["translation_vectors"] is translation_vectors
+diff --git a/tests/infrastructure/persistence/test_autolander_configuration_reader.py b/tests/infrastructure/persistence/test_autolander_configuration_reader.py
+index 6481c6b..a5f5d09 100644
+--- a/tests/infrastructure/persistence/test_autolander_configuration_reader.py
++++ b/tests/infrastructure/persistence/test_autolander_configuration_reader.py
+@@ -64,3 +64,19 @@ def test_reader_preserves_configured_camera_mount(tmp_path, valid_config_data):
+     from domain.models import Pose3D
+ 
+     assert config.camera_config.mount.to_body(Pose3D(1, 2, 3)) == Pose3D(1.1, 2.2, 3.3)
++
++
++def test_reader_maps_faruco_configuration_to_targeted_marker(
++    tmp_path: Path, valid_config_data: dict
++) -> None:
++    valid_config_data["vision"]["targeted_marker"] = {
++        "type": "faruco",
++        "length": 0.896,
++        "fractal_id": 0,
++        "fractal_type": "FRACTAL_3L_6",
++    }
++    config = AutolanderConfigurationReader(write_config(tmp_path, valid_config_data)).read()
++
++    assert config.targeted_marker == TargetedMarker(
++        id=0, length=0.896, marker_type="faruco", fractal_type="FRACTAL_3L_6"
++    )
+diff --git a/tests/infrastructure/vision/test_faruco_detector.py b/tests/infrastructure/vision/test_faruco_detector.py
+new file mode 100644
+index 0000000..e3e7731
+--- /dev/null
++++ b/tests/infrastructure/vision/test_faruco_detector.py
+@@ -0,0 +1,75 @@
++from types import SimpleNamespace
++from unittest.mock import Mock
++
++import numpy as np
++
++from domain.models import CalibrationData, TargetedMarker
++from infrastructure.vision.faruco_detector import FArUcoDetector
++
++
++def target() -> TargetedMarker:
++    return TargetedMarker(
++        id=7,
++        length=0.896,
++        marker_type="faruco",
++        fractal_type="FRACTAL_3L_6",
++    )
++
++
++def calibration() -> CalibrationData:
++    return CalibrationData(
++        camera_matrix=np.array([[500.0, 0.0, 200.0], [0.0, 500.0, 200.0], [0.0, 0.0, 1.0]]),
++        dist_coeffs=np.zeros(5),
++        camera_width=400,
++        camera_height=400,
++    )
++
++
++def bridge_marker(marker_id: int, *, with_pose: bool = True) -> SimpleNamespace:
++    return SimpleNamespace(
++        id=marker_id,
++        corners=np.array([[10, 10], [110, 10], [110, 110], [10, 110]], dtype=np.float32),
++        rvec=np.array([[0.1], [0.2], [0.3]]) if with_pose else None,
++        tvec=np.array([[1.0], [2.0], [3.0]]) if with_pose else None,
++        reprojection_error_px=0.25 if with_pose else None,
++    )
++
++
++def test_adapter_filters_by_fractal_id_and_preserves_bridge_pose() -> None:
++    bridge = Mock()
++    bridge.detect.return_value = SimpleNamespace(markers=[bridge_marker(8), bridge_marker(7)])
++    detector = FArUcoDetector(target(), calibration(), bridge_detector=bridge)
++
++    frame = np.zeros((400, 400, 3), dtype=np.uint8)
++    detections = detector.detect(frame, target())
++
++    assert len(detections) == 1
++    detection = detections[0]
++    assert detection.marker_id == 7
++    assert detection.corners.shape == (1, 4, 2)
++    assert detection.rotation_vectors.shape == (1, 1, 3)
++    assert detection.translation_vectors.shape == (1, 1, 3)
++    assert detection.reprojection_error_px == 0.25
++    np.testing.assert_allclose(detection.translation_vectors.reshape(-1), [1.0, 2.0, 3.0])
++    bridge.detect.assert_called_once_with(frame, include_points=False)
++
++
++def test_adapter_keeps_detection_when_bridge_cannot_estimate_pose() -> None:
++    bridge = Mock()
++    bridge.detect.return_value = SimpleNamespace(markers=[bridge_marker(7, with_pose=False)])
++    detector = FArUcoDetector(target(), calibration(), bridge_detector=bridge)
++
++    detections = detector.detect(np.zeros((400, 400, 3), dtype=np.uint8), target())
++
++    assert len(detections) == 1
++    assert detections[0].rotation_vectors is None
++    assert detections[0].translation_vectors is None
++
++
++def test_close_is_forwarded_to_bridge_worker() -> None:
++    bridge = Mock()
++    detector = FArUcoDetector(target(), calibration(), bridge_detector=bridge)
++
++    detector.close()
++
++    bridge.close.assert_called_once_with()
+diff --git a/tests/infrastructure/vision/test_opencv_gridboard_calibration_engine.py b/tests/infrastructure/vision/test_opencv_gridboard_calibration_engine.py
+index 1f449f9..a51981a 100644
+--- a/tests/infrastructure/vision/test_opencv_gridboard_calibration_engine.py
++++ b/tests/infrastructure/vision/test_opencv_gridboard_calibration_engine.py
+@@ -42,7 +42,7 @@ def test_collector_and_calibration_engine_use_the_same_opencv_dictionary(diction
+     detector = OpenCVArucoDetector(OpenCVArucoDetectorConfig(dictionary_id=dictionary_id))
+     target = TargetedMarker(id=None, length=0.03, dictionary=dictionary_id)
+     for frame in frames:
+-        assert {marker_id for marker_id, _ in detector.detect(frame, target)} == set(range(20))
++        assert {detection.marker_id for detection in detector.detect(frame, target)} == set(range(20))
+ 
+     engine = OpenCVGridBoardCameraCalibrationEngine(GridBoardSpec(4, 5, 0.03, 0.01, dictionary_id))
+     report = engine.calibrate_from_frames(frames)
+diff --git a/tests/test_composition.py b/tests/test_composition.py
+index 5882346..c827e9f 100644
+--- a/tests/test_composition.py
++++ b/tests/test_composition.py
+@@ -36,7 +36,7 @@ def test_calibration_assembly_detects_calibrates_and_saves(
+     service = composition.build_camera_calibration_service(camera, parameters)
+     for frame in frames:
+         detected = service.frame_collector.detector.detect(frame, service.frame_collector.target)
+-        assert {marker_id for marker_id, _ in detected} == set(range(20))
++        assert {detection.marker_id for detection in detected} == set(range(20))
+     monkeypatch.setattr(service.frame_collector, "collect", lambda: frames)
+     service.calibration_repository.default_calibration_filedir = tmp_path
+ 
+diff --git a/tests/test_faruco_composition.py b/tests/test_faruco_composition.py
+new file mode 100644
+index 0000000..9e16764
+--- /dev/null
++++ b/tests/test_faruco_composition.py
+@@ -0,0 +1,34 @@
++from unittest.mock import Mock
++
++import numpy as np
++
++import composition
++from domain.models import CalibrationData, TargetedMarker
++
++
++def test_tracking_builder_selects_faruco_adapter_for_faruco_targets(monkeypatch) -> None:
++    target = TargetedMarker(
++        id=0,
++        length=0.896,
++        marker_type="faruco",
++        fractal_type="FRACTAL_3L_6",
++    )
++    calibration = CalibrationData(
++        camera_matrix=np.array([[500.0, 0.0, 200.0], [0.0, 500.0, 200.0], [0.0, 0.0, 1.0]]),
++        dist_coeffs=np.zeros(5),
++        camera_width=400,
++        camera_height=400,
++    )
++    detector = Mock(name="faruco-detector")
++    faruco_factory = Mock(return_value=detector)
++    monkeypatch.setattr(composition, "FArUcoDetector", faruco_factory)
++
++    service = composition.build_tracking_service(
++        camera=Mock(),
++        target=target,
++        detector_config=None,
++        calibration_data=calibration,
++    )
++
++    assert service.detector is detector
++    faruco_factory.assert_called_once_with(target, calibration)
+diff --git a/tests/utils/validators/test_configuration_validator.py b/tests/utils/validators/test_configuration_validator.py
+index 7ee2c63..cc68107 100644
+--- a/tests/utils/validators/test_configuration_validator.py
++++ b/tests/utils/validators/test_configuration_validator.py
+@@ -103,3 +103,28 @@ def test_real_camera_does_not_require_a_simulation_topic(tmp_path, valid_config_
+ def test_invalid_configuration_fails_before_startup(tmp_path, valid_config_data, path, value):
+     with pytest.raises(ValidationError):
+         ConfigurationValidator(write_config(tmp_path, changed_config(valid_config_data, *path, value=value))).validate()
++
++
++def test_validator_accepts_faruco_configuration(tmp_path: Path, valid_config_data: dict) -> None:
++    valid_config_data["vision"]["targeted_marker"] = {
++        "type": "faruco",
++        "length": 0.896,
++        "fractal_id": 0,
++        "fractal_type": "FRACTAL_3L_6",
++    }
++
++    ConfigurationValidator(write_config(tmp_path, valid_config_data)).validate()
++
++
++def test_validator_rejects_unknown_faruco_preset(tmp_path: Path, valid_config_data: dict) -> None:
++    valid_config_data["vision"]["targeted_marker"] = {
++        "type": "faruco",
++        "length": 0.896,
++        "fractal_id": 0,
++        "fractal_type": "FRACTAL_99L_99",
++    }
++
++    with pytest.raises(ValidationError) as error:
++        ConfigurationValidator(write_config(tmp_path, valid_config_data)).validate()
++
++    assert error.value.path == "vision.targeted_marker.fractal_type"

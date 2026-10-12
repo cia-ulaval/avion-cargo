@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import Any, Optional
 
 from domain.camera_mount import CameraMount
+from domain.models import SUPPORTED_FRACTAL_TYPES
 from utils.validators.validation_error import ValidationError
 
 
@@ -131,12 +132,30 @@ class ConfigurationValidator:
         tm = self._req_obj(vision, "targeted_marker", "vision")
 
         self._req_number(tm, "length", "vision.targeted_marker", min_exclusive=0.0)
-        marker_id = self._req_int(tm, "id", "vision.targeted_marker", min_=0)
-        dictionary = self._req_int(tm, "aruco_dictionary", "vision.targeted_marker", min_=0, max_=16)
-        capacity = 1024 if dictionary == 16 else (50, 100, 250, 1000)[dictionary % 4]
-        if marker_id >= capacity:
-            raise ValidationError(f"Marker ID must be < {capacity} for this dictionary", "vision.targeted_marker.id")
-        self._no_extra_keys(tm, {"length", "id", "aruco_dictionary"}, "vision.targeted_marker")
+        marker_type = tm.get("type", "aruco")
+        if not isinstance(marker_type, str):
+            raise ValidationError("Expected a string", "vision.targeted_marker.type")
+
+        if marker_type == "aruco":
+            marker_id = self._req_int(tm, "id", "vision.targeted_marker", min_=0)
+            dictionary = self._req_int(tm, "aruco_dictionary", "vision.targeted_marker", min_=0, max_=16)
+            capacity = 1024 if dictionary == 16 else (50, 100, 250, 1000)[dictionary % 4]
+            if marker_id >= capacity:
+                raise ValidationError(
+                    f"Marker ID must be < {capacity} for this dictionary", "vision.targeted_marker.id"
+                )
+            self._no_extra_keys(tm, {"type", "length", "id", "aruco_dictionary"}, "vision.targeted_marker")
+        elif marker_type == "faruco":
+            self._req_int(tm, "fractal_id", "vision.targeted_marker", min_=0)
+            fractal_type = self._req_str(tm, "fractal_type", "vision.targeted_marker", allow_empty=False)
+            if fractal_type not in SUPPORTED_FRACTAL_TYPES:
+                raise ValidationError(
+                    f"Must be one of {SUPPORTED_FRACTAL_TYPES}", "vision.targeted_marker.fractal_type"
+                )
+            self._no_extra_keys(tm, {"type", "length", "fractal_id", "fractal_type"}, "vision.targeted_marker")
+        else:
+            raise ValidationError("Must be either 'aruco' or 'faruco'", "vision.targeted_marker.type")
+
         self._no_extra_keys(vision, {"targeted_marker"}, "vision")
 
     def _validate_streaming(self, root: dict[str, Any]) -> None:

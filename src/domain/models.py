@@ -8,6 +8,14 @@ import numpy as np
 from domain.errors import InvalidCalibrationError, InvalidMarkerLengthError, InvalidPoseError
 
 
+SUPPORTED_FRACTAL_TYPES = (
+    "FRACTAL_2L_6",
+    "FRACTAL_3L_6",
+    "FRACTAL_4L_6",
+    "FRACTAL_5L_6",
+)
+
+
 @dataclass(frozen=True, slots=True)
 class Pose3D:
     """3D translation (in meters) expressed in the camera coordinate system."""
@@ -74,28 +82,38 @@ class CalibrationData:
 
 @dataclass(frozen=True, slots=True)
 class TargetedMarker:
-    """Defines which marker/target we want to track and its real size."""
+    """Defines the marker type, identity, and physical outer side length."""
 
-    id: Optional[int]  # None => accept any marker (first detected)
-    length: float  # side length in meters
-    dictionary: int
+    id: Optional[int]  # None => accept any detected marker
+    length: float  # outer side length in meters
+    dictionary: int = 16  # used only for conventional ArUco markers
+    marker_type: str = "aruco"
+    fractal_type: Optional[str] = None
 
     def __post_init__(self) -> None:
-        if self.id is not None and self.id < 0:
-            raise ValueError("id must be >= 0 or None")
+        if self.id is not None and (
+            isinstance(self.id, bool) or not isinstance(self.id, int) or self.id < 0
+        ):
+            raise ValueError("id must be an integer >= 0 or None")
 
         if not np.isfinite(self.length) or self.length <= 0.0:
             raise InvalidMarkerLengthError(f"marker_length_m must be > 0, got {self.length}")
 
-        if not isinstance(self.dictionary, int) or isinstance(self.dictionary, bool):
-            raise ValueError("dictionary must be an integer")
-
-        if not 0 <= self.dictionary <= 16:
-            raise ValueError("dictionary must be between 0 and 16")
-
-        capacity = 1024 if self.dictionary == 16 else (50, 100, 250, 1000)[self.dictionary % 4]
-        if self.id is not None and (isinstance(self.id, bool) or not isinstance(self.id, int) or self.id >= capacity):
-            raise ValueError(f"id must be an integer below {capacity} for dictionary {self.dictionary}")
+        if self.marker_type == "aruco":
+            if self.fractal_type is not None:
+                raise ValueError("fractal_type is only valid when marker_type is 'faruco'")
+            if not isinstance(self.dictionary, int) or isinstance(self.dictionary, bool):
+                raise ValueError("dictionary must be an integer")
+            if not 0 <= self.dictionary <= 16:
+                raise ValueError("dictionary must be between 0 and 16")
+            capacity = 1024 if self.dictionary == 16 else (50, 100, 250, 1000)[self.dictionary % 4]
+            if self.id is not None and self.id >= capacity:
+                raise ValueError(f"id must be an integer below {capacity} for dictionary {self.dictionary}")
+        elif self.marker_type == "faruco":
+            if self.fractal_type not in SUPPORTED_FRACTAL_TYPES:
+                raise ValueError(f"fractal_type must be one of {SUPPORTED_FRACTAL_TYPES}")
+        else:
+            raise ValueError("marker_type must be either 'aruco' or 'faruco'")
 
 
 @dataclass(frozen=True, slots=True)

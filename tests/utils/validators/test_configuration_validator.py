@@ -103,3 +103,28 @@ def test_real_camera_does_not_require_a_simulation_topic(tmp_path, valid_config_
 def test_invalid_configuration_fails_before_startup(tmp_path, valid_config_data, path, value):
     with pytest.raises(ValidationError):
         ConfigurationValidator(write_config(tmp_path, changed_config(valid_config_data, *path, value=value))).validate()
+
+
+def test_validator_accepts_faruco_configuration(tmp_path: Path, valid_config_data: dict) -> None:
+    valid_config_data["vision"]["targeted_marker"] = {
+        "type": "faruco",
+        "length": 0.896,
+        "fractal_id": 0,
+        "fractal_type": "FRACTAL_3L_6",
+    }
+
+    ConfigurationValidator(write_config(tmp_path, valid_config_data)).validate()
+
+
+def test_validator_rejects_unknown_faruco_preset(tmp_path: Path, valid_config_data: dict) -> None:
+    valid_config_data["vision"]["targeted_marker"] = {
+        "type": "faruco",
+        "length": 0.896,
+        "fractal_id": 0,
+        "fractal_type": "FRACTAL_99L_99",
+    }
+
+    with pytest.raises(ValidationError) as error:
+        ConfigurationValidator(write_config(tmp_path, valid_config_data)).validate()
+
+    assert error.value.path == "vision.targeted_marker.fractal_type"

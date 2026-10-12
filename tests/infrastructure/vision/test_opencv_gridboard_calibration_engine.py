@@ -42,7 +42,7 @@ def test_collector_and_calibration_engine_use_the_same_opencv_dictionary(diction
     detector = OpenCVArucoDetector(OpenCVArucoDetectorConfig(dictionary_id=dictionary_id))
     target = TargetedMarker(id=None, length=0.03, dictionary=dictionary_id)
     for frame in frames:
-        assert {marker_id for marker_id, _ in detector.detect(frame, target)} == set(range(20))
+        assert {detection.marker_id for detection in detector.detect(frame, target)} == set(range(20))
 
     engine = OpenCVGridBoardCameraCalibrationEngine(GridBoardSpec(4, 5, 0.03, 0.01, dictionary_id))
     report = engine.calibrate_from_frames(frames)

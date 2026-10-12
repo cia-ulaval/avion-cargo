@@ -7,6 +7,7 @@ import numpy as np
 from domain.camera import Camera
 from domain.camera_mount import CameraMount
 from domain.frame_annotator import FrameAnnotator
+from domain.marker_detection import MarkerDetection
 from domain.marker_detector import MarkerDetector
 from domain.models import CalibrationData, Pose3D, TargetedMarker
 from domain.pose_estimator import PoseEstimator
@@ -59,10 +60,25 @@ class TrackingService:
         if not detections:
             return frame, TrackingResult.not_found(captured_at_s=captured_at_s)
 
-        marker_id, corners = detections[0]
-        pose, rotation_vectors, translation_vectors = self.pose_estimator.estimate_pose(
-            corners=corners, marker_length_m=self.target.length, calib=self.calibration, center=True
-        )
+        detection = detections[0]
+        # Accept tuple detections from older/custom adapters during migration.
+        if isinstance(detection, MarkerDetection):
+            marker_id, corners = detection.marker_id, detection.corners
+        else:
+            marker_id, corners = detection
+            detection = None
+
+        if detection is not None and detection.translation_vectors is not None:
+            # FArUco has already estimated pose from all nested-marker
+            # correspondences. Do not replace that estimate with a four-corner PnP.
+            rotation_vectors = detection.rotation_vectors
+            translation_vectors = detection.translation_vectors
+            x, y, z = np.asarray(translation_vectors).reshape(-1)[:3]
+            pose = Pose3D(x=float(x), y=float(y), z=float(z))
+        else:
+            pose, rotation_vectors, translation_vectors = self.pose_estimator.estimate_pose(
+                corners=corners, marker_length_m=self.target.length, calib=self.calibration, center=True
+            )
         if pose.z <= 0:
             return frame, TrackingResult.not_found(captured_at_s=captured_at_s)
 
