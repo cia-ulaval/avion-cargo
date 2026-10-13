@@ -1,6 +1,4 @@
 services:
-  # Runs as root once per named volume so Poetry and the venv are writable by dev.
-  # This prevents PermissionError failures from stale volumes left by earlier runs.
   permissions:
     build:
       context: .
@@ -29,8 +27,6 @@ services:
       permissions:
         condition: service_completed_successfully
     environment:
-      # listen-x11.sh forwards host TCP :6000 to the host's X11 socket (X1 by default). 
-      # Therefore the container deliberately connects to display :0 / TCP 6000.
       DISPLAY: "${DISPLAY}"
       QT_X11_NO_MITSHM: "1"
       NVIDIA_VISIBLE_DEVICES: all
@@ -41,7 +37,6 @@ services:
     ipc: host
     ports:
       - "127.0.0.1:8085:8085" # Autolander web UI
-      - "127.0.0.1:5678:5678" # optional debugpy attach port
     volumes:
       - .:/workspace/avion-cargo:cached
       - autolander_venv:/workspace/avion-cargo/.venv

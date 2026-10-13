@@ -1,8 +1,6 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
-# Opens one Konsole window per simulation process. X11 forwarding is not managed here.
-
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 if ROOT_DIR="$(git -C "$SCRIPT_DIR" rev-parse --show-toplevel 2>/dev/null)"; then
   :
@@ -74,8 +72,6 @@ launch_terminal() {
   printf -v q_log '%q' "$logfile"
   printf -v q_status '%q' "$statusfile"
 
-  # Keep the command in the foreground of a real terminal. `-it` preserves SITL/MAVProxy
-  # interactivity; tee captures logs without taking stdin away from Docker Compose.
   terminal_cmd="cd $q_root
 printf 'Service: %s\\nLog: %s\\n\\n' $q_service $q_log
 set +e
@@ -103,7 +99,6 @@ echo "Per-process logs: $LOG_DIR"
 echo "Close a service window or press Ctrl+C here to stop the simulation session."
 echo "Monitoring service lifecycles..."
 
-# If any service command exits or its terminal is closed, tear down the whole session.
 while true; do
   for service in "${SERVICES[@]}"; do
     statusfile="$STATUS_DIR/$service.exit"

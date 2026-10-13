@@ -9,8 +9,6 @@ if [[ ! -f pyproject.toml || ! -f poetry.lock ]]; then
   exit 2
 fi
 
-# ROS Jazzy's binary Python modules (rclpy, sensor_msgs) must be visible to this venv.
-# A named Docker volume keeps the venv separate from the host operating system.
 if [[ ! -f .venv/pyvenv.cfg ]]; then
   mkdir -p .venv
   /usr/bin/python3 -m venv --system-site-packages .venv
@@ -22,7 +20,6 @@ fi
 poetry env use "$ROOT/.venv/bin/python"
 poetry install --with dev
 
-# Fail early with an actionable diagnostic if ROS's Python packages are not visible.
 poetry run python - <<'PY'
 import cv2
 import rclpy

@@ -8,7 +8,6 @@ if [[ -z "${DISPLAY:-}" ]]; then
   echo "ERROR: DISPLAY is not set. Run this from a terminal in your graphical Linux desktop session." >&2
   exit 2
 fi
-# This setup needs a local X11/XWayland Unix socket, not SSH/TCP X forwarding.
 display_num="$(sed -nE 's/^.*:([0-9]+)(\.[0-9]+)?$/\1/p' <<< "$DISPLAY")"
 if [[ -z "$display_num" || ! -S "/tmp/.X11-unix/X${display_num}" ]]; then
   echo "ERROR: No local X11 socket found for DISPLAY=$DISPLAY under /tmp/.X11-unix." >&2
@@ -21,10 +20,8 @@ if ! command -v xhost >/dev/null 2>&1; then
   exit 2
 fi
 
-# Permit local container clients to connect to this X server. Do not use the much broader 'xhost +'.
 xhost +local:
 
-# NVIDIA's runtime supplies matching host driver libraries; Mesa hosts get /dev/dri plus matching GIDs.
 if command -v nvidia-smi >/dev/null 2>&1 && nvidia-smi -L >/dev/null 2>&1; then
   echo "NVIDIA GPU detected; using compose.linux.nvidia.yaml."
   echo "This requires NVIDIA Container Toolkit configured for Docker and Compose >= 2.30."

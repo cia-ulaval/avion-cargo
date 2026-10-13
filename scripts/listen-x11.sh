@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-# Run on the HOST, not inside Docker.
 set -Eeuo pipefail
 
 X11_SOCKET="${1:-/tmp/.X11-unix/X1}"
