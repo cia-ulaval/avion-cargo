@@ -116,9 +116,11 @@ cat > /usr/local/bin/avion-sitl <<'SCRIPT'
 #!/usr/bin/env bash
 set -euo pipefail
 cd /home/dev/ardupilot
-exec ./Tools/autotest/sim_vehicle.py -D -v ArduCopter -f JSON \
+exec ./Tools/autotest/sim_vehicle.py \
+  -D -v ArduCopter -f JSON \
   --add-param-file=/workspace/avion-cargo/simulation/config/gazebo-iris-gimbal.parm \
-  --console --map
+  --console --map \
+  --mavproxy-args="--non-interactive"
 SCRIPT
 cat > /usr/local/bin/avion-gazebo <<'SCRIPT'
 #!/usr/bin/env bash
