@@ -11,7 +11,6 @@ services:
       - autolander_venv:/workspace/avion-cargo/.venv
       - poetry_cache:/home/dev/.cache/pypoetry
     restart: "no"
-
   dev:
     runtime: nvidia # Comment this line if you don't have an NVidia GPU for graphics acceletation
     build:

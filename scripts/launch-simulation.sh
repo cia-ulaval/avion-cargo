@@ -9,11 +9,6 @@ else
 fi
 cd "$ROOT_DIR"
 
-if ! command -v konsole >/dev/null 2>&1; then
-  echo "Konsole is required to open separate desktop terminal windows." >&2
-  echo "On Kubuntu, install it with: sudo apt install konsole" >&2
-  exit 127
-fi
 if ! docker compose version >/dev/null 2>&1; then
   echo "Docker Compose is unavailable or this user cannot access Docker." >&2
   exit 1
@@ -25,7 +20,7 @@ STATUS_DIR="$LOG_DIR/.status"
 SESSION="avion-sim-$TIMESTAMP"
 mkdir -p "$STATUS_DIR"
 
-SERVICES=(avion-autolander avion-sitl avion-gazebo avion-image-bridge avion-web-proxy)
+SERVICES=(avion-autolander avion-sitl avion-gazebo avion-image-bridge)
 TERMINAL_PIDS=()
 STOPPING=0
 
@@ -83,8 +78,7 @@ printf 'The launcher will close this window when the supervisor stops the other 
 exec bash -i"
 
   echo "Opening terminal: $service (log: $logfile)"
-  konsole --separate --workdir "$ROOT_DIR" --title "$service" \
-    -e bash -lc "$terminal_cmd" &
+  konsole --separate --workdir "$ROOT_DIR" --title "$service" -e bash -lc "$terminal_cmd" &
   TERMINAL_PIDS+=("$!")
   sleep 0.25
 }
