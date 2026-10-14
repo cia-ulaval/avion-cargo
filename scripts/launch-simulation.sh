@@ -17,7 +17,6 @@ fi
 SIMULATION_ROOT="$ROOT_DIR/logs/simulation"
 mkdir -p "$SIMULATION_ROOT"
 
-# Prevent two launchers in this checkout from starting duplicate simulations.
 HOST_LOCK="$SIMULATION_ROOT/.launcher-lock"
 if ! mkdir "$HOST_LOCK" 2>/dev/null; then
   old_pid="$(cat "$HOST_LOCK/pid" 2>/dev/null || true)"
@@ -40,8 +39,6 @@ CONTAINER_LOG_DIR="/workspace/avion-cargo/logs/simulation/$TIMESTAMP"
 CONTAINER_STATUS_DIR="$CONTAINER_LOG_DIR/.status"
 mkdir -p "$STATUS_DIR"
 
-# Start dependencies before Autolander. Every service runs detached inside
-# the dev container; stdout/stderr are redirected to logs on the host mount.
 SERVICES=(avion-sitl avion-gazebo avion-image-bridge avion-autolander)
 SERVICE_PGIDS=()
 CONTAINER_LOCK_HELD=0
@@ -236,8 +233,6 @@ REMOTE_START
     remote_status=$?
   fi
 
-  # Register the process group even if startup reported an error, so cleanup
-  # can still stop a process that started before the error was returned.
   if [[ -s "$pgidfile" ]]; then
     IFS= read -r pgid < "$pgidfile"
     if [[ "$pgid" =~ ^[0-9]+$ ]]; then
