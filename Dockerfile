@@ -116,33 +116,51 @@ cat > /usr/local/bin/avion-sitl <<'SCRIPT'
 #!/usr/bin/env bash
 set -euo pipefail
 cd /home/dev/ardupilot
-exec ./Tools/autotest/sim_vehicle.py \
-  -D -v ArduCopter -f JSON \
-  --add-param-file=/workspace/avion-cargo/simulation/config/gazebo-iris-gimbal.parm \
-  --console --map \
-  --mavproxy-args="--non-interactive"
+
+VEHICLE="${AVION_SITL_VEHICLE:-ArduCopter}"
+FRAME="${AVION_SITL_FRAME:-JSON}"
+PARAM_FILE="${AVION_SITL_PARAM_FILE-/workspace/avion-cargo/simulation/config/gazebo-iris-gimbal.parm}"
+
+args=(-D -v "$VEHICLE" -f "$FRAME")
+
+if [[ -n "$PARAM_FILE" ]]; then
+  args+=("--add-param-file=$PARAM_FILE")
+fi
+
+args+=(--console --map --mavproxy-args=--non-interactive)
+
+exec ./Tools/autotest/sim_vehicle.py "${args[@]}"
 SCRIPT
+
 cat > /usr/local/bin/avion-gazebo <<'SCRIPT'
 #!/usr/bin/env bash
 set -eo pipefail
 set +u
 source /opt/ros/jazzy/setup.bash
 set -u
+
 export GZ_CONFIG_PATH="${GZ_CONFIG_PATH:-/usr/share/gz}"
 export GZ_SIM_SYSTEM_PLUGIN_PATH="/home/dev/ardupilot_gazebo/build${GZ_SIM_SYSTEM_PLUGIN_PATH:+:${GZ_SIM_SYSTEM_PLUGIN_PATH}}"
 export GZ_SIM_RESOURCE_PATH="/workspace/avion-cargo/simulation/models:/workspace/avion-cargo/simulation/worlds:/home/dev/ardupilot_gazebo/models:/home/dev/ardupilot_gazebo/worlds${GZ_SIM_RESOURCE_PATH:+:${GZ_SIM_RESOURCE_PATH}}"
-exec gz sim -v4 -r /workspace/avion-cargo/simulation/worlds/iris_runway_aruco.sdf
+
+WORLD="${AVION_WORLD:-/workspace/avion-cargo/simulation/worlds/iris_runway_aruco.sdf}"
+
+exec gz sim -v4 -r "$WORLD"
 SCRIPT
+
 cat > /usr/local/bin/avion-image-bridge <<'SCRIPT'
 #!/usr/bin/env bash
 set -eo pipefail
 set +u
 source /opt/ros/jazzy/setup.bash
 set -u
-AUTOLANDER_IMAGE_TOPIC='/world/iris_runway/model/iris_with_gimbal/model/gimbal/link/pitch_link/sensor/camera/image'
+
+AUTOLANDER_IMAGE_TOPIC="${AVION_IMAGE_TOPIC:-/world/iris_runway/model/iris_with_gimbal/model/gimbal/link/pitch_link/sensor/camera/image}"
+
 exec ros2 run ros_gz_bridge parameter_bridge \
   "${AUTOLANDER_IMAGE_TOPIC}@sensor_msgs/msg/Image[gz.msgs.Image"
 SCRIPT
+
 cat > /usr/local/bin/avion-autolander <<'SCRIPT'
 #!/usr/bin/env bash
 set -eo pipefail
@@ -150,8 +168,12 @@ set +u
 source /opt/ros/jazzy/setup.bash
 set -u
 cd /workspace/avion-cargo
-exec poetry run precision_landing simulation/config/autolanding_config.json --gz-simulation
+
+CONFIG="${AVION_AUTOLANDER_CONFIG:-simulation/config/autolanding_config.json}"
+
+exec poetry run precision_landing "$CONFIG" --gz-simulation
 SCRIPT
+
 cat > /usr/local/bin/avion-entrypoint <<'SCRIPT'
 #!/usr/bin/env bash
 set -Eeuo pipefail
@@ -166,15 +188,18 @@ if [[ $# -eq 0 ]]; then
 fi
 exec "$@"
 SCRIPT
+
 cat > /usr/local/bin/avion-web-proxy <<'SCRIPT'
 #!/usr/bin/env bash
 set -euo pipefail
 exec socat TCP-LISTEN:8086,bind=0.0.0.0,reuseaddr,fork TCP:127.0.0.1:8085
 SCRIPT
+
 chmod 0755 /usr/local/bin/avion-sitl /usr/local/bin/avion-gazebo \
   /usr/local/bin/avion-image-bridge /usr/local/bin/avion-autolander \
   /usr/local/bin/avion-entrypoint /usr/local/bin/avion-web-proxy
 CREATE_LAUNCHERS
+
 USER dev
 
 ENTRYPOINT ["/usr/local/bin/avion-entrypoint"]
