@@ -21,7 +21,7 @@ RUN apt-get update \
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
       adduser adwaita-icon-theme at-spi2-core build-essential ca-certificates cmake curl \
-      dbus-x11 file fonts-dejavu-core fonts-liberation g++ gdb gdbserver git gnupg \
+      dbus-x11 file fonts-dejavu-core fonts-liberation g++ gdb gdbserver git gnupg socat \
       gnome-themes-extra iproute2 iputils-ping libegl1 libgl1 libgl1-mesa-dri libglx-mesa0 \
       libglib2.0-0 libgtk-3-0 libopencv-dev libsm6 libx11-6 libxext6 libxkbcommon-x11-0 \
       libxrender1 locales lsb-release make mesa-utils nano net-tools ninja-build pipx \
@@ -164,9 +164,14 @@ if [[ $# -eq 0 ]]; then
 fi
 exec "$@"
 SCRIPT
+cat > /usr/local/bin/avion-web-proxy <<'SCRIPT'
+#!/usr/bin/env bash
+set -euo pipefail
+exec socat TCP-LISTEN:8086,bind=0.0.0.0,reuseaddr,fork TCP:127.0.0.1:8085
+SCRIPT
 chmod 0755 /usr/local/bin/avion-sitl /usr/local/bin/avion-gazebo \
   /usr/local/bin/avion-image-bridge /usr/local/bin/avion-autolander \
-  /usr/local/bin/avion-entrypoint
+  /usr/local/bin/avion-entrypoint /usr/local/bin/avion-web-proxy
 CREATE_LAUNCHERS
 USER dev
 

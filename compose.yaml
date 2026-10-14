@@ -36,7 +36,7 @@ services:
       PYTHONUNBUFFERED: "1"
     ipc: host
     ports:
-      - "127.0.0.1:8085:8085" # Autolander web UI
+      - "127.0.0.1:8085:8086" # Autolander web UI
     volumes:
       - .:/workspace/avion-cargo:cached
       - autolander_venv:/workspace/avion-cargo/.venv

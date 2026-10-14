@@ -25,7 +25,7 @@ STATUS_DIR="$LOG_DIR/.status"
 SESSION="avion-sim-$TIMESTAMP"
 mkdir -p "$STATUS_DIR"
 
-SERVICES=(avion-autolander avion-sitl avion-gazebo avion-image-bridge)
+SERVICES=(avion-autolander avion-sitl avion-gazebo avion-image-bridge avion-web-proxy)
 TERMINAL_PIDS=()
 STOPPING=0
 
