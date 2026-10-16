@@ -39,10 +39,12 @@ CONTAINER_LOG_DIR="/workspace/avion-cargo/logs/simulation/$TIMESTAMP"
 CONTAINER_STATUS_DIR="$CONTAINER_LOG_DIR/.status"
 mkdir -p "$STATUS_DIR"
 
-SERVICES=(avion-sitl avion-gazebo avion-image-bridge avion-autolander)
+# Supporting services remain detached and log to files. SITL runs interactively below.
+SERVICES=(avion-gazebo avion-image-bridge avion-autolander)
 SERVICE_PGIDS=()
 CONTAINER_LOCK_HELD=0
 STOPPING=0
+MONITOR_PID=""
 declare -A REPORTED=()
 
 release_container_lock() {
@@ -110,6 +112,13 @@ cleanup() {
   (( STOPPING )) && return
   STOPPING=1
   trap - EXIT INT TERM
+
+  # Stop the status watcher before stopping the supporting services.
+  if [[ -n "$MONITOR_PID" ]]; then
+    kill "$MONITOR_PID" 2>/dev/null || true
+    wait "$MONITOR_PID" 2>/dev/null || true
+    MONITOR_PID=""
+  fi
 
   echo
   stop_services
@@ -242,8 +251,38 @@ REMOTE_START
   return "$remote_status"
 }
 
-echo "Ensuring the dev container is running..."
-docker compose up -d dev
+monitor_services() {
+  # This runs in a subshell; it must not run the parent launcher's cleanup trap.
+  trap - EXIT INT TERM
+  local service statusfile pgidfile status pgid
+
+  while true; do
+    for service in "${SERVICES[@]}"; do
+      statusfile="$STATUS_DIR/$service.exit"
+      pgidfile="$STATUS_DIR/$service.pgid"
+
+      if [[ -f "$statusfile" ]]; then
+        if [[ -z "${REPORTED[$service]:-}" ]]; then
+          status="$(<"$statusfile")"
+          echo "Service $service exited with status $status. Other services will continue. Log: $LOG_DIR/$service.log"
+          REPORTED[$service]=1
+        fi
+      elif [[ -s "$pgidfile" && -z "${REPORTED[$service]:-}" ]]; then
+        pgid="$(<"$pgidfile")"
+        if [[ "$pgid" =~ ^[0-9]+$ ]] && ! container_group_alive "$pgid"; then
+          echo "Service $service stopped without writing an exit status (possibly killed by a signal). Other services will continue. Log: $LOG_DIR/$service.log"
+          REPORTED[$service]=1
+        fi
+      fi
+    done
+    sleep 1
+  done
+}
+
+if [[ -z "$(docker compose ps --status running -q dev)" ]]; then
+  echo "Dev container is not running; starting it..."
+  docker compose up -d dev
+fi
 if [[ -z "$(docker compose ps --status running -q dev)" ]]; then
   echo "Error: dev container is not running." >&2
   docker compose logs --tail=100 dev >&2 || true
@@ -252,7 +291,7 @@ fi
 
 start_container_lock
 
-echo "Starting simulation processes in the background (no service terminals)."
+echo "Starting supporting simulation processes in the background (logs forwarded to files)."
 echo "Logs: $LOG_DIR"
 for service in "${SERVICES[@]}"; do
   launch_service "$service"
@@ -260,29 +299,12 @@ for service in "${SERVICES[@]}"; do
 done
 
 echo
-echo "All simulation services have been launched."
+echo "Supporting simulation services have been launched."
 echo "Per-service logs are under: $LOG_DIR"
-echo "Press Ctrl+C here to stop all simulation processes."
-echo "If one service exits, the others will continue; its exit will be reported here."
+echo "Starting avion-sitl interactively; press Ctrl+C to stop SITL and the supporting services."
 
-while true; do
-  for service in "${SERVICES[@]}"; do
-    statusfile="$STATUS_DIR/$service.exit"
-    pgidfile="$STATUS_DIR/$service.pgid"
+# Keep the existing live status reporting while SITL owns the foreground terminal.
+monitor_services &
+MONITOR_PID=$!
 
-    if [[ -f "$statusfile" ]]; then
-      if [[ -z "${REPORTED[$service]:-}" ]]; then
-        status="$(<"$statusfile")"
-        echo "Service $service exited with status $status. Other services will continue. Log: $LOG_DIR/$service.log"
-        REPORTED[$service]=1
-      fi
-    elif [[ -s "$pgidfile" && -z "${REPORTED[$service]:-}" ]]; then
-      pgid="$(<"$pgidfile")"
-      if [[ "$pgid" =~ ^[0-9]+$ ]] && ! container_group_alive "$pgid"; then
-        echo "Service $service stopped without writing an exit status (possibly killed by a signal). Other services will continue. Log: $LOG_DIR/$service.log"
-        REPORTED[$service]=1
-      fi
-    fi
-  done
-  sleep 1
-done
+docker compose exec -it dev /usr/local/bin/avion-sitl

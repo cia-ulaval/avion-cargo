@@ -24,7 +24,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
       dbus-x11 file fonts-dejavu-core fonts-liberation g++ gdb gdbserver git gnupg socat \
       gnome-themes-extra iproute2 iputils-ping libegl1 libgl1 libgl1-mesa-dri libglx-mesa0 \
       libglib2.0-0 libgtk-3-0 libopencv-dev libsm6 libx11-6 libxext6 libxkbcommon-x11-0 \
-      libxrender1 locales lsb-release make mesa-utils nano net-tools ninja-build pipx \
+      libxrender1 libqt5svg5 locales lsb-release make mesa-utils nano net-tools ninja-build pipx \
       pkg-config procps python3 python3-debugpy python3-dev python3-pip python3-venv \
       rapidjson-dev sudo tzdata unzip vim wget x11-apps x11-utils x11-xserver-utils \
       xauth xdg-utils \
@@ -126,8 +126,6 @@ args=(-D -v "$VEHICLE" -f "$FRAME")
 if [[ -n "$PARAM_FILE" ]]; then
   args+=("--add-param-file=$PARAM_FILE")
 fi
-
-args+=(--console --map --mavproxy-args=--non-interactive)
 
 exec ./Tools/autotest/sim_vehicle.py "${args[@]}"
 SCRIPT
