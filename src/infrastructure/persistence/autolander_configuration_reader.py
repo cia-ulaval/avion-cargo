@@ -103,11 +103,30 @@ class AutolanderConfigurationReader:
         vision = self._require_dict(self._require(raw, "vision", "root"), "vision")
         tm = self._require_dict(self._require(vision, "targeted_marker", "vision"), "vision.targeted_marker")
 
+        marker_type = tm.get("type", "aruco")
         length = float(self._require(tm, "length", "vision.targeted_marker"))
-        marker_id = int(self._require(tm, "id", "vision.targeted_marker"))
-        aruco_dictionary = int(self._require(tm, "aruco_dictionary", "vision.targeted_marker"))
 
-        return TargetedMarker(length=length, id=marker_id, dictionary=aruco_dictionary)
+        if marker_type == "aruco":
+            marker_id = int(self._require(tm, "id", "vision.targeted_marker"))
+            aruco_dictionary = int(self._require(tm, "aruco_dictionary", "vision.targeted_marker"))
+            return TargetedMarker(
+                length=length,
+                id=marker_id,
+                dictionary=aruco_dictionary,
+                marker_type="aruco",
+            )
+
+        if marker_type == "faruco":
+            fractal_id = int(self._require(tm, "fractal_id", "vision.targeted_marker"))
+            fractal_type = str(self._require(tm, "fractal_type", "vision.targeted_marker"))
+            return TargetedMarker(
+                length=length,
+                id=fractal_id,
+                marker_type="faruco",
+                fractal_type=fractal_type,
+            )
+
+        raise ValueError(f"Unsupported marker type at 'vision.targeted_marker.type': {marker_type!r}")
 
     def _parse_streaming(self, raw: dict[str, Any]) -> StreamingConfiguration:
         streaming = self._require_dict(self._require(raw, "streaming", "root"), "streaming")

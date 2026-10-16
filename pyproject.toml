@@ -47,6 +47,12 @@ optional = true
 [tool.poetry.group.raspberry-pi.dependencies]
 picamera2 = ">=0.3.33,<0.4.0"
 
+[tool.poetry.group.faruco]
+optional = true
+
+[tool.poetry.group.faruco.dependencies]
+faruco-bridge = { git = "https://github.com/PladsElsker/faruco-bridge.git", branch = "main" }
+
 [tool.black]
 line-length = 120
 target-version = ["py312"]

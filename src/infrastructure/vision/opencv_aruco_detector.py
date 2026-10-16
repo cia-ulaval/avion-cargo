@@ -1,9 +1,10 @@
 from dataclasses import dataclass
-from typing import List, Tuple
+from typing import List
 
 import cv2
 import numpy as np
 
+from domain.marker_detection import MarkerDetection
 from domain.marker_detector import MarkerDetector
 from domain.models import TargetedMarker
 
@@ -24,16 +25,16 @@ class OpenCVArucoDetector(MarkerDetector):
             params.cornerRefinementMethod = cv2.aruco.CORNER_REFINE_SUBPIX
         self._detector = cv2.aruco.ArucoDetector(self._dict, params)
 
-    def detect(self, frame: np.ndarray, target: TargetedMarker) -> List[Tuple[int, np.ndarray]]:
+    def detect(self, frame: np.ndarray, target: TargetedMarker) -> List[MarkerDetection]:
         corners, ids, _ = self._detector.detectMarkers(frame)
         if ids is None or len(ids) == 0:
             return []
 
         ids_flat = ids.flatten().tolist()
-        results: List[Tuple[int, np.ndarray]] = []
+        results: List[MarkerDetection] = []
 
         for marker_id, c in zip(ids_flat, corners):
             if target.id is None or marker_id == target.id:
-                results.append((int(marker_id), c))
+                results.append(MarkerDetection(marker_id=int(marker_id), corners=c))
 
         return results

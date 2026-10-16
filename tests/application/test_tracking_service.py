@@ -7,6 +7,7 @@ import pytest
 
 from application.tracking_service import TrackingService
 from domain.frame_annotator import FrameAnnotator
+from domain.marker_detection import MarkerDetection
 from domain.models import CalibrationData, Pose3D, TargetedMarker
 from domain.tracking import TrackingStatus
 
@@ -25,10 +26,10 @@ class FakeCamera:
 
 @dataclass
 class FakeDetector:
-    detections: list[tuple[int, np.ndarray]]
+    detections: list[Any]
     calls: list[tuple[np.ndarray, TargetedMarker]] = field(default_factory=list)
 
-    def detect(self, frame: np.ndarray, target: TargetedMarker) -> list[tuple[int, np.ndarray]]:
+    def detect(self, frame: np.ndarray, target: TargetedMarker) -> list[Any]:
         self.calls.append((frame, target))
         return self.detections
 
@@ -158,3 +159,45 @@ def test_wrong_capture_resolution_is_rejected_before_detection():
     with pytest.raises(ValueError, match="does not match calibration"):
         service.track_target()
     detector.detect.assert_not_called()
+
+
+def test_tracking_uses_detector_provided_faruco_pose_without_reestimating_from_outer_corners() -> None:
+    frame = np.zeros((12, 12, 3), dtype=np.uint8)
+    corners = np.array([[[1.0, 1.0], [10.0, 1.0], [10.0, 10.0], [1.0, 10.0]]], dtype=np.float32)
+    rotation_vectors = np.array([[[0.1, 0.2, 0.3]]], dtype=np.float64)
+    translation_vectors = np.array([[[3.0, -2.0, 10.0]]], dtype=np.float64)
+    detection = MarkerDetection(
+        marker_id=7,
+        corners=corners,
+        rotation_vectors=rotation_vectors,
+        translation_vectors=translation_vectors,
+        reprojection_error_px=0.2,
+    )
+    target = TargetedMarker(
+        id=7, length=0.896, marker_type="faruco", fractal_type="FRACTAL_3L_6"
+    )
+    detector = FakeDetector(detections=[detection])
+    pose_estimator = FakePoseEstimator(
+        pose=Pose3D(100.0, 100.0, 100.0),
+        rotation_vectors=np.zeros((1, 1, 3)),
+        translation_vectors=np.zeros((1, 1, 3)),
+    )
+    annotator = Mock(spec=FrameAnnotator)
+    service = TrackingService(
+        camera=FakeCamera(frame),
+        detector=detector,
+        pose_estimator=pose_estimator,
+        target=target,
+        calibration=calibration_data(12),
+        annotator=annotator,
+    )
+
+    _, result = service.track_target()
+
+    assert result.status is TrackingStatus.DETECTED
+    assert result.marker_id == 7
+    assert result.pose == Pose3D(x=3.0, y=-2.0, z=10.0)
+    assert pose_estimator.calls == []
+    annotation = annotator.annotate.call_args.kwargs
+    assert annotation["rotation_vectors"] is rotation_vectors
+    assert annotation["translation_vectors"] is translation_vectors
