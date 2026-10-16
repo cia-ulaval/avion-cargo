@@ -1,0 +1,45 @@
+services:
+  permissions:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: avion-cargo-dev:ubuntu24.04
+    user: "0:0"
+    entrypoint: ["/usr/local/bin/fix-volume-permissions.sh"]
+    volumes:
+      - .:/workspace/avion-cargo:cached
+      - autolander_venv:/workspace/avion-cargo/.venv
+      - poetry_cache:/home/dev/.cache/pypoetry
+    restart: "no"
+  dev:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: avion-cargo-dev:ubuntu24.04
+    init: true
+    stdin_open: true
+    tty: true
+    working_dir: /workspace/avion-cargo
+    command: ["/usr/local/bin/container-start.sh"]
+    depends_on:
+      permissions:
+        condition: service_completed_successfully
+    environment:
+      DISPLAY: "${DISPLAY}"
+      QT_X11_NO_MITSHM: "1"
+      ROS_DOMAIN_ID: "42"
+      ROS_LOCALHOST_ONLY: "1"
+      PYTHONUNBUFFERED: "1"
+    ipc: host
+    ports:
+      - "127.0.0.1:8085:8086"
+    volumes:
+      - .:/workspace/avion-cargo:cached
+      - autolander_venv:/workspace/avion-cargo/.venv
+      - poetry_cache:/home/dev/.cache/pypoetry
+      - /tmp/.X11-unix:/tmp/.X11-unix:rw
+    stop_grace_period: 20s
+
+volumes:
+  autolander_venv:
+  poetry_cache:
