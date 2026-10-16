@@ -39,7 +39,6 @@ CONTAINER_LOG_DIR="/workspace/avion-cargo/logs/simulation/$TIMESTAMP"
 CONTAINER_STATUS_DIR="$CONTAINER_LOG_DIR/.status"
 mkdir -p "$STATUS_DIR"
 
-# Supporting services remain detached and log to files. SITL runs interactively below.
 SERVICES=(avion-gazebo avion-image-bridge avion-autolander)
 SERVICE_PGIDS=()
 CONTAINER_LOCK_HELD=0
@@ -113,7 +112,6 @@ cleanup() {
   STOPPING=1
   trap - EXIT INT TERM
 
-  # Stop the status watcher before stopping the supporting services.
   if [[ -n "$MONITOR_PID" ]]; then
     kill "$MONITOR_PID" 2>/dev/null || true
     wait "$MONITOR_PID" 2>/dev/null || true
@@ -197,8 +195,6 @@ fi
 mkdir -p "$(dirname "$logfile")" "$(dirname "$statusfile")"
 rm -f -- "$statusfile" "$pidfile" "$pgidfile"
 
-# setsid gives each service its own process group, so cleanup can stop the
-# launcher and its descendants without killing unrelated container processes.
 setsid bash -c '
   service="$1"
   statusfile="$2"
@@ -213,12 +209,10 @@ setsid bash -c '
   rc=$?
   printf "[%s] %s exited with status %s\\n" "$(date --iso-8601=seconds)" "$service" "$rc"
   printf "%s\\n" "$rc" > "$statusfile"
-  # If the launcher left child processes behind, terminate its process group.
   kill -TERM -- "-$$" 2>/dev/null || true
   exit "$rc"
 ' _ "$service" "$statusfile" "$pidfile" "$pgidfile" >> "$logfile" 2>&1 < /dev/null &
 
-# Wait until the detached wrapper has written its PID and process group.
 for _ in {1..50}; do
   if [[ -s "$pidfile" && -s "$pgidfile" ]]; then
     break
@@ -252,7 +246,6 @@ REMOTE_START
 }
 
 monitor_services() {
-  # This runs in a subshell; it must not run the parent launcher's cleanup trap.
   trap - EXIT INT TERM
   local service statusfile pgidfile status pgid
 
@@ -303,7 +296,6 @@ echo "Supporting simulation services have been launched."
 echo "Per-service logs are under: $LOG_DIR"
 echo "Starting avion-sitl interactively; press Ctrl+C to stop SITL and the supporting services."
 
-# Keep the existing live status reporting while SITL owns the foreground terminal.
 monitor_services &
 MONITOR_PID=$!
 
