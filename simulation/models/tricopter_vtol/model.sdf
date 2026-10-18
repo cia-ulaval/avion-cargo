@@ -679,7 +679,7 @@
             <joint_name>left_propeller_joint</joint_name>
             <use_angvel_cmd>1</use_angvel_cmd>
             <velocity_control>true</velocity_control>
-            <thrust_coefficient>0.001705676074</thrust_coefficient>
+            <thrust_coefficient>-0.001705676074</thrust_coefficient>
             <fluid_density>1.2041</fluid_density>
             <propeller_diameter>0.254</propeller_diameter>
             <max_thrust_cmd>800</max_thrust_cmd>
