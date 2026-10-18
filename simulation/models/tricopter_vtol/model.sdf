@@ -4,7 +4,7 @@
         <static>false</static>
         <self_collide>false</self_collide>
         <link name="main_frame">
-            <pose>0 0 0 -1.57079632679 0 0</pose>
+            <pose>0 0 0 0 0 0</pose>
             <gravity>true</gravity>
             <inertial>
                 <mass>1</mass>
@@ -18,7 +18,7 @@
                 </inertia>
             </inertial>
             <collision name="main_frame_collision">
-                <pose>0 0 0 1.57079632679 0 0</pose>
+                <pose>0 0 0 0 0 0</pose>
                 <geometry>
                     <mesh>
                         <uri>meshes/main-frame.obj</uri>
@@ -27,7 +27,7 @@
                 </geometry>
             </collision>
             <visual name="main_frame_visual">
-                <pose>0 0 0 1.57079632679 0 0</pose>
+                <pose>0 0 0 0 0 0</pose>
                 <geometry>
                     <mesh>
                         <uri>meshes/main-frame.obj</uri>
@@ -35,9 +35,45 @@
                     </mesh>
                 </geometry>
             </visual>
+            <sensor name="imu_sensor" type="imu">
+                <!-- IMU uses ArduPilot's forward-right-down body frame. -->
+                <pose degrees="true">0 0 0 180 0 0</pose>
+                <always_on>true</always_on>
+                <update_rate>1000</update_rate>
+                <visualize>false</visualize>
+            </sensor>
+            <!-- Downward rangefinder, offset forward so its beam clears the fuselage collision mesh. -->
+            <sensor name="sonar" type="gpu_lidar">
+                <pose>-0.193178 0 0.0076394 0 1.57079632679 0</pose>
+                <always_on>true</always_on>
+                <update_rate>20</update_rate>
+                <visualize>false</visualize>
+                <topic>/model/tricopter_vtol/sonar/scan</topic>
+                <lidar>
+                    <scan>
+                        <horizontal>
+                            <samples>1</samples>
+                            <resolution>1</resolution>
+                            <min_angle>0</min_angle>
+                            <max_angle>0</max_angle>
+                        </horizontal>
+                        <vertical>
+                            <samples>1</samples>
+                            <resolution>1</resolution>
+                            <min_angle>0</min_angle>
+                            <max_angle>0</max_angle>
+                        </vertical>
+                    </scan>
+                    <range>
+                        <min>0.10</min>
+                        <max>40.0</max>
+                        <resolution>0.01</resolution>
+                    </range>
+                </lidar>
+            </sensor>
         </link>
         <link name="left_tilt_mount">
-            <pose>0.0685426 0.0511394 -0.1409 -1.57079632679 0 0</pose>
+            <pose>0.0685426 0.1409 0.0511394 0 0 0</pose>
             <gravity>true</gravity>
             <inertial>
                 <mass>0.1</mass>
@@ -51,7 +87,7 @@
                 </inertia>
             </inertial>
             <collision name="left_tilt_mount_collision">
-                <pose>-0.0685426 -0.1409 -0.0511394 1.57079632679 0 0</pose>
+                <pose>-0.0685426 -0.1409 -0.0511394 0 0 0</pose>
                 <geometry>
                     <mesh>
                         <uri>meshes/left-tilt-mount.obj</uri>
@@ -60,7 +96,7 @@
                 </geometry>
             </collision>
             <visual name="left_tilt_mount_visual">
-                <pose>-0.0685426 -0.1409 -0.0511394 1.57079632679 0 0</pose>
+                <pose>-0.0685426 -0.1409 -0.0511394 0 0 0</pose>
                 <geometry>
                     <mesh>
                         <uri>meshes/left-tilt-mount.obj</uri>
@@ -70,7 +106,7 @@
             </visual>
         </link>
         <link name="right_tilt_mount">
-            <pose>0.0685426 0.0511394 0.1409 -1.57079632679 0 0</pose>
+            <pose>0.0685426 -0.1409 0.0511394 0 0 0</pose>
             <gravity>true</gravity>
             <inertial>
                 <mass>0.1</mass>
@@ -84,7 +120,7 @@
                 </inertia>
             </inertial>
             <collision name="right_tilt_mount_collision">
-                <pose>-0.0685426 0.1409 -0.0511394 1.57079632679 0 0</pose>
+                <pose>-0.0685426 0.1409 -0.0511394 0 0 0</pose>
                 <geometry>
                     <mesh>
                         <uri>meshes/right-tilt-mount.obj</uri>
@@ -93,7 +129,7 @@
                 </geometry>
             </collision>
             <visual name="right_tilt_mount_visual">
-                <pose>-0.0685426 0.1409 -0.0511394 1.57079632679 0 0</pose>
+                <pose>-0.0685426 0.1409 -0.0511394 0 0 0</pose>
                 <geometry>
                     <mesh>
                         <uri>meshes/right-tilt-mount.obj</uri>
@@ -103,7 +139,7 @@
             </visual>
         </link>
         <link name="left_propeller">
-            <pose>0.105481 0.0516861 -0.140898 -1.57079632679 0 0</pose>
+            <pose>0.105481 0.140898 0.0516861 0 0 0</pose>
             <gravity>true</gravity>
             <inertial>
                 <mass>0.02</mass>
@@ -117,7 +153,7 @@
                 </inertia>
             </inertial>
             <collision name="left_propeller_collision">
-                <pose>-0.105481 -0.140898 -0.0516861 1.57079632679 0 0</pose>
+                <pose>-0.105481 -0.140898 -0.0516861 0 0 0</pose>
                 <geometry>
                     <mesh>
                         <uri>meshes/left-propeller.obj</uri>
@@ -126,7 +162,7 @@
                 </geometry>
             </collision>
             <visual name="left_propeller_visual">
-                <pose>-0.105481 -0.140898 -0.0516861 1.57079632679 0 0</pose>
+                <pose>-0.105481 -0.140898 -0.0516861 0 0 0</pose>
                 <geometry>
                     <mesh>
                         <uri>meshes/left-propeller.obj</uri>
@@ -136,7 +172,7 @@
             </visual>
         </link>
         <link name="right_propeller">
-            <pose>0.105481 0.0516861 0.140897 -1.57079632679 0 0</pose>
+            <pose>0.105481 -0.140897 0.0516861 0 0 0</pose>
             <gravity>true</gravity>
             <inertial>
                 <mass>0.02</mass>
@@ -150,7 +186,7 @@
                 </inertia>
             </inertial>
             <collision name="right_propeller_collision">
-                <pose>-0.105481 0.140897 -0.0516861 1.57079632679 0 0</pose>
+                <pose>-0.105481 0.140897 -0.0516861 0 0 0</pose>
                 <geometry>
                     <mesh>
                         <uri>meshes/right-propeller.obj</uri>
@@ -159,7 +195,7 @@
                 </geometry>
             </collision>
             <visual name="right_propeller_visual">
-                <pose>-0.105481 0.140897 -0.0516861 1.57079632679 0 0</pose>
+                <pose>-0.105481 0.140897 -0.0516861 0 0 0</pose>
                 <geometry>
                     <mesh>
                         <uri>meshes/right-propeller.obj</uri>
@@ -169,7 +205,7 @@
             </visual>
         </link>
         <link name="back_propeller">
-            <pose>-0.19343 0.0632816 -0 -1.57079632679 0 0</pose>
+            <pose>-0.19343 0 0.0632816 0 0 0</pose>
             <gravity>true</gravity>
             <inertial>
                 <mass>0.02</mass>
@@ -183,7 +219,7 @@
                 </inertia>
             </inertial>
             <collision name="back_propeller_collision">
-                <pose>0.19343 0 -0.0632816 1.57079632679 0 0</pose>
+                <pose>0.19343 0 -0.0632816 0 0 0</pose>
                 <geometry>
                     <mesh>
                         <uri>meshes/back-propeller.obj</uri>
@@ -192,7 +228,7 @@
                 </geometry>
             </collision>
             <visual name="back_propeller_visual">
-                <pose>0.19343 0 -0.0632816 1.57079632679 0 0</pose>
+                <pose>0.19343 0 -0.0632816 0 0 0</pose>
                 <geometry>
                     <mesh>
                         <uri>meshes/back-propeller.obj</uri>
@@ -202,7 +238,7 @@
             </visual>
         </link>
         <link name="left_flap">
-            <pose>-0.0918776 0.0320133 -0.2095 -1.57079632679 0 0</pose>
+            <pose>-0.0918776 0.2095 0.0320133 0 0 0</pose>
             <gravity>true</gravity>
             <inertial>
                 <mass>0.02</mass>
@@ -216,7 +252,7 @@
                 </inertia>
             </inertial>
             <collision name="left_flap_collision">
-                <pose>0.0918776 -0.2095 -0.0320133 1.57079632679 0 0</pose>
+                <pose>0.0918776 -0.2095 -0.0320133 0 0 0</pose>
                 <geometry>
                     <mesh>
                         <uri>meshes/left-flap.obj</uri>
@@ -225,7 +261,7 @@
                 </geometry>
             </collision>
             <visual name="left_flap_visual">
-                <pose>0.0918776 -0.2095 -0.0320133 1.57079632679 0 0</pose>
+                <pose>0.0918776 -0.2095 -0.0320133 0 0 0</pose>
                 <geometry>
                     <mesh>
                         <uri>meshes/left-flap.obj</uri>
@@ -235,7 +271,7 @@
             </visual>
         </link>
         <link name="right_flap">
-            <pose>-0.0918776 0.0320133 0.2095 -1.57079632679 0 0</pose>
+            <pose>-0.0918776 -0.2095 0.0320133 0 0 0</pose>
             <gravity>true</gravity>
             <inertial>
                 <mass>0.02</mass>
@@ -249,7 +285,7 @@
                 </inertia>
             </inertial>
             <collision name="right_flap_collision">
-                <pose>0.0918776 0.2095 -0.0320133 1.57079632679 0 0</pose>
+                <pose>0.0918776 0.2095 -0.0320133 0 0 0</pose>
                 <geometry>
                     <mesh>
                         <uri>meshes/right-flap.obj</uri>
@@ -258,7 +294,7 @@
                 </geometry>
             </collision>
             <visual name="right_flap_visual">
-                <pose>0.0918776 0.2095 -0.0320133 1.57079632679 0 0</pose>
+                <pose>0.0918776 0.2095 -0.0320133 0 0 0</pose>
                 <geometry>
                     <mesh>
                         <uri>meshes/right-flap.obj</uri>
@@ -268,7 +304,7 @@
             </visual>
         </link>
         <link name="back_flap">
-            <pose>-0.361445 0.0477911 -0 -1.57079632679 0 0</pose>
+            <pose>-0.361445 0 0.0477911 0 0 0</pose>
             <gravity>true</gravity>
             <inertial>
                 <mass>0.02</mass>
@@ -282,7 +318,7 @@
                 </inertia>
             </inertial>
             <collision name="back_flap_collision">
-                <pose>0.361445 0 -0.0477911 1.57079632679 0 0</pose>
+                <pose>0.361445 0 -0.0477911 0 0 0</pose>
                 <geometry>
                     <mesh>
                         <uri>meshes/back-flap.obj</uri>
@@ -291,7 +327,7 @@
                 </geometry>
             </collision>
             <visual name="back_flap_visual">
-                <pose>0.361445 0 -0.0477911 1.57079632679 0 0</pose>
+                <pose>0.361445 0 -0.0477911 0 0 0</pose>
                 <geometry>
                     <mesh>
                         <uri>meshes/back-flap.obj</uri>
@@ -308,7 +344,7 @@
                 <xyz>0 -1 0</xyz>
                 <limit>
                     <lower>0</lower>
-                    <upper>1.57079632679</upper>
+                    <upper>1.88495559215</upper>
                     <effort>10</effort>
                     <velocity>2</velocity>
                 </limit>
@@ -325,7 +361,7 @@
                 <xyz>0 -1 0</xyz>
                 <limit>
                     <lower>0</lower>
-                    <upper>1.57079632679</upper>
+                    <upper>1.88495559215</upper>
                     <effort>10</effort>
                     <velocity>2</velocity>
                 </limit>
@@ -670,6 +706,108 @@
             <propeller_diameter>0.254</propeller_diameter>
             <max_thrust_cmd>800</max_thrust_cmd>
             <min_thrust_cmd>-800</min_thrust_cmd>
+        </plugin>
+        <!-- ArduPilot SITL FDM and actuator bridge. Existing Gazebo joint controllers
+             and thruster systems remain the actuator endpoints; this bridge only sends
+             commands on their existing cmd_pos/cmd_vel topics. -->
+        <plugin name="ArduPilotPlugin" filename="ArduPilotPlugin">
+            <fdm_addr>127.0.0.1</fdm_addr>
+            <fdm_port_in>9002</fdm_port_in>
+            <connectionTimeoutMaxCount>5</connectionTimeoutMaxCount>
+            <lock_step>1</lock_step>
+            <no_time_sync>1</no_time_sync>
+            <have_32_channels>0</have_32_channels>
+            <modelXYZToAirplaneXForwardZDown degrees="true">0 0 0 180 0 0</modelXYZToAirplaneXForwardZDown>
+            <gazeboXYZToNED degrees="true">0 0 0 180 0 90</gazeboXYZToNED>
+            <imuName>main_frame::imu_sensor</imuName>
+            <sensor>
+                <type>range</type>
+                <index>1</index>
+                <topic>/model/tricopter_vtol/sonar/scan</topic>
+            </sensor>
+
+            <!-- Output 1: left aileron. -->
+            <control channel="0">
+                <jointName>left_flap_joint</jointName>
+                <multiplier>1.0471975512</multiplier>
+                <offset>-0.5</offset>
+                <servo_min>1000</servo_min>
+                <servo_max>2000</servo_max>
+                <type>COMMAND</type>
+                <cmd_topic>/model/tricopter_vtol/joint/left_flap_joint/cmd_pos</cmd_topic>
+            </control>
+            <!-- Output 2: elevator. -->
+            <control channel="1">
+                <jointName>back_flap_joint</jointName>
+                <multiplier>1.0471975512</multiplier>
+                <offset>-0.5</offset>
+                <servo_min>1000</servo_min>
+                <servo_max>2000</servo_max>
+                <type>COMMAND</type>
+                <cmd_topic>/model/tricopter_vtol/joint/back_flap_joint/cmd_pos</cmd_topic>
+            </control>
+            <!-- Output 4: right aileron. -->
+            <control channel="3">
+                <jointName>right_flap_joint</jointName>
+                <multiplier>1.0471975512</multiplier>
+                <offset>-0.5</offset>
+                <servo_min>1000</servo_min>
+                <servo_max>2000</servo_max>
+                <type>COMMAND</type>
+                <cmd_topic>/model/tricopter_vtol/joint/right_flap_joint/cmd_pos</cmd_topic>
+            </control>
+
+            <!-- Outputs 5 and 6: front propulsion. Counter-rotation sign must be confirmed in SITL. -->
+            <control channel="4">
+                <jointName>right_propeller_joint</jointName>
+                <multiplier>838</multiplier>
+                <offset>0</offset>
+                <servo_min>1000</servo_min>
+                <servo_max>2000</servo_max>
+                <type>COMMAND</type>
+                <cmd_topic>/model/tricopter_vtol/joint/right_propeller_joint/cmd_vel</cmd_topic>
+            </control>
+            <control channel="5">
+                <jointName>left_propeller_joint</jointName>
+                <multiplier>-838</multiplier>
+                <offset>0</offset>
+                <servo_min>1000</servo_min>
+                <servo_max>2000</servo_max>
+                <type>COMMAND</type>
+                <cmd_topic>/model/tricopter_vtol/joint/left_propeller_joint/cmd_vel</cmd_topic>
+            </control>
+            <!-- Output 8: rear VTOL-only motor; the QuadPlane mixer stops it in fixed-wing flight. -->
+            <control channel="7">
+                <jointName>back_propeller_joint</jointName>
+                <multiplier>838</multiplier>
+                <offset>0</offset>
+                <servo_min>1000</servo_min>
+                <servo_max>2000</servo_max>
+                <type>COMMAND</type>
+                <cmd_topic>/model/tricopter_vtol/joint/back_propeller_joint/cmd_vel</cmd_topic>
+            </control>
+
+            <!-- Outputs 12/13: normalized ArduPilot tilt output maps to a joint
+                 range of 108 degrees (VTOL, including 18 degrees for vectored yaw)
+                 down to 0 degrees (forward flight). -->
+            <control channel="11">
+                <jointName>left_tilt_joint</jointName>
+                <multiplier>-1.88495559215</multiplier>
+                <offset>-1</offset>
+                <servo_min>1000</servo_min>
+                <servo_max>2000</servo_max>
+                <type>COMMAND</type>
+                <cmd_topic>/model/tricopter_vtol/joint/left_tilt_joint/0/cmd_pos</cmd_topic>
+            </control>
+            <control channel="12">
+                <jointName>right_tilt_joint</jointName>
+                <multiplier>-1.88495559215</multiplier>
+                <offset>-1</offset>
+                <servo_min>1000</servo_min>
+                <servo_max>2000</servo_max>
+                <type>COMMAND</type>
+                <cmd_topic>/model/tricopter_vtol/joint/right_tilt_joint/0/cmd_pos</cmd_topic>
+            </control>
         </plugin>
     </model>
 </sdf>

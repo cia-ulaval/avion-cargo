@@ -1,0 +1,45 @@
+# Supplemental parameters for the tricopter_vtol Gazebo model.
+# sim_vehicle's -f quadplane-tilttrivec loads the upstream frame defaults.
+Q_ENABLE             1
+Q_FRAME_CLASS        7
+Q_TILT_ENABLE        1
+Q_TILT_MASK          3
+Q_TILT_TYPE          2
+Q_TILT_YAW_ANGLE   18
+Q_ASSIST_SPEED       15
+
+# QuadPlane motor outputs: front motors 1/2 and rear VTOL motor 4.
+SERVO5_FUNCTION      33
+SERVO5_MIN           1000
+SERVO5_MAX           2000
+SERVO6_FUNCTION      34
+SERVO6_MIN           1000
+SERVO6_MAX           2000
+SERVO8_FUNCTION      36
+SERVO8_MIN           1000
+SERVO8_MAX           2000
+
+# Fixed-wing surfaces: left aileron, elevator, right aileron.
+SERVO1_FUNCTION      4
+SERVO1_MIN           1000
+SERVO1_MAX           2000
+SERVO2_FUNCTION      19
+SERVO2_MIN           1000
+SERVO2_MAX           2000
+SERVO4_FUNCTION      24
+SERVO4_MIN           1000
+SERVO4_MAX           2000
+
+# Independent front tilt outputs for vectored tricopter yaw.
+SERVO12_FUNCTION     75
+SERVO12_MIN          1000
+SERVO12_MAX          2000
+SERVO13_FUNCTION     76
+SERVO13_MIN          1000
+SERVO13_MAX          2000
+
+# Gazebo JSON rangefinder input 1, facing down.
+RNGFND1_TYPE         100
+RNGFND1_MIN          0.10
+RNGFND1_MAX          40.0
+RNGFND1_ORIENT       25
