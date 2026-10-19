@@ -1,6 +1,0 @@
-services:
-  dev:
-    environment:
-      XAUTHORITY: /run/avion-x11/Xauthority
-    volumes:
-      - ./.cache/x11:/run/avion-x11:ro
