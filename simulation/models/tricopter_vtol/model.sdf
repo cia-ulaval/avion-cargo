@@ -543,15 +543,6 @@
             <joint_name>right_flap_joint</joint_name>
             <joint_name>back_flap_joint</joint_name>
         </plugin>
-        <!--
-      PROVISIONAL FIXED-WING AERODYNAMICS
-      Estimate based on approx. 0.65 m span x 0.60 m overall length.
-      Assumptions: aircraft +X points forward; +Z is up; rho=1.2041 kg/m^3.
-      Effective wing area is split between left/right halves (0.045 m^2 each).
-      These are starter coefficients for experimentation, not validated data.
-    -->
-        <!-- Main wing: left half. CP is behind the provisional CG to provide
-         a restoring pitch moment and outboard to provide roll damping. -->
         <plugin filename="gz-sim-lift-drag-system" name="gz::sim::systems::LiftDrag">
             <link_name>main_frame</link_name>
             <air_density>1.2041</air_density>
@@ -568,8 +559,6 @@
             <upward>0 0 1</upward>
             <cp>-0.02 0.15 0.015</cp>
         </plugin>
-        <!-- Main wing: right half. Separate application point provides
-         angular-rate-dependent rolling moments. -->
         <plugin filename="gz-sim-lift-drag-system" name="gz::sim::systems::LiftDrag">
             <link_name>main_frame</link_name>
             <air_density>1.2041</air_density>
@@ -586,9 +575,6 @@
             <upward>0 0 1</upward>
             <cp>-0.02 -0.15 0.015</cp>
         </plugin>
-        <!-- Approximate parasitic fuselage / exposed-frame drag. This uses a
-         drag-only LiftDrag instance (cla=0); the nonzero a0 creates a
-         modest baseline drag because this system's cda is a slope vs alpha. -->
         <plugin filename="gz-sim-lift-drag-system" name="gz::sim::systems::LiftDrag">
             <link_name>main_frame</link_name>
             <air_density>1.2041</air_density>
@@ -605,8 +591,6 @@
             <upward>0 0 1</upward>
             <cp>-0.04 0 0.015</cp>
         </plugin>
-        <!-- Approximate side-force/directional stability from the fuselage and
-         any vertical side area. Refine/remove this once fin geometry is measured. -->
         <plugin filename="gz-sim-lift-drag-system" name="gz::sim::systems::LiftDrag">
             <link_name>main_frame</link_name>
             <air_density>1.2041</air_density>
@@ -623,8 +607,6 @@
             <upward>0 1 0</upward>
             <cp>-0.22 0 0.025</cp>
         </plugin>
-        <!-- Left and right movable flap/aft control surfaces. Aerodynamic forces
-         act on the actual flap links so deflection changes their orientation. -->
         <plugin filename="gz-sim-lift-drag-system" name="gz::sim::systems::LiftDrag">
             <link_name>left_flap</link_name>
             <air_density>1.2041</air_density>
@@ -657,7 +639,6 @@
             <upward>0 0 1</upward>
             <cp>-0.012 0 0</cp>
         </plugin>
-        <!-- Rear flap / elevator approximation. -->
         <plugin filename="gz-sim-lift-drag-system" name="gz::sim::systems::LiftDrag">
             <link_name>back_flap</link_name>
             <air_density>1.2041</air_density>
@@ -707,9 +688,6 @@
             <max_thrust_cmd>800</max_thrust_cmd>
             <min_thrust_cmd>-800</min_thrust_cmd>
         </plugin>
-        <!-- ArduPilot SITL FDM and actuator bridge. Existing Gazebo joint controllers
-             and thruster systems remain the actuator endpoints; this bridge only sends
-             commands on their existing cmd_pos/cmd_vel topics. -->
         <plugin name="ArduPilotPlugin" filename="ArduPilotPlugin">
             <fdm_addr>127.0.0.1</fdm_addr>
             <fdm_port_in>9002</fdm_port_in>
@@ -726,7 +704,6 @@
                 <topic>/model/tricopter_vtol/sonar/scan</topic>
             </sensor>
 
-            <!-- Output 1: left aileron. -->
             <control channel="0">
                 <jointName>left_flap_joint</jointName>
                 <multiplier>1.0471975512</multiplier>
@@ -736,7 +713,6 @@
                 <type>COMMAND</type>
                 <cmd_topic>/model/tricopter_vtol/joint/left_flap_joint/0/cmd_pos</cmd_topic>
             </control>
-            <!-- Output 2: elevator. -->
             <control channel="1">
                 <jointName>back_flap_joint</jointName>
                 <multiplier>1.0471975512</multiplier>
@@ -746,7 +722,6 @@
                 <type>COMMAND</type>
                 <cmd_topic>/model/tricopter_vtol/joint/back_flap_joint/0/cmd_pos</cmd_topic>
             </control>
-            <!-- Output 4: right aileron. -->
             <control channel="3">
                 <jointName>right_flap_joint</jointName>
                 <multiplier>1.0471975512</multiplier>
@@ -756,8 +731,6 @@
                 <type>COMMAND</type>
                 <cmd_topic>/model/tricopter_vtol/joint/right_flap_joint/0/cmd_pos</cmd_topic>
             </control>
-
-            <!-- Outputs 5 and 6: front propulsion. Counter-rotation sign must be confirmed in SITL. -->
             <control channel="4">
                 <jointName>right_propeller_joint</jointName>
                 <multiplier>838</multiplier>
@@ -776,7 +749,6 @@
                 <type>COMMAND</type>
                 <cmd_topic>/model/tricopter_vtol/joint/left_propeller_joint/cmd_vel</cmd_topic>
             </control>
-            <!-- Output 8: rear VTOL-only motor; the QuadPlane mixer stops it in fixed-wing flight. -->
             <control channel="7">
                 <jointName>back_propeller_joint</jointName>
                 <multiplier>838</multiplier>
@@ -786,10 +758,6 @@
                 <type>COMMAND</type>
                 <cmd_topic>/model/tricopter_vtol/joint/back_propeller_joint/cmd_vel</cmd_topic>
             </control>
-
-            <!-- Outputs 12/13: normalized ArduPilot tilt output maps to a joint
-                 range of 108 degrees (VTOL, including 18 degrees for vectored yaw)
-                 down to 0 degrees (forward flight). -->
             <control channel="11">
                 <jointName>left_tilt_joint</jointName>
                 <multiplier>-1.88495559215</multiplier>
