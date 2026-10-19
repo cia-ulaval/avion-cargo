@@ -5,4 +5,4 @@ services:
       AVION_SITL_VEHICLE: ArduPlane
       AVION_SITL_FRAME: quadplane-tilttrivec
       AVION_SITL_MODEL: JSON
-      AVION_SITL_PARAM_FILE: /workspace/avion-cargo/simulation/config/quadplane-tricopter-sitl.parm
+      AVION_SITL_PARAM_FILE: /workspace/avion-cargo/simulation/config/tricopter-vtol.parm

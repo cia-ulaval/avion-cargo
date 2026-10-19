@@ -430,7 +430,7 @@
                 <limit>
                     <lower>-0.5235987756</lower>
                     <upper>0.5235987756</upper>
-                    <effort>2</effort>
+                    <effort>10</effort>
                     <velocity>3</velocity>
                 </limit>
                 <dynamics>
@@ -447,7 +447,7 @@
                 <limit>
                     <lower>-0.5235987756</lower>
                     <upper>0.5235987756</upper>
-                    <effort>2</effort>
+                    <effort>10</effort>
                     <velocity>3</velocity>
                 </limit>
                 <dynamics>
@@ -464,7 +464,7 @@
                 <limit>
                     <lower>-0.5235987756</lower>
                     <upper>0.5235987756</upper>
-                    <effort>2</effort>
+                    <effort>10</effort>
                     <velocity>3</velocity>
                 </limit>
                 <dynamics>
@@ -500,36 +500,36 @@
             name="gz::sim::systems::JointPositionController">
             <joint_name>left_flap_joint</joint_name>
             <p_gain>10.0</p_gain>
-            <i_gain>0.0</i_gain>
+            <i_gain>0.5</i_gain>
             <d_gain>1.0</d_gain>
-            <i_max>0.0</i_max>
-            <i_min>0.0</i_min>
-            <cmd_max>2</cmd_max>
-            <cmd_min>-2</cmd_min>
+            <i_max>0.2</i_max>
+            <i_min>-0.2</i_min>
+            <cmd_max>10</cmd_max>
+            <cmd_min>-10</cmd_min>
             <initial_position>0.0</initial_position>
         </plugin>
         <plugin filename="gz-sim-joint-position-controller-system"
             name="gz::sim::systems::JointPositionController">
             <joint_name>right_flap_joint</joint_name>
             <p_gain>10.0</p_gain>
-            <i_gain>0.0</i_gain>
+            <i_gain>0.5</i_gain>
             <d_gain>1.0</d_gain>
-            <i_max>0.0</i_max>
-            <i_min>0.0</i_min>
-            <cmd_max>2</cmd_max>
-            <cmd_min>-2</cmd_min>
+            <i_max>0.2</i_max>
+            <i_min>-0.2</i_min>
+            <cmd_max>10</cmd_max>
+            <cmd_min>-10</cmd_min>
             <initial_position>0.0</initial_position>
         </plugin>
         <plugin filename="gz-sim-joint-position-controller-system"
             name="gz::sim::systems::JointPositionController">
             <joint_name>back_flap_joint</joint_name>
             <p_gain>10.0</p_gain>
-            <i_gain>0.0</i_gain>
+            <i_gain>0.5</i_gain>
             <d_gain>1.0</d_gain>
-            <i_max>0.0</i_max>
-            <i_min>0.0</i_min>
-            <cmd_max>2</cmd_max>
-            <cmd_min>-2</cmd_min>
+            <i_max>0.2</i_max>
+            <i_min>-0.2</i_min>
+            <cmd_max>10</cmd_max>
+            <cmd_min>-10</cmd_min>
             <initial_position>0.0</initial_position>
         </plugin>
         <plugin filename="gz-sim-joint-state-publisher-system"
@@ -730,31 +730,31 @@
             <control channel="0">
                 <jointName>left_flap_joint</jointName>
                 <multiplier>1.0471975512</multiplier>
-                <offset>-0.5</offset>
+                <offset>-0.5235987756</offset>
                 <servo_min>1000</servo_min>
                 <servo_max>2000</servo_max>
                 <type>COMMAND</type>
-                <cmd_topic>/model/tricopter_vtol/joint/left_flap_joint/cmd_pos</cmd_topic>
+                <cmd_topic>/model/tricopter_vtol/joint/left_flap_joint/0/cmd_pos</cmd_topic>
             </control>
             <!-- Output 2: elevator. -->
             <control channel="1">
                 <jointName>back_flap_joint</jointName>
                 <multiplier>1.0471975512</multiplier>
-                <offset>-0.5</offset>
+                <offset>-0.5235987756</offset>
                 <servo_min>1000</servo_min>
                 <servo_max>2000</servo_max>
                 <type>COMMAND</type>
-                <cmd_topic>/model/tricopter_vtol/joint/back_flap_joint/cmd_pos</cmd_topic>
+                <cmd_topic>/model/tricopter_vtol/joint/back_flap_joint/0/cmd_pos</cmd_topic>
             </control>
             <!-- Output 4: right aileron. -->
             <control channel="3">
                 <jointName>right_flap_joint</jointName>
                 <multiplier>1.0471975512</multiplier>
-                <offset>-0.5</offset>
+                <offset>-0.5235987756</offset>
                 <servo_min>1000</servo_min>
                 <servo_max>2000</servo_max>
                 <type>COMMAND</type>
-                <cmd_topic>/model/tricopter_vtol/joint/right_flap_joint/cmd_pos</cmd_topic>
+                <cmd_topic>/model/tricopter_vtol/joint/right_flap_joint/0/cmd_pos</cmd_topic>
             </control>
 
             <!-- Outputs 5 and 6: front propulsion. Counter-rotation sign must be confirmed in SITL. -->
