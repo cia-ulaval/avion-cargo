@@ -22,6 +22,7 @@ SERVO8_MAX           2000
 
 # Fixed-wing surfaces: left aileron, elevator, right aileron.
 SERVO1_FUNCTION      24
+SERVO1_REVERSED      1
 SERVO1_MIN           1000
 SERVO1_MAX           2000
 SERVO2_FUNCTION      19
@@ -30,6 +31,12 @@ SERVO2_MAX           2000
 SERVO4_FUNCTION      25
 SERVO4_MIN           1000
 SERVO4_MAX           2000
+
+# Front-wheel steering via the steering carrier joint.
+SERVO7_FUNCTION      26
+SERVO7_MIN           1000
+SERVO7_MAX           2000
+GROUND_STEER_ALT     5
 
 # Independent front tilt outputs for vectored tricopter yaw.
 SERVO12_FUNCTION     75
