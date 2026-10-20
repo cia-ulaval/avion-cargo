@@ -910,6 +910,29 @@ trio = ["trio (>=0.30)"]
 wmi = ["wmi (>=1.5.1) ; platform_system == \"Windows\""]
 
 [[package]]
+name = "faruco-bridge"
+version = "0.0.1"
+description = "Python client for the ArUco2 Fractal ArUco C++ worker"
+optional = false
+python-versions = ">=3.10"
+groups = ["faruco"]
+files = []
+develop = false
+
+[package.dependencies]
+numpy = ">=1.23"
+
+[package.extras]
+opencv = ["opencv-python (>=4.8)"]
+test = ["pytest (>=7)"]
+
+[package.source]
+type = "git"
+url = "https://github.com/PladsElsker/faruco-bridge.git"
+reference = "main"
+resolved_reference = "a79a8638000505c1a51015acd1533e08fb007ac0"
+
+[[package]]
 name = "fastcrc"
 version = "0.3.5"
 description = "A hyper-fast Python module for computing CRC(8, 16, 32, 64) checksum"
@@ -2043,7 +2066,7 @@ version = "2.4.2"
 description = "Fundamental package for array computing in Python"
 optional = false
 python-versions = ">=3.11"
-groups = ["main", "raspberry-pi"]
+groups = ["main", "faruco", "raspberry-pi"]
 files = [
     {file = "numpy-2.4.2-cp311-cp311-macosx_10_9_x86_64.whl", hash = "sha256:e7e88598032542bd49af7c4747541422884219056c268823ef6e5e89851c8825"},
     {file = "numpy-2.4.2-cp311-cp311-macosx_11_0_arm64.whl", hash = "sha256:7edc794af8b36ca37ef5fcb5e0d128c7e0595c7b96a2318d1badb6fcd8ee86b1"},
@@ -3458,4 +3481,4 @@ propcache = ">=0.2.1"
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.11,<3.14"
-content-hash = "194bc49f4ca4e109ab4a8e0bad386d34b71dc0db94f905edff4153a5053456f3"
+content-hash = "57e4bc67fe9b3f4d6854a38d5c847625dae2e7470edb9e751281a08fd581803d"

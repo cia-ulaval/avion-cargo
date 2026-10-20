@@ -10,10 +10,10 @@
   },
   "vision": {
     "targeted_marker": {
-      "length": 0.896,
-      "id": 29,
-      "aruco_dictionary": 16,
-      "type": "aruco"
+      "length": 1.792,
+      "fractal_id": 0,
+      "fractal_type": "FRACTAL_5L_6",
+      "type": "faruco"
     }
   },
   "streaming": {

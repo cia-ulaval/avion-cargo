@@ -115,9 +115,11 @@ secrets/
 # -------------------------------------------------
 # Temporary / local
 # -------------------------------------------------
+generated_markers/
 tmp/
 temp/
 *.tmp
 
 # Texture du scénario Gazebo versionné
 !simulation/worlds/markers/aruco.png
+!simulation/worlds/markers/faruco.png
