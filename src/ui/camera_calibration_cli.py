@@ -11,8 +11,8 @@ from ui.calibration_report_presenter import show_calibration_report
 @click.command(context_settings={"help_option_names": ["-h", "--help"]})
 @click.option("-w", "markers_x", required=True, type=int, help="Markers X")
 @click.option("-hm", "markers_y", required=True, type=int, help="Markers Y")
-@click.option("-l", "marker_length", required=True, type=float, help="Marker length (meters)")
-@click.option("-s", "marker_separation", required=True, type=float, help="Marker separation (meters)")
+@click.option("-l", "marker_length", required=True, type=float, help="Marker length (in meters)")
+@click.option("-s", "marker_separation", required=True, type=float, help="Marker separation (in meters)")
 @click.option(
     "-d",
     "dictionary_id",
