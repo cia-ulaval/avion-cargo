@@ -217,11 +217,16 @@ class DroneAutolandingService:
 
         # Drivers can block while closing. All resources get a shutdown request
         # and share a single bounded deadline, even if another close fails.
-        for name, close in (
+        resources = [
             ("streaming", self.content_streamer.stop),
             ("camera", self.aruco_tracker.camera.close),
-            ("drone", self.drone.close),
-        ):
+        ]
+        detector = getattr(self.aruco_tracker, "detector", None)
+        if detector is not None:
+            resources.append(("marker detector", detector.close))
+        resources.append(("drone", self.drone.close))
+
+        for name, close in resources:
             thread = Thread(target=close_resource, args=(name, close), name=f"autolander-close-{name}", daemon=True)
             self._threads[f"close-{name}"] = thread
             thread.start()

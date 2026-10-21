@@ -123,7 +123,7 @@ class DroneMavlinkBase(Drone):
             self._send_landing_target(uav_pose, target_size)
 
     def _send_landing_target(self, uav_pose: Pose3D, target_size: tuple[float, float]) -> None:
-        """Send the MAVLink 2 position branch, expressed in metres in BODY_FRD.
+        """Send the MAVLink 2 position branch in BODY_FRD coordinates (in meters).
 
         Image angles/sizes cannot be recovered from a body-frame translation
         for an arbitrary camera mounting. Leave these unused legacy fields at

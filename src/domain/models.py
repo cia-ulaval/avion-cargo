@@ -6,6 +6,13 @@ from typing import Optional, Tuple
 import numpy as np
 
 from domain.errors import InvalidCalibrationError, InvalidMarkerLengthError, InvalidPoseError
+from domain.markers import (
+    DEFAULT_ARUCO_DICTIONARY,
+    SUPPORTED_FRACTAL_TYPES,
+    FractalType,
+    MarkerType,
+    aruco_dictionary_capacity,
+)
 
 
 @dataclass(frozen=True, slots=True)
@@ -74,28 +81,44 @@ class CalibrationData:
 
 @dataclass(frozen=True, slots=True)
 class TargetedMarker:
-    """Defines which marker/target we want to track and its real size."""
+    """Defines the marker type, identity, and physical outer side length."""
 
-    id: Optional[int]  # None => accept any marker (first detected)
-    length: float  # side length in meters
-    dictionary: int
+    id: Optional[int]  # None => accept any detected marker
+    length: float  # outer side length in meters
+    dictionary: int = DEFAULT_ARUCO_DICTIONARY  # used only for conventional ArUco markers
+    marker_type: MarkerType = MarkerType.ARUCO
+    fractal_type: Optional[FractalType] = None
 
     def __post_init__(self) -> None:
-        if self.id is not None and self.id < 0:
-            raise ValueError("id must be >= 0 or None")
+        # JSON and existing callers may pass strings. Normalise them once so
+        # the rest of the application only handles validated enum members.
+        try:
+            object.__setattr__(self, "marker_type", MarkerType(self.marker_type))
+        except ValueError as error:
+            raise ValueError(f"marker_type must be one of {tuple(kind.value for kind in MarkerType)}") from error
+
+        if self.id is not None and (isinstance(self.id, bool) or not isinstance(self.id, int) or self.id < 0):
+            raise ValueError("id must be an integer >= 0 or None")
 
         if not np.isfinite(self.length) or self.length <= 0.0:
             raise InvalidMarkerLengthError(f"marker_length_m must be > 0, got {self.length}")
 
-        if not isinstance(self.dictionary, int) or isinstance(self.dictionary, bool):
-            raise ValueError("dictionary must be an integer")
+        if self.marker_type is MarkerType.ARUCO:
+            if self.fractal_type is not None:
+                raise ValueError("fractal_type is only valid when marker_type is 'faruco'")
+            capacity = aruco_dictionary_capacity(self.dictionary)
+            if self.id is not None and self.id >= capacity:
+                raise ValueError(f"id must be an integer below {capacity} for dictionary {self.dictionary}")
+        else:
+            try:
+                object.__setattr__(self, "fractal_type", FractalType(self.fractal_type))
+            except ValueError as error:
+                raise ValueError(f"fractal_type must be one of {SUPPORTED_FRACTAL_TYPES}") from error
 
-        if not 0 <= self.dictionary <= 16:
-            raise ValueError("dictionary must be between 0 and 16")
-
-        capacity = 1024 if self.dictionary == 16 else (50, 100, 250, 1000)[self.dictionary % 4]
-        if self.id is not None and (isinstance(self.id, bool) or not isinstance(self.id, int) or self.id >= capacity):
-            raise ValueError(f"id must be an integer below {capacity} for dictionary {self.dictionary}")
+    @property
+    def requires_detector_pose(self) -> bool:
+        """Whether visible corners alone lack enough information for the generic square PnP."""
+        return self.marker_type is MarkerType.FARUCO
 
 
 @dataclass(frozen=True, slots=True)

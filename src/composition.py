@@ -10,6 +10,7 @@ from application.tracking_service import TrackingService
 from domain.camera import Camera
 from domain.camera_mount import CameraMount
 from domain.drone import Drone
+from domain.markers import MarkerType
 from domain.models import CalibrationData, TargetedMarker
 from infrastructure.camera.frame_buffer import FrameBuffer
 from infrastructure.camera.opencv_capture_adapter import OpenCVCamera
@@ -20,6 +21,7 @@ from infrastructure.persistence.configuration_models import (
     CameraConfiguration,
     DroneConnectionConfiguration,
 )
+from infrastructure.vision.faruco_detector import FArUcoDetector
 from infrastructure.vision.live_frame_collector import LiveFrameCollector, LiveFrameCollectorConfig
 from infrastructure.vision.opencv_aruco_detector import OpenCVArucoDetector, OpenCVArucoDetectorConfig
 from infrastructure.vision.opencv_frame_annotator import OpenCVFrameAnnotator
@@ -110,13 +112,18 @@ def build_camera_calibration_service(
 def build_tracking_service(
     camera: Camera,
     target: TargetedMarker,
-    detector_config: OpenCVArucoDetectorConfig,
+    detector_config: Optional[OpenCVArucoDetectorConfig],
     calibration_data: CalibrationData,
     camera_mount: CameraMount = CameraMount(),
 ) -> TrackingService:
+    if target.marker_type is MarkerType.FARUCO:
+        detector = FArUcoDetector(target, calibration_data)
+    else:
+        detector = OpenCVArucoDetector(detector_config or OpenCVArucoDetectorConfig(dictionary_id=target.dictionary))
+
     return TrackingService(
         camera=camera,
-        detector=OpenCVArucoDetector(detector_config),
+        detector=detector,
         pose_estimator=OpenCVPoseEstimator(),
         target=target,
         calibration=calibration_data,
@@ -139,7 +146,7 @@ def build_landing_service(config: AutolanderConfiguration, use_simulated_cam: bo
     tracker = build_tracking_service(
         camera=camera,
         target=config.targeted_marker,
-        detector_config=OpenCVArucoDetectorConfig(dictionary_id=config.targeted_marker.dictionary),
+        detector_config=None,
         calibration_data=calibration,
         camera_mount=config.camera_config.mount,
     )

@@ -32,6 +32,13 @@ la calibration de la caméra, les essais en simulation, l’utilisation sur Rasp
 Les commandes d’installation, d’exécution, de gestion des dépendances, de formatage et de tests sont regroupées dans
 **[Commandes pour développeurs](https://github.com/cia-ulaval/avion-cargo/wiki/Commandes-pour-developpeurs)**.
 
+## Type de marqueur
+
+Le champ `vision.targeted_marker.type` accepte `aruco` (valeur par défaut pour les anciens fichiers de configuration) ou `faruco`.
+Pour ArUco, configurez `id` et `aruco_dictionary` comme auparavant. Pour FArUco, configurez `fractal_id` et `fractal_type` (`FRACTAL_2L_6`, `FRACTAL_3L_6`, `FRACTAL_4L_6` ou `FRACTAL_5L_6`). Le champ `length` indique dans les deux cas le côté physique du marqueur extérieur, en mètres.
+
+FArUco est une dépendance optionnelle. Sur la machine cible, installez d’abord les dépendances système de compilation et OpenCV requises par [FArUco Bridge](https://github.com/PladsElsker/faruco-bridge), puis exécutez `poetry lock` et `poetry install --with faruco`. Le générateur amont ne prend actuellement en charge qu’un seul ID fractal intégré; configurez `fractal_id` avec l’ID réellement renvoyé par le bridge.
+
 ------------------------------------------------------------------------------------------------------------------------
 
 > Équipe Avion Cargo  

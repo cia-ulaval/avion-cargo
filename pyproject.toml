@@ -47,6 +47,12 @@ optional = true
 [tool.poetry.group.raspberry-pi.dependencies]
 picamera2 = ">=0.3.33,<0.4.0"
 
+[tool.poetry.group.faruco]
+optional = true
+
+[tool.poetry.group.faruco.dependencies]
+faruco-bridge = { git = "https://github.com/PladsElsker/faruco-bridge.git", branch = "main" }
+
 [tool.black]
 line-length = 120
 target-version = ["py312"]
@@ -67,6 +73,7 @@ build-backend = "poetry.core.masonry.api"
 [tool.poetry.scripts]
 calibrate_camera = "ui.camera_calibration_cli:main"
 precision_landing = "ui.precision_landing_cli:main"
+generate_markers = "ui.marker_generation_cli:main"
 fmt = "script:run_code_formatting"
 fmt-check = "script:run_code_format_checking"
 clean = "script:clean_project"
