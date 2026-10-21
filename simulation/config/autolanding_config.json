@@ -11,7 +11,6 @@
   "vision": {
     "targeted_marker": {
       "length": 1.792,
-      "fractal_id": 0,
       "fractal_type": "FRACTAL_5L_6",
       "type": "faruco"
     }

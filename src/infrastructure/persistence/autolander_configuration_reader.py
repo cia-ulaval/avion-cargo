@@ -117,9 +117,8 @@ class AutolanderConfigurationReader:
                 marker_type=marker_type,
             )
 
-        fractal_id = int(self._require(tm, "fractal_id", "vision.targeted_marker"))
         fractal_type = FractalType(self._require(tm, "fractal_type", "vision.targeted_marker"))
-        return TargetedMarker(length=length, id=fractal_id, marker_type=marker_type, fractal_type=fractal_type)
+        return TargetedMarker(length=length, id=None, marker_type=marker_type, fractal_type=fractal_type)
 
     def _parse_streaming(self, raw: dict[str, Any]) -> StreamingConfiguration:
         streaming = self._require_dict(self._require(raw, "streaming", "root"), "streaming")

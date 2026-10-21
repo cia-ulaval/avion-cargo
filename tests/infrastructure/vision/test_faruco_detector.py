@@ -10,7 +10,7 @@ from infrastructure.vision.faruco_detector import FArUcoDetector, FArUcoDetector
 
 
 def target(preset="FRACTAL_5L_6"):
-    return TargetedMarker(0, 1.792, marker_type="faruco", fractal_type=preset)
+    return TargetedMarker(None, 1.792, marker_type="faruco", fractal_type=preset)
 
 
 def calibration():
@@ -204,5 +204,5 @@ def test_close_is_forwarded_to_bridge_worker():
 
 
 def test_unknown_root_id_is_rejected():
-    with pytest.raises(ValueError, match="fractal_id=0"):
+    with pytest.raises(ValueError, match="automatic tracking"):
         FArUcoDetector(TargetedMarker(7, 1.792, marker_type="faruco", fractal_type="FRACTAL_5L_6"), calibration())

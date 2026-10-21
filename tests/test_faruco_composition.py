@@ -8,7 +8,7 @@ from domain.models import CalibrationData, TargetedMarker
 
 def test_tracking_builder_selects_faruco_adapter_for_faruco_targets(monkeypatch) -> None:
     target = TargetedMarker(
-        id=0,
+        id=None,
         length=0.896,
         marker_type="faruco",
         fractal_type="FRACTAL_3L_6",

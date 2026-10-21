@@ -6,6 +6,7 @@ from typing import Any, Optional
 
 from domain.camera_mount import CameraMount
 from domain.markers import (
+    FRACTAL_ROOT_ID,
     SUPPORTED_ARUCO_DICTIONARY_IDS,
     SUPPORTED_FRACTAL_TYPES,
     FractalType,
@@ -164,7 +165,10 @@ class ConfigurationValidator:
                 )
             self._no_extra_keys(tm, {"type", "length", "id", "aruco_dictionary"}, "vision.targeted_marker")
         else:
-            self._req_int(tm, "fractal_id", "vision.targeted_marker", min_=0)
+            # Existing configurations may still declare the built-in root ID.
+            # Level selection is automatic and this field is no longer needed.
+            if "fractal_id" in tm:
+                self._req_int(tm, "fractal_id", "vision.targeted_marker", min_=FRACTAL_ROOT_ID, max_=FRACTAL_ROOT_ID)
             fractal_type = self._req_str(tm, "fractal_type", "vision.targeted_marker", allow_empty=False)
             try:
                 FractalType(fractal_type)

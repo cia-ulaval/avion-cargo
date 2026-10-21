@@ -50,9 +50,7 @@ class FArUcoDetector(MarkerDetector):
         if target.marker_type is not MarkerType.FARUCO or target.fractal_type is None:
             raise ValueError("FArUcoDetector requires a TargetedMarker configured for 'faruco'")
         if target.id not in (None, FRACTAL_ROOT_ID):
-            raise ValueError(
-                "The built-in fractal presets require fractal_id=0; inner level IDs are selected automatically"
-            )
+            raise ValueError("FArUco targets cannot select an individual level; use id=None for automatic tracking")
 
         self._target = target
         self._calibration = calibration

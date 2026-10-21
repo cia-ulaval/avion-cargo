@@ -37,7 +37,7 @@ def make_detector(config=None):
         camera_width=640,
         camera_height=480,
     )
-    target = TargetedMarker(0, 1.792, marker_type="faruco", fractal_type="FRACTAL_5L_6")
+    target = TargetedMarker(None, 1.792, marker_type="faruco", fractal_type="FRACTAL_5L_6")
     return FArUcoDetector(target, calibration, config=config), target
 
 
