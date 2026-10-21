@@ -7,7 +7,12 @@ import click
 import cv2
 
 from domain.errors import DomainError
-from domain.models import SUPPORTED_FRACTAL_TYPES
+from domain.markers import (
+    DEFAULT_ARUCO_DICTIONARY,
+    DEFAULT_FRACTAL_TYPE,
+    SUPPORTED_ARUCO_DICTIONARY_IDS,
+    SUPPORTED_FRACTAL_TYPES,
+)
 from infrastructure.marker_generation.aruco_generators import (
     ARUCO_DICTIONARIES,
     ArucoBoardGenerator,
@@ -16,10 +21,20 @@ from infrastructure.marker_generation.aruco_generators import (
     MarkerBoardGenerationParams,
 )
 from infrastructure.marker_generation.faruco_generator import FArUcoMarkerGenerationParams, FArUcoMarkerGenerator
+from infrastructure.marker_generation.settings import (
+    DEFAULT_BORDER_BITS,
+    DEFAULT_FRACTAL_BIT_SIZE,
+    DEFAULT_PRINT_DPI,
+    DEFAULT_WHITE_MARGIN_M,
+    MIN_BORDER_BITS,
+    MIN_FRACTAL_BIT_SIZE,
+    MIN_PRINT_DPI,
+    SUPPORTED_OUTPUT_SUFFIXES,
+)
 
 
 def _output_path(ctx, param, value):
-    if value is not None and value.suffix.lower() not in (".pdf", ".png"):
+    if value is not None and value.suffix.lower() not in SUPPORTED_OUTPUT_SUFFIXES:
         raise click.BadParameter("Use a .pdf or .png output file")
     return value
 
@@ -37,7 +52,7 @@ def _print_options(command):
         click.option(
             "--margin",
             "margin_m",
-            default=0.01,
+            default=DEFAULT_WHITE_MARGIN_M,
             show_default=True,
             type=float,
             help="White margin around the marker or board (in meters).",
@@ -60,13 +75,15 @@ def _aruco_options(command):
         click.option(
             "-d",
             "--dictionary",
-            default=16,
+            default=DEFAULT_ARUCO_DICTIONARY,
             show_default=True,
-            type=click.IntRange(0, 16),
+            type=click.IntRange(min(SUPPORTED_ARUCO_DICTIONARY_IDS), max(SUPPORTED_ARUCO_DICTIONARY_IDS)),
             help="OpenCV dictionary ID; see the dictionaries command.",
         ),
-        click.option("--dpi", default=300, show_default=True, type=click.IntRange(min=150)),
-        click.option("--border-bits", default=1, show_default=True, type=click.IntRange(min=1)),
+        click.option("--dpi", default=DEFAULT_PRINT_DPI, show_default=True, type=click.IntRange(min=MIN_PRINT_DPI)),
+        click.option(
+            "--border-bits", default=DEFAULT_BORDER_BITS, show_default=True, type=click.IntRange(min=MIN_BORDER_BITS)
+        ),
     ):
         command = option(command)
     return command
@@ -113,13 +130,17 @@ def board(output, **parameters):
 
 @main.command()
 @click.option(
-    "-t", "--fractal-type", default="FRACTAL_3L_6", show_default=True, type=click.Choice(SUPPORTED_FRACTAL_TYPES)
+    "-t",
+    "--fractal-type",
+    default=DEFAULT_FRACTAL_TYPE.value,
+    show_default=True,
+    type=click.Choice(SUPPORTED_FRACTAL_TYPES),
 )
 @click.option(
     "--bit-size",
-    default=20,
+    default=DEFAULT_FRACTAL_BIT_SIZE,
     show_default=True,
-    type=click.IntRange(min=2),
+    type=click.IntRange(min=MIN_FRACTAL_BIT_SIZE),
     help="Pixels per innermost bit cell; independent of the physical print size.",
 )
 @_print_options

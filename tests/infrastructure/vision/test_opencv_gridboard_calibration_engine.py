@@ -56,7 +56,7 @@ def test_collector_and_calibration_engine_use_the_same_opencv_dictionary(diction
 
 @pytest.mark.parametrize("dictionary_id", [-1, 17])
 def test_calibration_engine_rejects_dictionary_outside_supported_range(dictionary_id: int) -> None:
-    with pytest.raises(ValueError, match="dictionary_id must be in 0..16"):
+    with pytest.raises(ValueError, match="dictionary must be between 0 and 16"):
         OpenCVGridBoardCameraCalibrationEngine(GridBoardSpec(4, 5, 0.03, 0.01, dictionary_id))
 
 

@@ -173,9 +173,7 @@ def test_tracking_uses_detector_provided_faruco_pose_without_reestimating_from_o
         translation_vectors=translation_vectors,
         reprojection_error_px=0.2,
     )
-    target = TargetedMarker(
-        id=7, length=0.896, marker_type="faruco", fractal_type="FRACTAL_3L_6"
-    )
+    target = TargetedMarker(id=7, length=0.896, marker_type="faruco", fractal_type="FRACTAL_3L_6")
     detector = FakeDetector(detections=[detection])
     pose_estimator = FakePoseEstimator(
         pose=Pose3D(100.0, 100.0, 100.0),
@@ -201,3 +199,23 @@ def test_tracking_uses_detector_provided_faruco_pose_without_reestimating_from_o
     annotation = annotator.annotate.call_args.kwargs
     assert annotation["rotation_vectors"] is rotation_vectors
     assert annotation["translation_vectors"] is translation_vectors
+
+
+def test_tracking_rejects_faruco_corners_without_a_metric_pose() -> None:
+    detector = FakeDetector(detections=[MarkerDetection(marker_id=1, corners=np.zeros((1, 4, 2)))])
+    estimator = Mock()
+    annotator = Mock(spec=FrameAnnotator)
+    service = TrackingService(
+        camera=FakeCamera(np.zeros((12, 12, 3), dtype=np.uint8)),
+        detector=detector,
+        pose_estimator=estimator,
+        target=TargetedMarker(0, 1.792, marker_type="faruco", fractal_type="FRACTAL_5L_6"),
+        calibration=calibration_data(12),
+        annotator=annotator,
+    )
+
+    _, result = service.track_target()
+
+    assert result.status is TrackingStatus.NOT_FOUND
+    estimator.estimate_pose.assert_not_called()
+    annotator.annotate.assert_not_called()

@@ -68,13 +68,16 @@ class TrackingService:
             marker_id, corners = detection
             detection = None
 
-        if detection is not None and detection.translation_vectors is not None:
-            # FArUco has already estimated pose from all nested-marker
-            # correspondences. Do not replace that estimate with a four-corner PnP.
+        if detection is not None and detection.has_pose:
+            # The detector has already estimated a pose in the common target
+            # frame, including the scale of any visible inner fractal level.
             rotation_vectors = detection.rotation_vectors
             translation_vectors = detection.translation_vectors
             x, y, z = np.asarray(translation_vectors).reshape(-1)[:3]
             pose = Pose3D(x=float(x), y=float(y), z=float(z))
+        elif self.target.requires_detector_pose:
+            # An inner contour must never be reinterpreted as an outer square.
+            return frame, TrackingResult.not_found(captured_at_s=captured_at_s)
         else:
             pose, rotation_vectors, translation_vectors = self.pose_estimator.estimate_pose(
                 corners=corners, marker_length_m=self.target.length, calib=self.calibration, center=True

@@ -8,6 +8,11 @@ from PIL import Image, ImageOps
 from reportlab.lib.utils import ImageReader
 from reportlab.pdfgen import canvas
 
+from infrastructure.marker_generation.settings import SUPPORTED_OUTPUT_SUFFIXES
+
+METERS_PER_INCH = 0.0254
+POINTS_PER_INCH = 72
+
 
 def validate_margin(margin_m: float) -> None:
     if not math.isfinite(margin_m) or margin_m < 0:
@@ -20,7 +25,7 @@ def validate_integer(name: str, value: int, minimum: int) -> None:
 
 
 def meters_to_pixels(length_m: float, dpi: int) -> int:
-    return round(length_m / 0.0254 * dpi)
+    return round(length_m / METERS_PER_INCH * dpi)
 
 
 class MarkerImageWriter:
@@ -35,7 +40,7 @@ class MarkerImageWriter:
         margin_m: float = 0.0,
     ) -> Path:
         output = Path(output).expanduser()
-        if output.suffix.lower() not in (".pdf", ".png"):
+        if output.suffix.lower() not in SUPPORTED_OUTPUT_SUFFIXES:
             raise ValueError("Output must have a .pdf or .png extension")
         if gray_u8.ndim != 2 or gray_u8.dtype != np.uint8 or gray_u8.size == 0:
             raise ValueError("Marker image must be a nonempty uint8 grayscale image")
@@ -51,9 +56,9 @@ class MarkerImageWriter:
             margin_x = round(margin_m * pixels_per_m_x)
             margin_y = round(margin_m * pixels_per_m_y)
             image = ImageOps.expand(image, border=(margin_x, margin_y), fill=255)
-            image.save(output, format="PNG", dpi=(pixels_per_m_x * 0.0254, pixels_per_m_y * 0.0254))
+            image.save(output, format="PNG", dpi=(pixels_per_m_x * METERS_PER_INCH, pixels_per_m_y * METERS_PER_INCH))
         else:
-            points_per_m = 72 / 0.0254
+            points_per_m = POINTS_PER_INCH / METERS_PER_INCH
             pdf = canvas.Canvas(
                 str(output),
                 pagesize=((content_w_m + 2 * margin_m) * points_per_m, (content_h_m + 2 * margin_m) * points_per_m),

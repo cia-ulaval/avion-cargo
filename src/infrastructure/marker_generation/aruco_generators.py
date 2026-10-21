@@ -8,6 +8,7 @@ import cv2
 import numpy as np
 
 from domain.marker_generators import MarkerGenerator
+from domain.markers import DEFAULT_ARUCO_DICTIONARY, SUPPORTED_ARUCO_DICTIONARY_IDS
 from domain.models import TargetedMarker
 from infrastructure.marker_generation.image_writer import (
     MarkerImageWriter,
@@ -15,13 +16,20 @@ from infrastructure.marker_generation.image_writer import (
     validate_integer,
     validate_margin,
 )
+from infrastructure.marker_generation.settings import (
+    DEFAULT_BORDER_BITS,
+    DEFAULT_PRINT_DPI,
+    DEFAULT_WHITE_MARGIN_M,
+    MIN_BORDER_BITS,
+    MIN_PRINT_DPI,
+)
 
 # Keep the generator aligned with the 0..16 dictionaries accepted by tracking
 # and camera calibration, even when OpenCV also exposes AprilTag dictionaries.
 ARUCO_DICTIONARIES = {
     value: name
     for name, value in vars(cv2.aruco).items()
-    if name.startswith("DICT_") and isinstance(value, int) and 0 <= value <= 16
+    if name.startswith("DICT_") and isinstance(value, int) and value in SUPPORTED_ARUCO_DICTIONARY_IDS
 }
 
 
@@ -29,16 +37,16 @@ ARUCO_DICTIONARIES = {
 class ArucoMarkerGenerationParams:
     marker_id: int
     marker_len_m: float
-    dictionary: int = 16
-    border_bits: int = 1
-    dpi: int = 300
-    margin_m: float = 0.01
+    dictionary: int = DEFAULT_ARUCO_DICTIONARY
+    border_bits: int = DEFAULT_BORDER_BITS
+    dpi: int = DEFAULT_PRINT_DPI
+    margin_m: float = DEFAULT_WHITE_MARGIN_M
 
     def __post_init__(self) -> None:
         validate_integer("marker_id", self.marker_id, 0)
         TargetedMarker(id=self.marker_id, length=self.marker_len_m, dictionary=self.dictionary)
-        validate_integer("border_bits", self.border_bits, 1)
-        validate_integer("dpi", self.dpi, 150)
+        validate_integer("border_bits", self.border_bits, MIN_BORDER_BITS)
+        validate_integer("dpi", self.dpi, MIN_PRINT_DPI)
         validate_margin(self.margin_m)
 
 
@@ -62,10 +70,10 @@ class MarkerBoardGenerationParams:
     num_rows: int
     marker_len_m: float
     separation_m: float
-    dictionary: int = 16
-    margin_m: float = 0.01
-    border_bits: int = 1
-    dpi: int = 300
+    dictionary: int = DEFAULT_ARUCO_DICTIONARY
+    margin_m: float = DEFAULT_WHITE_MARGIN_M
+    border_bits: int = DEFAULT_BORDER_BITS
+    dpi: int = DEFAULT_PRINT_DPI
 
     def __post_init__(self) -> None:
         validate_integer("num_columns", self.num_columns, 1)
