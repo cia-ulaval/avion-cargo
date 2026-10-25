@@ -39,7 +39,9 @@ class ConfigurationValidator:
         "use_serial": bool,
         "address": str non-empty,
         "port": int in [1..65535] OR null,
-        "baud_rate": int>0
+        "baud_rate": int>0,
+        "timeout": float>0 (optional, default 10.0 seconds),
+        "fail_on_timeout": bool (optional, default true)
       }
     }
     """
@@ -161,6 +163,10 @@ class ConfigurationValidator:
         use_serial = self._req_bool(dc, "use_serial", "drone_connection")
         address = self._req_str(dc, "address", "drone_connection", allow_empty=False)
         self._req_int(dc, "baud_rate", "drone_connection", min_=1)
+        if "timeout" in dc:
+            self._req_number(dc, "timeout", "drone_connection", min_exclusive=0.0)
+        if "fail_on_timeout" in dc:
+            self._req_bool(dc, "fail_on_timeout", "drone_connection")
 
         # port can be null or int
         port_val = self._req_key(dc, "port", "drone_connection")
@@ -197,7 +203,9 @@ class ConfigurationValidator:
                 )
             self._validate_host_like(address, "drone_connection.address")
 
-        self._no_extra_keys(dc, {"use_serial", "address", "port", "baud_rate"}, "drone_connection")
+        self._no_extra_keys(
+            dc, {"use_serial", "address", "port", "baud_rate", "timeout", "fail_on_timeout"}, "drone_connection"
+        )
 
     # -------------------------
     # Helpers
