@@ -1,4 +1,5 @@
 from collections import deque
+from dataclasses import replace
 
 import pytest
 from pymavlink import mavutil
@@ -71,8 +72,10 @@ def link(monkeypatch):
     return drone, connection, clock
 
 
-def test_connect_accepts_only_autopilot_and_initializes_status_from_first_heartbeat(link):
+@pytest.mark.parametrize("fail_on_timeout", [True, False])
+def test_connect_accepts_only_autopilot_and_initializes_status_from_first_heartbeat(link, fail_on_timeout):
     drone, connection, _ = link
+    drone.parameters = replace(drone.parameters, fail_on_timeout=fail_on_timeout)
     connection.incoming.extend([heartbeat(system=42, autopilot=mavlink2.MAV_AUTOPILOT_INVALID), heartbeat(system=7)])
     drone.connect()
     assert drone.status.connected
@@ -99,6 +102,69 @@ def test_missing_heartbeat_times_out_and_closes_transport(link):
     assert connection.close_count == 1
     assert drone.connection is None
     assert not drone.status.connected
+
+
+def test_optional_timeout_keeps_transport_open_and_status_disconnected(link):
+    drone, connection, clock = link
+    drone.parameters = replace(drone.parameters, fail_on_timeout=False)
+
+    drone.connect()
+
+    assert clock.now == pytest.approx(100.5)
+    assert drone.connection is connection
+    assert connection.close_count == 0
+    assert not drone.status.connected
+    assert drone.status.mode is DroneMode.UNKNOWN
+    assert [message.get_type() for message in connection.outgoing] == ["HEARTBEAT"]
+    connection.receive_calls.clear()
+    clock.now += 20
+    assert not drone.get_status().connected
+    assert all(call == {"blocking": False} for call in connection.receive_calls)
+    drone.close()
+    assert connection.close_count == 1
+
+
+def test_optional_link_discovers_late_autopilot_and_requests_streams_once(link):
+    drone, connection, _ = link
+    drone.parameters = replace(drone.parameters, fail_on_timeout=False)
+    drone.connect()
+    connection.incoming.extend(
+        [
+            sourced(mavlink2.MAVLink_vfr_hud_message(0, 12, 0, 0, 42, 0), system=7),
+            heartbeat(system=42, autopilot=mavlink2.MAV_AUTOPILOT_INVALID),
+            heartbeat(system=0),
+        ]
+    )
+    assert not drone.get_status().connected
+
+    connection.incoming.extend(
+        [heartbeat(system=7), sourced(mavlink2.MAVLink_vfr_hud_message(0, 12, 0, 0, 42, 0), system=7)]
+    )
+    status = drone.get_status()
+
+    assert status.connected
+    assert status.mode is DroneMode.LAND
+    assert status.alt_m == 42
+    assert (connection.target_system, connection.target_component) == (7, 1)
+    requests = [message for message in connection.outgoing if message.get_type() == "COMMAND_LONG"]
+    assert len(requests) == 4
+    assert all((message.target_system, message.target_component) == (7, 1) for message in requests)
+    connection.incoming.extend([heartbeat(system=8, mode=4), heartbeat(system=7)])
+    assert drone.get_status().mode is DroneMode.LAND
+    assert len([message for message in connection.outgoing if message.get_type() == "COMMAND_LONG"]) == 4
+
+
+def test_optional_timeout_does_not_suppress_transport_errors(link, monkeypatch):
+    drone, connection, _ = link
+    drone.parameters = replace(drone.parameters, fail_on_timeout=False)
+
+    def fail_to_open():
+        raise OSError("transport unavailable")
+
+    monkeypatch.setattr(drone, "_init_mavlink_connection", fail_to_open)
+    with pytest.raises(OSError, match="transport unavailable"):
+        drone.connect()
+    assert drone.connection is None
 
 
 def test_status_poll_does_not_wait_for_traffic_and_maintains_heartbeat(link):
