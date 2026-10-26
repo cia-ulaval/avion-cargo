@@ -94,7 +94,6 @@ recordings/
 *.avi
 *.mov
 *.mkv
-*.png
 *.jpg
 *.jpeg
 *.tiff
