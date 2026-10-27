@@ -1,10 +1,36 @@
+import json
 import math
+from dataclasses import asdict
 
 import numpy as np
 import pytest
 
 from domain.errors import InvalidCalibrationError, InvalidMarkerLengthError
+from domain.markers import FractalType, MarkerType
 from domain.models import CalibrationData, Pose3D, TargetedMarker
+
+
+@pytest.mark.parametrize(
+    "kind,preset",
+    [(MarkerType.ARUCO, None), (MarkerType.FARUCO, FractalType.FRACTAL_3L_6)],
+)
+def test_marker_types_normalise_legacy_strings_and_preserve_json_round_trips(kind, preset):
+    marker = TargetedMarker(0, 0.2, marker_type=kind.value, fractal_type=None if preset is None else preset.value)
+    typed_marker = TargetedMarker(0, 0.2, marker_type=kind, fractal_type=preset)
+
+    assert marker.marker_type is kind
+    assert marker.fractal_type is preset
+    assert marker == typed_marker
+    payload = json.loads(json.dumps(asdict(marker)))
+    assert payload["marker_type"] == kind.value
+    assert payload["fractal_type"] == (None if preset is None else preset.value)
+    assert TargetedMarker(**payload) == typed_marker
+
+
+@pytest.mark.parametrize("kind", ["unknown", None, 1, True])
+def test_unknown_marker_types_fail_at_model_construction(kind):
+    with pytest.raises(ValueError, match="marker_type"):
+        TargetedMarker(0, 0.2, marker_type=kind)
 
 
 def test_targeted_marker_accepts_documented_aruco_dictionary_boundaries() -> None:
