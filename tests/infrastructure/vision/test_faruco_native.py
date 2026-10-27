@@ -3,7 +3,7 @@ import numpy as np
 import pytest
 
 from domain.models import CalibrationData, TargetedMarker
-from infrastructure.vision.faruco_detector import FArUcoDetector, FArUcoDetectorConfig
+from infrastructure.vision.faruco_detector import FArUcoDetector
 
 
 @pytest.fixture(scope="module")
@@ -17,59 +17,57 @@ def native_texture(tmp_path_factory):
 
 
 def view(texture, rendered_size):
-    _, x = np.nonzero(texture < 128)
     scale = rendered_size / texture.shape[1]
-    expected_z = 1.792 * 600 / ((x.max() - x.min() + 1) * scale)
-    transform = np.array(
-        [
-            [scale, 0, 320 + 600 * 0.02 / expected_z - rendered_size / 2],
-            [0, scale, 240 - 600 * 0.01 / expected_z - rendered_size / 2],
-        ]
-    )
+    transform = np.array([[scale, 0, 320 - rendered_size / 2], [0, scale, 240 - rendered_size / 2]])
     frame = cv2.warpAffine(texture, transform, (640, 480), flags=cv2.INTER_NEAREST, borderValue=255)
-    return cv2.cvtColor(frame, cv2.COLOR_GRAY2BGR), expected_z
+    return cv2.cvtColor(frame, cv2.COLOR_GRAY2BGR)
 
 
-def make_detector(config=None):
-    calibration = CalibrationData(
+def calibration():
+    return CalibrationData(
         camera_matrix=np.array([[600.0, 0.0, 320.0], [0.0, 600.0, 240.0], [0.0, 0.0, 1.0]]),
         dist_coeffs=np.zeros(5),
         camera_width=640,
         camera_height=480,
     )
+
+
+@pytest.mark.parametrize("rendered_size,level", [(360, 0), (720, 1), (1440, 2), (4320, 3), (11520, 4)])
+def test_native_detection_and_annotation_match_the_bridge_at_every_level(native_texture, rendered_size, level):
+    from faruco_bridge import Detector
+
+    frame = view(native_texture, rendered_size)
+    original = frame.copy()
+    calib = calibration()
     target = TargetedMarker(None, 1.792, marker_type="faruco", fractal_type="FRACTAL_5L_6")
-    return FArUcoDetector(target, calibration, config=config), target
-
-
-@pytest.mark.parametrize("rendered_size,level", [(360, 0), (720, 1), (1440, 2), (2880, 3), (11520, 4)])
-def test_native_inner_only_views_preserve_distance_and_lateral_offset(native_texture, rendered_size, level):
-    frame, expected_z = view(native_texture, rendered_size)
-    detector, target = make_detector(FArUcoDetectorConfig(transition_frames=1))
+    detector = FArUcoDetector(target, calib)
     try:
+        with Detector(
+            fractal_type=target.fractal_type.value,
+            marker_size_m=target.length,
+            camera_matrix=calib.camera_matrix,
+            dist_coeffs=calib.dist_coeffs,
+        ) as reference:
+            expected = reference.detect(frame)
+        (observed,) = expected.markers
         (detection,) = detector.detect(frame, target)
-        assert detection.marker_id == level
-        np.testing.assert_allclose(detection.translation_vectors.reshape(3), [0.02, -0.01, expected_z], atol=0.004)
-        assert detection.reprojection_error_px < 3
-    finally:
-        detector.close()
 
+        assert detection.marker_id == observed.id == level
+        np.testing.assert_array_equal(detection.corners.reshape(4, 2), observed.corners)
+        np.testing.assert_allclose(detection.rotation_vectors.reshape(3), observed.rvec.reshape(3))
+        np.testing.assert_allclose(detection.translation_vectors.reshape(3), observed.tvec.reshape(3))
+        assert detection.reprojection_error_px == pytest.approx(observed.reprojection_error_px)
 
-def test_native_approach_and_retreat_keep_a_common_pose_through_all_five_levels(native_texture):
-    detector, target = make_detector()
-    sizes = np.r_[np.geomspace(360, 11520, 80), np.repeat(11520, 3), np.geomspace(11520, 360, 80), np.repeat(360, 3)]
-    levels = set()
-    try:
-        for size in sizes:
-            frame, expected_z = view(native_texture, size)
-            detections = detector.detect(frame, target)
-            if not detections:
-                continue
-            (detection,) = detections
-            levels.add(detection.marker_id)
-            x, y, z = detection.translation_vectors.reshape(3)
-            assert abs(x - 0.02) < 0.006 and abs(y + 0.01) < 0.006
-            assert z == pytest.approx(expected_z, rel=0.03)
-        assert levels == {0, 1, 2, 3, 4}
-        assert detections[0].marker_id == 0
+        annotated = detector.annotate(
+            frame,
+            marker_id=detection.marker_id,
+            corners=detection.corners,
+            calibration=calib,
+            rotation_vectors=detection.rotation_vectors,
+            translation_vectors=detection.translation_vectors,
+        )
+        np.testing.assert_array_equal(annotated, expected.annotate(frame))
+        np.testing.assert_array_equal(frame, original)
+        assert np.any(annotated != original)
     finally:
         detector.close()

@@ -1,12 +1,12 @@
+import sys
 from types import SimpleNamespace
 from unittest.mock import Mock
 
-import cv2
 import numpy as np
 import pytest
 
 from domain.models import CalibrationData, TargetedMarker
-from infrastructure.vision.faruco_detector import FArUcoDetector, FArUcoDetectorConfig
+from infrastructure.vision.faruco_detector import FArUcoDetector
 
 
 def target(preset="FRACTAL_5L_6"):
@@ -23,178 +23,91 @@ def calibration():
 
 
 FRAME = np.zeros((480, 640, 3), dtype=np.uint8)
-ROTATION = np.array([np.pi, 0.08, 0.02])
 
 
-def square(side):
-    h = side / 2
-    return np.array([[-h, h, 0], [h, h, 0], [h, -h, 0], [-h, -h, 0]])
-
-
-def project(points, translation):
-    return cv2.projectPoints(
-        np.asarray(points, dtype=float),
-        ROTATION,
-        np.asarray(translation, dtype=float),
-        calibration().camera_matrix,
-        calibration().dist_coeffs,
-    )[0].reshape(-1, 2)
-
-
-def marker(level=0, ratio=1.0, translation=(0.08, -0.04, 3.0), *, old_fallback=False, points=True):
-    corners = project(square(1.792 * ratio), translation)
+def marker(level=0, *, translation=(0.08, -0.04, 3.0), pose=True):
     return SimpleNamespace(
         id=level,
-        type="FRACTAL_5L_6",
-        corners=corners,
-        object_points=(square(1.792 if old_fallback else 1.792 * ratio) if points else None),
-        image_points=(corners.copy() if points else None),
-        rvec=ROTATION.copy(),
-        tvec=np.asarray(translation) / ratio,
-        reprojection_error_px=0.0,
+        corners=np.array([[1, 1], [11, 1], [11, 11], [1, 11]], dtype=np.float32),
+        rvec=np.array([[3.1], [0.08], [0.02]]) if pose else None,
+        tvec=np.asarray(translation).reshape(3, 1) if pose else None,
+        reprojection_error_px=12.0 if pose else None,
     )
 
 
-def detector_for(markers, *, frames=1, configured_target=None):
+def detector_for(markers):
     bridge = Mock()
     bridge.detect.return_value = SimpleNamespace(markers=markers)
-    detector = FArUcoDetector(
-        configured_target or target(),
-        calibration(),
-        bridge_detector=bridge,
-        config=FArUcoDetectorConfig(transition_frames=frames),
-    )
-    return detector, bridge
+    return FArUcoDetector(target(), calibration(), bridge_detector=bridge), bridge
 
 
-LAYOUTS = [
-    ("FRACTAL_2L_6", (1, 1 / 3)),
-    ("FRACTAL_3L_6", (1, 3 / 7, 1 / 7)),
-    ("FRACTAL_4L_6", (1, 7 / 15, 1 / 5, 1 / 15)),
-    ("FRACTAL_5L_6", (1, 5 / 13, 7 / 39, 1 / 13, 1 / 39)),
-]
+@pytest.mark.parametrize("level", range(5))
+def test_bridge_pose_is_used_unchanged_on_the_first_frame_even_for_small_markers(level):
+    observed = marker(level)
+    detector, bridge = detector_for([observed])
 
-
-@pytest.mark.parametrize("preset,level,ratio", [(p, i, r) for p, ratios in LAYOUTS for i, r in enumerate(ratios)])
-@pytest.mark.parametrize("old_fallback", [False, True])
-def test_all_levels_preserve_the_global_metric_centre(preset, level, ratio, old_fallback):
-    translation = np.array([0.04, -0.02, 4.0]) * (1.792 * ratio)
-    observed = marker(level, ratio, translation, old_fallback=old_fallback)
-    observed.type = preset
-    detector, bridge = detector_for([observed], configured_target=target(preset))
-
-    (detection,) = detector.detect(FRAME, target(preset))
+    (detection,) = detector.detect(FRAME, target())
 
     assert detection.marker_id == level
     assert detection.corners.shape == (1, 4, 2)
     assert detection.rotation_vectors.shape == detection.translation_vectors.shape == (1, 1, 3)
-    np.testing.assert_allclose(detection.translation_vectors.reshape(3), translation, atol=1e-6)
-    assert detection.reprojection_error_px < 1e-5
-    bridge.detect.assert_called_once_with(FRAME, include_points=True)
+    np.testing.assert_array_equal(detection.corners.reshape(4, 2), observed.corners)
+    np.testing.assert_array_equal(detection.rotation_vectors.reshape(3), observed.rvec.reshape(3))
+    np.testing.assert_array_equal(detection.translation_vectors.reshape(3), observed.tvec.reshape(3))
+    assert detection.reprojection_error_px == observed.reprojection_error_px
+    bridge.detect.assert_called_once_with(FRAME)
 
 
-def test_missing_correspondences_use_the_visible_levels_size_instead_of_the_bridge_pose():
-    detector, _ = detector_for([marker(1, 5 / 13, points=False)])
-    (detection,) = detector.detect(FRAME, target())
-    np.testing.assert_allclose(detection.translation_vectors.reshape(3), [0.08, -0.04, 3.0], atol=1e-6)
+def test_all_bridge_detections_are_returned_in_their_original_order():
+    detector, _ = detector_for([marker(3), marker(0), marker(1)])
+    assert [detection.marker_id for detection in detector.detect(FRAME, target())] == [3, 0, 1]
 
 
-@pytest.mark.parametrize("outlier", [False, True])
-def test_multipoint_pose_preserves_global_coordinates_and_rejects_outliers(outlier):
-    observed = marker(1, 5 / 13)
-    observed.object_points = np.vstack([square(0.8), square(0.5), square(0.3)])
-    observed.image_points = project(observed.object_points, [0.08, -0.04, 3.0])
-    if outlier:
-        observed.image_points[-1] += [40, -30]
+def test_level_changes_position_jumps_and_reacquisition_are_immediate():
+    detector, bridge = detector_for([])
+    for observed in [marker(), marker(3, translation=(0.4, -0.2, 0.5)), None, marker(1)]:
+        bridge.detect.return_value = SimpleNamespace(markers=[] if observed is None else [observed])
+        detections = detector.detect(FRAME, target())
+        if observed is None:
+            assert detections == []
+        else:
+            (detection,) = detections
+            assert detection.marker_id == observed.id
+            np.testing.assert_array_equal(detection.translation_vectors.reshape(3), observed.tvec.reshape(3))
+
+
+def test_bridge_detection_without_pose_keeps_its_corners_and_has_no_fallback_pose():
+    observed = marker(pose=False)
     detector, _ = detector_for([observed])
+
     (detection,) = detector.detect(FRAME, target())
-    np.testing.assert_allclose(detection.translation_vectors.reshape(3), [0.08, -0.04, 3.0], atol=1e-5)
+
+    np.testing.assert_array_equal(detection.corners.reshape(4, 2), observed.corners)
+    assert not detection.has_pose
+    assert detection.rotation_vectors is None
+    assert detection.translation_vectors is None
+    assert detection.reprojection_error_px is None
 
 
-def test_unknown_level_and_other_preset_are_ignored():
-    other = marker()
-    other.type = "FRACTAL_3L_6"
-    detector, _ = detector_for([marker(9), other])
-    assert detector.detect(FRAME, target()) == []
+def test_bridge_is_constructed_with_the_same_parameters_as_the_webcam_example(monkeypatch):
+    factory = Mock()
+    monkeypatch.setitem(sys.modules, "faruco_bridge", SimpleNamespace(Detector=factory))
+    calib = calibration()
+
+    FArUcoDetector(target(), calib)
+
+    factory.assert_called_once_with(
+        fractal_type="FRACTAL_5L_6",
+        marker_size_m=1.792,
+        camera_matrix=calib.camera_matrix,
+        dist_coeffs=calib.dist_coeffs,
+    )
 
 
-@pytest.mark.parametrize("case", ["tiny", "clipped", "nan", "collinear", "missing_points", "bad_points", "residual"])
-def test_unusable_geometry_is_not_reported_as_a_detection(case):
-    observed = marker()
-    if case == "tiny":
-        observed = marker(4, 1 / 39)
-    elif case == "clipped":
-        observed = marker(translation=(2.0, 0.0, 3.0))
-    elif case == "nan":
-        observed.corners[0, 0] = np.nan
-    elif case == "collinear":
-        observed.object_points[:, 1:] = 0
-    elif case == "missing_points":
-        observed.image_points = None
-    elif case == "bad_points":
-        observed.object_points[0, 0] = np.inf
-    elif case == "residual":
-        observed.image_points[0] += [15, -20]
-    detector, _ = detector_for([observed])
-    assert detector.detect(FRAME, target()) == []
-
-
-def test_solver_failure_does_not_expose_an_unsafe_outer_size_fallback(monkeypatch):
-    detector, _ = detector_for([marker(1, 5 / 13)])
-    monkeypatch.setattr(cv2, "solvePnP", lambda *args, **kwargs: (False, None, None))
-    assert detector.detect(FRAME, target()) == []
-
-
-def test_acquisition_and_level_changes_require_three_frames_and_can_skip_levels():
-    detector, bridge = detector_for([marker()], frames=3)
-    assert detector.detect(FRAME, target()) == []
-    assert detector.detect(FRAME, target()) == []
-    (outer,) = detector.detect(FRAME, target())
-    bridge.detect.return_value.markers = [marker(2, 7 / 39)]
-    assert detector.detect(FRAME, target()) == []
-    assert detector.detect(FRAME, target()) == []
-    (inner,) = detector.detect(FRAME, target())
-    assert outer.marker_id == 0 and inner.marker_id == 2
-    np.testing.assert_allclose(inner.translation_vectors, outer.translation_vectors, atol=1e-6)
-
-
-def test_interrupted_switch_resets_confirmation_and_never_replays_old_poses():
-    detector, bridge = detector_for([marker()], frames=2)
-    detector.detect(FRAME, target())
-    assert detector.detect(FRAME, target())
-    bridge.detect.return_value.markers = [marker(1, 5 / 13)]
-    assert detector.detect(FRAME, target()) == []
-    bridge.detect.return_value.markers = []
-    assert detector.detect(FRAME, target()) == []
-    bridge.detect.return_value.markers = [marker(1, 5 / 13)]
-    assert detector.detect(FRAME, target()) == []
-    assert detector.detect(FRAME, target())[0].marker_id == 1
-
-
-def test_current_observation_continues_while_a_better_level_is_confirmed():
-    detector, bridge = detector_for([marker(1, 5 / 13)], frames=2)
-    detector.detect(FRAME, target())
-    assert detector.detect(FRAME, target())[0].marker_id == 1
-    bridge.detect.return_value.markers = [marker(1, 5 / 13), marker()]
-    assert detector.detect(FRAME, target())[0].marker_id == 1
-    assert detector.detect(FRAME, target())[0].marker_id == 0
-
-
-def test_position_jump_is_rejected_then_reacquisition_is_possible_after_loss():
-    detector, bridge = detector_for([marker()], frames=2)
-    detector.detect(FRAME, target())
-    assert detector.detect(FRAME, target())
-    bridge.detect.return_value.markers = [marker(1, 5 / 13, translation=(0.08, -0.04, 1.5))]
-    assert detector.detect(FRAME, target()) == []
-    bridge.detect.return_value.markers = [marker()]
-    assert detector.detect(FRAME, target())
-    bridge.detect.return_value.markers = []
-    for _ in range(5):
-        assert detector.detect(FRAME, target()) == []
-    bridge.detect.return_value.markers = [marker(1, 5 / 13, translation=(0.08, -0.04, 1.5))]
-    assert detector.detect(FRAME, target()) == []
-    (detection,) = detector.detect(FRAME, target())
-    np.testing.assert_allclose(detection.translation_vectors.reshape(3), [0.08, -0.04, 1.5], atol=1e-6)
+def test_missing_optional_dependency_has_an_installation_message(monkeypatch):
+    monkeypatch.setitem(sys.modules, "faruco_bridge", None)
+    with pytest.raises(RuntimeError, match="poetry install --with faruco"):
+        FArUcoDetector(target(), calibration())
 
 
 def test_close_is_forwarded_to_bridge_worker():
@@ -206,3 +119,10 @@ def test_close_is_forwarded_to_bridge_worker():
 def test_unknown_root_id_is_rejected():
     with pytest.raises(ValueError, match="automatic tracking"):
         FArUcoDetector(TargetedMarker(7, 1.792, marker_type="faruco", fractal_type="FRACTAL_5L_6"), calibration())
+
+
+def test_changing_target_requires_a_new_detector():
+    detector, bridge = detector_for([])
+    with pytest.raises(ValueError, match="changing the target"):
+        detector.detect(FRAME, target("FRACTAL_3L_6"))
+    bridge.detect.assert_not_called()

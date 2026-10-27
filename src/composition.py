@@ -120,8 +120,10 @@ def build_tracking_service(
 ) -> TrackingService:
     if target.marker_type is MarkerType.FARUCO:
         detector = FArUcoDetector(target, calibration_data)
+        annotator = detector
     else:
         detector = OpenCVArucoDetector(detector_config or OpenCVArucoDetectorConfig(dictionary_id=target.dictionary))
+        annotator = OpenCVFrameAnnotator()
 
     return TrackingService(
         camera=camera,
@@ -129,7 +131,7 @@ def build_tracking_service(
         pose_estimator=OpenCVPoseEstimator(),
         target=target,
         calibration=calibration_data,
-        annotator=OpenCVFrameAnnotator(),
+        annotator=annotator,
         camera_mount=camera_mount,
     )
 

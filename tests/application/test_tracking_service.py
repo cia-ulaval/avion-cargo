@@ -201,10 +201,12 @@ def test_tracking_uses_detector_provided_faruco_pose_without_reestimating_from_o
     assert annotation["translation_vectors"] is translation_vectors
 
 
-def test_tracking_rejects_faruco_corners_without_a_metric_pose() -> None:
+def test_tracking_draws_faruco_corners_without_using_them_to_estimate_a_pose() -> None:
     detector = FakeDetector(detections=[MarkerDetection(marker_id=1, corners=np.zeros((1, 4, 2)))])
     estimator = Mock()
     annotator = Mock(spec=FrameAnnotator)
+    annotated_frame = np.full((12, 12, 3), 255, dtype=np.uint8)
+    annotator.annotate.return_value = annotated_frame
     service = TrackingService(
         camera=FakeCamera(np.zeros((12, 12, 3), dtype=np.uint8)),
         detector=detector,
@@ -214,8 +216,11 @@ def test_tracking_rejects_faruco_corners_without_a_metric_pose() -> None:
         annotator=annotator,
     )
 
-    _, result = service.track_target()
+    returned_frame, result = service.track_target()
 
     assert result.status is TrackingStatus.NOT_FOUND
+    assert returned_frame is annotated_frame
     estimator.estimate_pose.assert_not_called()
-    annotator.annotate.assert_not_called()
+    annotator.annotate.assert_called_once()
+    assert annotator.annotate.call_args.kwargs["rotation_vectors"] is None
+    assert annotator.annotate.call_args.kwargs["translation_vectors"] is None

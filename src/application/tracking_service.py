@@ -68,23 +68,19 @@ class TrackingService:
             marker_id, corners = detection
             detection = None
 
+        pose = None
+        rotation_vectors = None
+        translation_vectors = None
         if detection is not None and detection.has_pose:
-            # The detector has already estimated a pose in the common target
-            # frame, including the scale of any visible inner fractal level.
+            # Use the detector's pose directly.
             rotation_vectors = detection.rotation_vectors
             translation_vectors = detection.translation_vectors
             x, y, z = np.asarray(translation_vectors).reshape(-1)[:3]
             pose = Pose3D(x=float(x), y=float(y), z=float(z))
-        elif self.target.requires_detector_pose:
-            # An inner contour must never be reinterpreted as an outer square.
-            return frame, TrackingResult.not_found(captured_at_s=captured_at_s)
-        else:
+        elif not self.target.requires_detector_pose:
             pose, rotation_vectors, translation_vectors = self.pose_estimator.estimate_pose(
                 corners=corners, marker_length_m=self.target.length, calib=self.calibration, center=True
             )
-        if pose.z <= 0:
-            return frame, TrackingResult.not_found(captured_at_s=captured_at_s)
-
         frame = self.annotator.annotate(
             frame,
             marker_id=marker_id,
@@ -93,6 +89,8 @@ class TrackingService:
             rotation_vectors=rotation_vectors,
             translation_vectors=translation_vectors,
         )
+        if pose is None or pose.z <= 0:
+            return frame, TrackingResult.not_found(captured_at_s=captured_at_s)
 
         return frame, TrackingResult.detected(
             pose=pose, marker_id=marker_id, uav_pose=self._to_uav_pose(pose), captured_at_s=captured_at_s
