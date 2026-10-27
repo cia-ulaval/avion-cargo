@@ -16,6 +16,30 @@ def test_validator_accepts_a_coherent_udp_configuration_with_relative_calibratio
     ConfigurationValidator(config_path).validate()
 
 
+@pytest.mark.parametrize(
+    "key,value",
+    [
+        ("timeout", 0),
+        ("timeout", -1),
+        ("timeout", float("nan")),
+        ("timeout", float("inf")),
+        ("timeout", True),
+        ("timeout", "10"),
+        ("timeout", None),
+        ("fail_on_timeout", "false"),
+        ("fail_on_timeout", 0),
+        ("fail_on_timeout", None),
+    ],
+)
+def test_validator_rejects_invalid_fc_timeout_settings(tmp_path, valid_config_data, key, value):
+    valid_config_data["drone_connection"][key] = value
+
+    with pytest.raises(ValidationError) as error:
+        ConfigurationValidator(write_config(tmp_path, valid_config_data)).validate()
+
+    assert error.value.path == f"drone_connection.{key}"
+
+
 def test_validator_rejects_serial_configuration_that_still_uses_a_network_port(
     tmp_path: Path,
     valid_config_data: dict,

@@ -68,13 +68,22 @@ class DroneMavlinkBase(Drone):
             try:
                 self._init_mavlink_connection()
                 self._configure_mavlink2()
-                self._wait_for_heartbeat()
+                heartbeat_received = self._wait_for_heartbeat()
                 self._send_heartbeat()
-                self._request_status_streams()
-                self._link_was_alive = True
-                logger.info(
-                    "MAVLink autopilot connected: system {}, component {}", self._target_system, self._target_component
-                )
+                if heartbeat_received:
+                    self._request_status_streams()
+                    self._link_was_alive = True
+                    logger.info(
+                        "MAVLink autopilot connected: system {}, component {}",
+                        self._target_system,
+                        self._target_component,
+                    )
+                else:
+                    logger.warning(
+                        "No autopilot heartbeat within {}s; continuing without FC (fail_on_timeout=false). "
+                        "MAVLink discovery remains active",
+                        self.parameters.timeout,
+                    )
             except BaseException:
                 try:
                     self.close()
@@ -163,7 +172,10 @@ class DroneMavlinkBase(Drone):
             received_message = self.connection.recv_match(blocking=False)
             if received_message is None:
                 break
-            if self._is_from_autopilot(received_message):
+            if self._target_system is None:
+                if self._accept_autopilot_heartbeat(received_message):
+                    self._request_status_streams()
+            elif self._is_from_autopilot(received_message):
                 self._handle_message(received_message)
             if time.monotonic() >= deadline:
                 break
@@ -238,23 +250,30 @@ class DroneMavlinkBase(Drone):
         )
         self._last_sent_heartbeat_s = time.monotonic()
 
-    def _wait_for_heartbeat(self):
+    def _accept_autopilot_heartbeat(self, message) -> bool:
+        if (
+            message.get_type() != "HEARTBEAT"
+            or message.autopilot == mavlink2.MAV_AUTOPILOT_INVALID
+            or message.type in (mavlink2.MAV_TYPE_GCS, mavlink2.MAV_TYPE_ONBOARD_CONTROLLER)
+            or message.get_srcSystem() == 0
+        ):
+            return False
+        self._target_system = message.get_srcSystem()
+        self._target_component = message.get_srcComponent()
+        self.connection.target_system = self._target_system
+        self.connection.target_component = self._target_component
+        self._handle_message(message)
+        return True
+
+    def _wait_for_heartbeat(self) -> bool:
         self._require_connected()
         deadline = time.monotonic() + self.parameters.timeout
         while time.monotonic() < deadline:
             message = self.connection.recv_match(blocking=True, timeout=min(0.2, max(0, deadline - time.monotonic())))
-            if message is None or message.get_type() != "HEARTBEAT":
-                continue
-            if (
-                message.autopilot == mavlink2.MAV_AUTOPILOT_INVALID
-                or message.type in (mavlink2.MAV_TYPE_GCS, mavlink2.MAV_TYPE_ONBOARD_CONTROLLER)
-                or message.get_srcSystem() == 0
-            ):
-                continue
-            self._target_system = message.get_srcSystem()
-            self._target_component = message.get_srcComponent()
-            self.connection.target_system = self._target_system
-            self.connection.target_component = self._target_component
-            self._handle_message(message)
-            return
-        raise TimeoutError(f"No autopilot heartbeat from {self.parameters.address} within {self.parameters.timeout}s")
+            if message is not None and self._accept_autopilot_heartbeat(message):
+                return True
+        if self.parameters.fail_on_timeout:
+            raise TimeoutError(
+                f"No autopilot heartbeat from {self.parameters.address} within {self.parameters.timeout}s"
+            )
+        return False

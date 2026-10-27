@@ -154,4 +154,6 @@ class AutolanderConfigurationReader:
             address=address,
             port=port,
             baud_rate=baud_rate,
+            timeout=float(dc.get("timeout", 10.0)),
+            fail_on_timeout=dc.get("fail_on_timeout", True),
         )

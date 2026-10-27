@@ -1,0 +1,10 @@
+services:
+  dev:
+    environment:
+      AVION_WORLD: /workspace/avion-cargo/simulation/worlds/tricopter_full_mission.sdf
+      AVION_SITL_VEHICLE: ArduPlane
+      AVION_SITL_FRAME: quadplane-tilttrivec
+      AVION_SITL_MODEL: JSON
+      AVION_SITL_PARAM_FILE: /workspace/avion-cargo/simulation/config/tricopter-vtol.parm
+      AVION_IMAGE_TOPIC: /world/iris_runway/model/tricopter_vtol/link/main_frame/sensor/downward_camera/image
+      AVION_AUTOLANDER_CONFIG: /workspace/avion-cargo/simulation/config/autolanding_config_tricopter_vtol.json

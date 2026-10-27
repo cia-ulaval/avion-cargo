@@ -76,7 +76,8 @@ RUN set -eux; \
     cd /home/dev/ardupilot; \
     Tools/environment_install/install-prereqs-ubuntu.sh -y; \
     ./waf configure --board sitl --debug; \
-    ./waf copter -j2
+    ./waf copter -j2; \
+    ./waf plane -j2
 
 RUN set -eux; \
     ARDUPILOT_GAZEBO_REF="$(sed -n 's/^ardupilot_gazebo=//p' /tmp/versions.txt)"; \
@@ -119,9 +120,13 @@ cd /home/dev/ardupilot
 
 VEHICLE="${AVION_SITL_VEHICLE:-ArduCopter}"
 FRAME="${AVION_SITL_FRAME:-JSON}"
+MODEL="${AVION_SITL_MODEL:-}"
 PARAM_FILE="${AVION_SITL_PARAM_FILE-/workspace/avion-cargo/simulation/config/gazebo-iris-gimbal.parm}"
 
 args=(-D -v "$VEHICLE" -f "$FRAME")
+if [[ -n "$MODEL" ]]; then
+  args+=(--model "$MODEL")
+fi
 
 if [[ -n "$PARAM_FILE" ]]; then
   args+=("--add-param-file=$PARAM_FILE")

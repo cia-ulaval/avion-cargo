@@ -1,15 +1,18 @@
 """Exercise UDP bytes against an in-process fake ArduPilot, not a firmware."""
 
 import socket
+import time
 from threading import Event, Thread
 
+import pytest
 from pymavlink.dialects.v20 import ardupilotmega as mavlink2
 
 from domain.models import Pose3D
 from infrastructure.communication.mavlink import DroneMavlinkUDPConnector, MavlinkConnectionParams
 
 
-def test_udp_publishes_target_without_changing_flight_mode():
+@pytest.mark.parametrize("late_connection", [False, True])
+def test_udp_publishes_target_without_changing_flight_mode(late_connection):
     with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as reservation:
         reservation.bind(("127.0.0.1", 0))
         port = reservation.getsockname()[1]
@@ -52,11 +55,23 @@ def test_udp_publishes_target_without_changing_flight_mode():
         except Exception as error:
             errors.append(error)
 
-    drone = DroneMavlinkUDPConnector(MavlinkConnectionParams("127.0.0.1", port, timeout=2))
+    drone = DroneMavlinkUDPConnector(
+        MavlinkConnectionParams(
+            "127.0.0.1", port, timeout=0.05 if late_connection else 2, fail_on_timeout=not late_connection
+        )
+    )
     thread = Thread(target=autopilot, daemon=True)
-    thread.start()
     try:
-        drone.connect()
+        if late_connection:
+            drone.connect()
+            assert not drone.get_status().connected
+            thread.start()
+            deadline = time.monotonic() + 2
+            while not drone.get_status().connected and time.monotonic() < deadline:
+                stop.wait(0.01)
+        else:
+            thread.start()
+            drone.connect()
         assert drone.get_status().connected
         drone.send_landing_target(Pose3D(0.5, -0.25, 2), (0.4, 0.4))
         assert target_received.wait(2)
@@ -67,7 +82,8 @@ def test_udp_publishes_target_without_changing_flight_mode():
     finally:
         drone.close()
         stop.set()
-        thread.join(2)
+        if thread.ident is not None:
+            thread.join(2)
         controller.close()
     assert not thread.is_alive()
     assert not errors

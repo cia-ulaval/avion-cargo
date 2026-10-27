@@ -26,6 +26,8 @@
     "use_serial": true,
     "address": "/dev/serial0",
     "port": null,
-    "baud_rate": 921600
+    "baud_rate": 921600,
+    "timeout": 10.0,
+    "fail_on_timeout": true
   }
 }

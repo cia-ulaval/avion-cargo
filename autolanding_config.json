@@ -29,6 +29,8 @@
     "use_serial": false,
     "address": "127.0.0.1",
     "port": 14550,
-    "baud_rate": 921600
+    "baud_rate": 921600,
+    "timeout": 10.0,
+    "fail_on_timeout": true
   }
 }
