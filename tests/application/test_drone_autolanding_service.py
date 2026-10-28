@@ -260,3 +260,50 @@ def test_publication_continues_for_minutes_without_target_or_after_target_loss(
     assert drone.get_status.call_count == 12
     assert service.drone_status_buffer.set_value.call_count == 12
     assert drone.target_messages == [(pose, (0.896, 0.896))] * len(visible_cycles)
+
+
+def test_transient_camera_timeout_clears_target_and_recovers(sample_drone_status):
+    service = build_service(FakeDrone(sample_drone_status()))
+    frame = np.zeros((2, 2, 3), dtype=np.uint8)
+    pose = Pose3D(0.1, 0.2, 1.0)
+    recovered_result = type(
+        "TrackingResultStub",
+        (),
+        {
+            "status": type("Status", (), {"name": "DETECTED"})(),
+            "captured_at_s": 12.0,
+            "pose": pose,
+            "uav_pose": pose,
+            "to_dict": lambda self: {
+                "status": 1,
+                "marker_id": 29,
+                "poses": {
+                    "estimated_pose_from_camera": {"x": 0.1, "y": 0.2, "z": 1.0},
+                    "estimated_pose_to_uav": {"x": 0.1, "y": 0.2, "z": 1.0},
+                },
+            },
+        },
+    )()
+    service.aruco_tracker.track_target = Mock(side_effect=[TimeoutError("no fresh frame"), (frame, recovered_result)])
+    service._tracking_started = True
+    waits = 0
+
+    def wait_for_next_frame(_delay):
+        nonlocal waits
+        waits += 1
+        if waits == 2:
+            service._tracking_started = False
+
+    service._stop_event.wait = Mock(side_effect=wait_for_next_frame)
+
+    service._tracking_target_loop()
+
+    assert service.aruco_tracker.track_target.call_count == 2
+    first_metadata = service.frame_buffer.set_value.call_args_list[0].args[1]
+    assert first_metadata["camera_state"] == "STALE"
+    assert first_metadata["poses"]["estimated_pose_to_uav"] is None
+    service.pose_buffer.set_value.assert_any_call(None)
+    service.pose_buffer.set_uav_pose_value.assert_any_call(None)
+    recovered_metadata = service.frame_buffer.set_value.call_args_list[1].args[1]
+    assert recovered_metadata["camera_state"] == "OK"
+    service.pose_buffer.set_uav_pose_value.assert_called_with(pose, timestamp=12.0)

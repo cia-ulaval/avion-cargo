@@ -1,0 +1,1031 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<sdf version="1.9">
+    <model name="tricopter_vtol">
+        <!-- Updated provisional physics: total link mass 1.590 kg; CAD inertia figures treated as kg*m^2 because literal lbm*ft^2 conversion conflicts with the supplied component mass/position data. Wing half-area estimated from level-flight CL point; validate against CAD and Gazebo tests. -->
+        <static>false</static>
+        <self_collide>false</self_collide>
+        <link name="main_frame">
+            <pose>0 0 0 0 0 0</pose>
+            <gravity>true</gravity>
+            <inertial>
+                <pose>-0.00253977 7.45545e-07 -0.00598538 0 0 0</pose>
+                <mass>1.403</mass>
+                <inertia>
+                    <ixx>0.00634438365</ixx>
+                    <iyy>0.00471196226</iyy>
+                    <izz>0.010694566</izz>
+                    <ixy>0</ixy>
+                    <ixz>-0.000226523392</ixz>
+                    <iyz>0</iyz>
+                </inertia>
+            </inertial>
+            <collision name="main_frame_collision">
+                <pose>0 0 0 0 0 0</pose>
+                <geometry>
+                    <mesh>
+                        <uri>meshes/main-frame.obj</uri>
+                        <scale>0.1 0.1 0.1</scale>
+                    </mesh>
+                </geometry>
+            </collision>
+            <visual name="main_frame_visual">
+                <pose>0 0 0 0 0 0</pose>
+                <geometry>
+                    <mesh>
+                        <uri>meshes/main-frame.obj</uri>
+                        <scale>0.1 0.1 0.1</scale>
+                    </mesh>
+                </geometry>
+            </visual>
+            <sensor name="imu_sensor" type="imu">
+                <pose degrees="true">0 0 0 180 0 0</pose>
+                <always_on>true</always_on>
+                <update_rate>1000</update_rate>
+                <visualize>false</visualize>
+            </sensor>
+            <sensor name="sonar" type="gpu_lidar">
+                <pose>-0.193178 0 0.0076394 0 1.57079632679 0</pose>
+                <always_on>true</always_on>
+                <update_rate>20</update_rate>
+                <visualize>false</visualize>
+                <topic>/model/tricopter_vtol/sonar/scan</topic>
+                <lidar>
+                    <scan>
+                        <horizontal>
+                            <samples>1</samples>
+                            <resolution>1</resolution>
+                            <min_angle>0</min_angle>
+                            <max_angle>0</max_angle>
+                        </horizontal>
+                        <vertical>
+                            <samples>1</samples>
+                            <resolution>1</resolution>
+                            <min_angle>0</min_angle>
+                            <max_angle>0</max_angle>
+                        </vertical>
+                    </scan>
+                    <range>
+                        <min>0.10</min>
+                        <max>40.0</max>
+                        <resolution>0.01</resolution>
+                    </range>
+                </lidar>
+            </sensor>
+            <sensor name="downward_camera" type="camera">
+                <gz_frame_id>main_frame</gz_frame_id>
+                <pose>0.214822 0 -0.0337606 0 1.57079632679 0</pose>
+                <camera>
+                    <image>
+                        <width>640</width>
+                        <height>480</height>
+                        <format>R8G8B8</format>
+                    </image>
+                    <clip>
+                        <near>0.05</near>
+                        <far>15000</far>
+                    </clip>
+                    <horizontal_fov>0.9801124751</horizontal_fov>
+                    <distortion>
+                        <k1>0.17302056</k1>
+                        <k2>-0.64690950</k2>
+                        <k3>0.82928460</k3>
+                        <p1>-0.00210671</p1>
+                        <p2>0.00108887</p2>
+                        <center>0.49125875 0.49342793</center>
+                    </distortion>
+                    <lens>
+                        <intrinsics>
+                            <fx>599.85709968</fx>
+                            <fy>601.32346767</fy>
+                            <cx>314.40559965</cx>
+                            <cy>236.84540631</cy>
+                            <s>0.0</s>
+                        </intrinsics>
+                    </lens>
+                </camera>
+                <always_on>1</always_on>
+                <update_rate>30</update_rate>
+                <visualize>1</visualize>
+                <plugin filename="CameraZoomPlugin" name="CameraZoomPlugin">
+                    <max_zoom>125.0</max_zoom>
+                    <slew_rate>0.42514285714</slew_rate>
+                </plugin>
+                <plugin name="GstCameraPlugin" filename="GstCameraPlugin">
+                    <udp_host>127.0.0.1</udp_host>
+                    <udp_port>5600</udp_port>
+                    <use_basic_pipeline>true</use_basic_pipeline>
+                    <use_cuda>false</use_cuda>
+                </plugin>
+            </sensor>
+        </link>
+        <link name="left_tilt_mount">
+            <pose>0.0685426 0.1409 0.0511394 0 0 0</pose>
+            <gravity>true</gravity>
+            <inertial>
+                <mass>0.042</mass>
+                <inertia>
+                    <ixx>2.4e-05</ixx>
+                    <iyy>4.8e-05</iyy>
+                    <izz>4.8e-05</izz>
+                    <ixy>0</ixy>
+                    <ixz>0</ixz>
+                    <iyz>0</iyz>
+                </inertia>
+            </inertial>
+            <collision name="left_tilt_mount_collision">
+                <pose>-0.0685426 -0.1409 -0.0511394 0 0 0</pose>
+                <geometry>
+                    <mesh>
+                        <uri>meshes/left-tilt-mount.obj</uri>
+                        <scale>0.1 0.1 0.1</scale>
+                    </mesh>
+                </geometry>
+            </collision>
+            <visual name="left_tilt_mount_visual">
+                <pose>-0.0685426 -0.1409 -0.0511394 0 0 0</pose>
+                <geometry>
+                    <mesh>
+                        <uri>meshes/left-tilt-mount.obj</uri>
+                        <scale>0.1 0.1 0.1</scale>
+                    </mesh>
+                </geometry>
+            </visual>
+        </link>
+        <link name="right_tilt_mount">
+            <pose>0.0685426 -0.1409 0.0511394 0 0 0</pose>
+            <gravity>true</gravity>
+            <inertial>
+                <mass>0.042</mass>
+                <inertia>
+                    <ixx>2.4e-05</ixx>
+                    <iyy>4.8e-05</iyy>
+                    <izz>4.8e-05</izz>
+                    <ixy>0</ixy>
+                    <ixz>0</ixz>
+                    <iyz>0</iyz>
+                </inertia>
+            </inertial>
+            <collision name="right_tilt_mount_collision">
+                <pose>-0.0685426 0.1409 -0.0511394 0 0 0</pose>
+                <geometry>
+                    <mesh>
+                        <uri>meshes/right-tilt-mount.obj</uri>
+                        <scale>0.1 0.1 0.1</scale>
+                    </mesh>
+                </geometry>
+            </collision>
+            <visual name="right_tilt_mount_visual">
+                <pose>-0.0685426 0.1409 -0.0511394 0 0 0</pose>
+                <geometry>
+                    <mesh>
+                        <uri>meshes/right-tilt-mount.obj</uri>
+                        <scale>0.1 0.1 0.1</scale>
+                    </mesh>
+                </geometry>
+            </visual>
+        </link>
+        <link name="left_propeller">
+            <pose>0.105481 0.140898 0.0516861 0 0 0</pose>
+            <gravity>true</gravity>
+            <inertial>
+                <mass>0.015</mass>
+                <inertia>
+                    <ixx>0.00012</ixx>
+                    <iyy>6e-05</iyy>
+                    <izz>6e-05</izz>
+                    <ixy>0</ixy>
+                    <ixz>0</ixz>
+                    <iyz>0</iyz>
+                </inertia>
+            </inertial>
+            <collision name="left_propeller_collision">
+                <pose>-0.105481 -0.140898 -0.0516861 0 0 0</pose>
+                <geometry>
+                    <mesh>
+                        <uri>meshes/left-propeller.obj</uri>
+                        <scale>0.1 0.1 0.1</scale>
+                    </mesh>
+                </geometry>
+            </collision>
+            <visual name="left_propeller_visual">
+                <pose>-0.105481 -0.140898 -0.0516861 0 0 0</pose>
+                <geometry>
+                    <mesh>
+                        <uri>meshes/left-propeller.obj</uri>
+                        <scale>0.1 0.1 0.1</scale>
+                    </mesh>
+                </geometry>
+            </visual>
+        </link>
+        <link name="right_propeller">
+            <pose>0.105481 -0.140897 0.0516861 0 0 0</pose>
+            <gravity>true</gravity>
+            <inertial>
+                <mass>0.015</mass>
+                <inertia>
+                    <ixx>0.00012</ixx>
+                    <iyy>6e-05</iyy>
+                    <izz>6e-05</izz>
+                    <ixy>0</ixy>
+                    <ixz>0</ixz>
+                    <iyz>0</iyz>
+                </inertia>
+            </inertial>
+            <collision name="right_propeller_collision">
+                <pose>-0.105481 0.140897 -0.0516861 0 0 0</pose>
+                <geometry>
+                    <mesh>
+                        <uri>meshes/right-propeller.obj</uri>
+                        <scale>0.1 0.1 0.1</scale>
+                    </mesh>
+                </geometry>
+            </collision>
+            <visual name="right_propeller_visual">
+                <pose>-0.105481 0.140897 -0.0516861 0 0 0</pose>
+                <geometry>
+                    <mesh>
+                        <uri>meshes/right-propeller.obj</uri>
+                        <scale>0.1 0.1 0.1</scale>
+                    </mesh>
+                </geometry>
+            </visual>
+        </link>
+        <link name="back_propeller">
+            <pose>-0.19343 0 0.0632816 0 0 0</pose>
+            <gravity>true</gravity>
+            <inertial>
+                <mass>0.015</mass>
+                <inertia>
+                    <ixx>6e-05</ixx>
+                    <iyy>6e-05</iyy>
+                    <izz>0.00012</izz>
+                    <ixy>0</ixy>
+                    <ixz>0</ixz>
+                    <iyz>0</iyz>
+                </inertia>
+            </inertial>
+            <collision name="back_propeller_collision">
+                <pose>0.19343 0 -0.0632816 0 0 0</pose>
+                <geometry>
+                    <mesh>
+                        <uri>meshes/back-propeller.obj</uri>
+                        <scale>0.1 0.1 0.1</scale>
+                    </mesh>
+                </geometry>
+            </collision>
+            <visual name="back_propeller_visual">
+                <pose>0.19343 0 -0.0632816 0 0 0</pose>
+                <geometry>
+                    <mesh>
+                        <uri>meshes/back-propeller.obj</uri>
+                        <scale>0.1 0.1 0.1</scale>
+                    </mesh>
+                </geometry>
+            </visual>
+        </link>
+        <link name="left_flap">
+            <pose>-0.0918776 0.2095 0.0320133 0 0 0</pose>
+            <gravity>true</gravity>
+            <inertial>
+                <mass>0.007</mass>
+                <inertia>
+                    <ixx>2.33333333e-05</ixx>
+                    <iyy>5.83333333e-06</iyy>
+                    <izz>2.33333333e-05</izz>
+                    <ixy>0</ixy>
+                    <ixz>0</ixz>
+                    <iyz>0</iyz>
+                </inertia>
+            </inertial>
+            <collision name="left_flap_collision">
+                <pose>0.0918776 -0.2095 -0.0320133 0 0 0</pose>
+                <geometry>
+                    <mesh>
+                        <uri>meshes/left-flap.obj</uri>
+                        <scale>0.1 0.1 0.1</scale>
+                    </mesh>
+                </geometry>
+            </collision>
+            <visual name="left_flap_visual">
+                <pose>0.0918776 -0.2095 -0.0320133 0 0 0</pose>
+                <geometry>
+                    <mesh>
+                        <uri>meshes/left-flap.obj</uri>
+                        <scale>0.1 0.1 0.1</scale>
+                    </mesh>
+                </geometry>
+            </visual>
+        </link>
+        <link name="right_flap">
+            <pose>-0.0918776 -0.2095 0.0320133 0 0 0</pose>
+            <gravity>true</gravity>
+            <inertial>
+                <mass>0.007</mass>
+                <inertia>
+                    <ixx>2.33333333e-05</ixx>
+                    <iyy>5.83333333e-06</iyy>
+                    <izz>2.33333333e-05</izz>
+                    <ixy>0</ixy>
+                    <ixz>0</ixz>
+                    <iyz>0</iyz>
+                </inertia>
+            </inertial>
+            <collision name="right_flap_collision">
+                <pose>0.0918776 0.2095 -0.0320133 0 0 0</pose>
+                <geometry>
+                    <mesh>
+                        <uri>meshes/right-flap.obj</uri>
+                        <scale>0.1 0.1 0.1</scale>
+                    </mesh>
+                </geometry>
+            </collision>
+            <visual name="right_flap_visual">
+                <pose>0.0918776 0.2095 -0.0320133 0 0 0</pose>
+                <geometry>
+                    <mesh>
+                        <uri>meshes/right-flap.obj</uri>
+                        <scale>0.1 0.1 0.1</scale>
+                    </mesh>
+                </geometry>
+            </visual>
+        </link>
+        <link name="back_flap">
+            <pose>-0.361445 0 0.0477911 0 0 0</pose>
+            <gravity>true</gravity>
+            <inertial>
+                <mass>0.014</mass>
+                <inertia>
+                    <ixx>8.505e-05</ixx>
+                    <iyy>2.766e-06</iyy>
+                    <izz>8.779e-05</izz>
+                    <ixy>0</ixy>
+                    <ixz>1.684e-07</ixz>
+                    <iyz>0</iyz>
+                </inertia>
+            </inertial>
+            <collision name="back_flap_collision">
+                <pose>0.361445 0 -0.0477911 0 0 0</pose>
+                <geometry>
+                    <mesh>
+                        <uri>meshes/back-flap.obj</uri>
+                        <scale>0.1 0.1 0.1</scale>
+                    </mesh>
+                </geometry>
+            </collision>
+            <visual name="back_flap_visual">
+                <pose>0.361445 0 -0.0477911 0 0 0</pose>
+                <geometry>
+                    <mesh>
+                        <uri>meshes/back-flap.obj</uri>
+                        <scale>0.1 0.1 0.1</scale>
+                    </mesh>
+                </geometry>
+            </visual>
+        </link>
+        <link name="steer_frame">
+            <pose>0.155522 0 -0.0718702 0 0 0</pose>
+            <gravity>true</gravity>
+            <inertial>
+                <mass>0.01</mass>
+                <inertia>
+                    <ixx>1.6e-05</ixx>
+                    <iyy>1.6e-05</iyy>
+                    <izz>2.4e-05</izz>
+                    <ixy>0</ixy>
+                    <ixz>0</ixz>
+                    <iyz>0</iyz>
+                </inertia>
+            </inertial>
+            <collision name="steer_frame_collision">
+                <pose>-0.155522 0 0.0718702 0 0 0</pose>
+                <geometry>
+                    <mesh>
+                        <uri>meshes/steer-frame.obj</uri>
+                        <scale>0.1 0.1 0.1</scale>
+                    </mesh>
+                </geometry>
+            </collision>
+            <visual name="steer_frame_visual">
+                <pose>-0.155522 0 0.0718702 0 0 0</pose>
+                <geometry>
+                    <mesh>
+                        <uri>meshes/steer-frame.obj</uri>
+                        <scale>0.1 0.1 0.1</scale>
+                    </mesh>
+                </geometry>
+            </visual>
+        </link>
+        <link name="front_left_wheel">
+            <pose relative_to="steer_frame">0 0.0555 -0.032 0 0 0</pose>
+            <gravity>true</gravity>
+            <inertial>
+                <mass>0.005</mass>
+                <inertia>
+                    <ixx>1.3e-06</ixx>
+                    <iyy>2.26666667e-06</iyy>
+                    <izz>1.3e-06</izz>
+                    <ixy>0</ixy>
+                    <ixz>0</ixz>
+                    <iyz>0</iyz>
+                </inertia>
+            </inertial>
+            <collision name="front_left_wheel_collision">
+                <pose>0 0 0 1.57079632679 0 0</pose>
+                <geometry><cylinder><radius>0.03</radius><length>0.021</length></cylinder></geometry>
+            </collision>
+            <visual name="front_left_wheel_visual">
+                <pose>-0.1555225 -0.0555 0.1038702 0 0 0</pose>
+                <geometry>
+                    <mesh><uri>meshes/front-left-wheel.obj</uri><scale>0.1 0.1 0.1</scale></mesh>
+                </geometry>
+            </visual>
+        </link>
+        <link name="front_right_wheel">
+            <pose relative_to="steer_frame">0 -0.0554999 -0.032 0 0 0</pose>
+            <gravity>true</gravity>
+            <inertial>
+                <mass>0.005</mass>
+                <inertia>
+                    <ixx>1.3e-06</ixx>
+                    <iyy>2.26666667e-06</iyy>
+                    <izz>1.3e-06</izz>
+                    <ixy>0</ixy>
+                    <ixz>0</ixz>
+                    <iyz>0</iyz>
+                </inertia>
+            </inertial>
+            <collision name="front_right_wheel_collision">
+                <pose>0 0 0 1.57079632679 0 0</pose>
+                <geometry><cylinder><radius>0.03</radius><length>0.021</length></cylinder></geometry>
+            </collision>
+            <visual name="front_right_wheel_visual">
+                <pose>-0.1555225 0.0554999 0.1038702 0 0 0</pose>
+                <geometry>
+                    <mesh><uri>meshes/front-right-wheel.obj</uri><scale>0.1 0.1 0.1</scale></mesh>
+                </geometry>
+            </visual>
+        </link>
+        <link name="back_left_wheel">
+            <pose relative_to="main_frame">-0.1369271 0.1348937 -0.1012611 0 0 0</pose>
+            <gravity>true</gravity>
+            <inertial>
+                <mass>0.005</mass>
+                <inertia>
+                    <ixx>1.3e-06</ixx>
+                    <iyy>2.26666667e-06</iyy>
+                    <izz>1.3e-06</izz>
+                    <ixy>0</ixy>
+                    <ixz>0</ixz>
+                    <iyz>0</iyz>
+                </inertia>
+            </inertial>
+            <collision name="back_left_wheel_collision">
+                <pose>0 0 0 1.57079632679 0 0</pose>
+                <geometry><cylinder><radius>0.03</radius><length>0.021</length></cylinder></geometry>
+            </collision>
+            <visual name="back_left_wheel_visual">
+                <pose>0.1369271 -0.1348937 0.1012611 0 0 0</pose>
+                <geometry>
+                    <mesh><uri>meshes/back-left-wheel.obj</uri><scale>0.1 0.1 0.1</scale></mesh>
+                </geometry>
+            </visual>
+        </link>
+        <link name="back_right_wheel">
+            <pose relative_to="main_frame">-0.1369271 -0.135106 -0.1012611 0 0 0</pose>
+            <gravity>true</gravity>
+            <inertial>
+                <mass>0.005</mass>
+                <inertia>
+                    <ixx>1.3e-06</ixx>
+                    <iyy>2.26666667e-06</iyy>
+                    <izz>1.3e-06</izz>
+                    <ixy>0</ixy>
+                    <ixz>0</ixz>
+                    <iyz>0</iyz>
+                </inertia>
+            </inertial>
+            <collision name="back_right_wheel_collision">
+                <pose>0 0 0 1.57079632679 0 0</pose>
+                <geometry><cylinder><radius>0.03</radius><length>0.021</length></cylinder></geometry>
+            </collision>
+            <visual name="back_right_wheel_visual">
+                <pose>0.1369271 0.135106 0.1012611 0 0 0</pose>
+                <geometry>
+                    <mesh><uri>meshes/back-right-wheel.obj</uri><scale>0.1 0.1 0.1</scale></mesh>
+                </geometry>
+            </visual>
+        </link>
+
+        <joint name="front_steering_joint" type="revolute">
+            <pose relative_to="main_frame">0.155522 0 -0.0718702 0 0 0</pose>
+            <parent>main_frame</parent>
+            <child>steer_frame</child>
+            <axis>
+                <xyz>0 0 1</xyz>
+                <limit><lower>-0.5235987756</lower><upper>0.5235987756</upper><effort>10</effort><velocity>2</velocity></limit>
+                <dynamics><damping>0.05</damping></dynamics>
+            </axis>
+        </joint>
+        <joint name="front_left_wheel_joint" type="revolute">
+            <pose relative_to="steer_frame">0 0.0555 -0.032 0 0 0</pose>
+            <parent>steer_frame</parent>
+            <child>front_left_wheel</child>
+            <axis>
+                <xyz>0 1 0</xyz>
+                <limit><lower>-1000000</lower><upper>1000000</upper><effort>10</effort><velocity>100</velocity></limit>
+                <dynamics><damping>0.001</damping></dynamics>
+            </axis>
+        </joint>
+        <joint name="front_right_wheel_joint" type="revolute">
+            <pose relative_to="steer_frame">0 -0.0554999 -0.032 0 0 0</pose>
+            <parent>steer_frame</parent>
+            <child>front_right_wheel</child>
+            <axis>
+                <xyz>0 1 0</xyz>
+                <limit><lower>-1000000</lower><upper>1000000</upper><effort>10</effort><velocity>100</velocity></limit>
+                <dynamics><damping>0.001</damping></dynamics>
+            </axis>
+        </joint>
+        <joint name="back_left_wheel_joint" type="revolute">
+            <pose relative_to="main_frame">-0.1369271 0.1348937 -0.1012611 0 0 0</pose>
+            <parent>main_frame</parent>
+            <child>back_left_wheel</child>
+            <axis>
+                <xyz>0 1 0</xyz>
+                <limit><lower>-1000000</lower><upper>1000000</upper><effort>10</effort><velocity>100</velocity></limit>
+                <dynamics><damping>0.001</damping></dynamics>
+            </axis>
+        </joint>
+        <joint name="back_right_wheel_joint" type="revolute">
+            <pose relative_to="main_frame">-0.1369271 -0.135106 -0.1012611 0 0 0</pose>
+            <parent>main_frame</parent>
+            <child>back_right_wheel</child>
+            <axis>
+                <xyz>0 1 0</xyz>
+                <limit><lower>-1000000</lower><upper>1000000</upper><effort>10</effort><velocity>100</velocity></limit>
+                <dynamics><damping>0.001</damping></dynamics>
+            </axis>
+        </joint>
+
+        <joint name="left_tilt_joint" type="revolute">
+            <pose relative_to="main_frame">0.0685426 0.1409 0.0511394 0 0 0</pose>
+            <parent>main_frame</parent>
+            <child>left_tilt_mount</child>
+            <axis>
+                <xyz>0 -1 0</xyz>
+                <limit>
+                    <lower>0</lower>
+                    <upper>1.88495559215</upper>
+                    <effort>10</effort>
+                    <velocity>2</velocity>
+                </limit>
+                <dynamics>
+                    <damping>0.05</damping>
+                </dynamics>
+            </axis>
+        </joint>
+        <joint name="right_tilt_joint" type="revolute">
+            <pose relative_to="main_frame">0.0685426 -0.1409 0.0511394 0 0 0</pose>
+            <parent>main_frame</parent>
+            <child>right_tilt_mount</child>
+            <axis>
+                <xyz>0 -1 0</xyz>
+                <limit>
+                    <lower>0</lower>
+                    <upper>1.88495559215</upper>
+                    <effort>10</effort>
+                    <velocity>2</velocity>
+                </limit>
+                <dynamics>
+                    <damping>0.05</damping>
+                </dynamics>
+            </axis>
+        </joint>
+        <joint name="left_propeller_joint" type="revolute">
+            <pose relative_to="left_tilt_mount">0.0369384 -2e-06 0.0005467 0 0 0</pose>
+            <parent>left_tilt_mount</parent>
+            <child>left_propeller</child>
+            <axis>
+                <xyz>1 0 0</xyz>
+                <limit>
+                    <lower>-1000000</lower>
+                    <upper>1000000</upper>
+                    <effort>1</effort>
+                    <velocity>2000</velocity>
+                </limit>
+                <dynamics>
+                    <damping>0.0</damping>
+                </dynamics>
+            </axis>
+        </joint>
+        <joint name="right_propeller_joint" type="revolute">
+            <pose relative_to="right_tilt_mount">0.0369384 3e-06 0.0005467 0 0 0</pose>
+            <parent>right_tilt_mount</parent>
+            <child>right_propeller</child>
+            <axis>
+                <xyz>1 0 0</xyz>
+                <limit>
+                    <lower>-1000000</lower>
+                    <upper>1000000</upper>
+                    <effort>1</effort>
+                    <velocity>2000</velocity>
+                </limit>
+                <dynamics>
+                    <damping>0.0</damping>
+                </dynamics>
+            </axis>
+        </joint>
+        <joint name="back_propeller_joint" type="revolute">
+            <pose relative_to="main_frame">-0.19343 0 0.0632816 0 0 0</pose>
+            <parent>main_frame</parent>
+            <child>back_propeller</child>
+            <axis>
+                <xyz>0 0 1</xyz>
+                <limit>
+                    <lower>-1000000</lower>
+                    <upper>1000000</upper>
+                    <effort>1</effort>
+                    <velocity>2000</velocity>
+                </limit>
+                <dynamics>
+                    <damping>0.0</damping>
+                </dynamics>
+            </axis>
+        </joint>
+        <joint name="left_flap_joint" type="revolute">
+            <pose relative_to="main_frame">-0.0918776 0.2095 0.0320133 0 0 0</pose>
+            <parent>main_frame</parent>
+            <child>left_flap</child>
+            <axis>
+                <xyz>0 1 0</xyz>
+                <limit>
+                    <lower>-0.5235987756</lower>
+                    <upper>0.5235987756</upper>
+                    <effort>10</effort>
+                    <velocity>3</velocity>
+                </limit>
+                <dynamics>
+                    <damping>0.05</damping>
+                </dynamics>
+            </axis>
+        </joint>
+        <joint name="right_flap_joint" type="revolute">
+            <pose relative_to="main_frame">-0.0918776 -0.2095 0.0320133 0 0 0</pose>
+            <parent>main_frame</parent>
+            <child>right_flap</child>
+            <axis>
+                <xyz>0 1 0</xyz>
+                <limit>
+                    <lower>-0.5235987756</lower>
+                    <upper>0.5235987756</upper>
+                    <effort>10</effort>
+                    <velocity>3</velocity>
+                </limit>
+                <dynamics>
+                    <damping>0.05</damping>
+                </dynamics>
+            </axis>
+        </joint>
+        <joint name="back_flap_joint" type="revolute">
+            <pose relative_to="main_frame">-0.361445 0 0.0477911 0 0 0</pose>
+            <parent>main_frame</parent>
+            <child>back_flap</child>
+            <axis>
+                <xyz>0 1 0</xyz>
+                <limit>
+                    <lower>-0.5235987756</lower>
+                    <upper>0.5235987756</upper>
+                    <effort>10</effort>
+                    <velocity>3</velocity>
+                </limit>
+                <dynamics>
+                    <damping>0.05</damping>
+                </dynamics>
+            </axis>
+        </joint>
+        <plugin filename="gz-sim-joint-position-controller-system" name="gz::sim::systems::JointPositionController">
+            <joint_name>left_tilt_joint</joint_name>
+            <p_gain>10.0</p_gain>
+            <i_gain>0.0</i_gain>
+            <d_gain>1.0</d_gain>
+            <i_max>0.0</i_max>
+            <i_min>0.0</i_min>
+            <cmd_max>10</cmd_max>
+            <cmd_min>-10</cmd_min>
+            <initial_position>0.0</initial_position>
+        </plugin>
+        <plugin filename="gz-sim-joint-position-controller-system" name="gz::sim::systems::JointPositionController">
+            <joint_name>right_tilt_joint</joint_name>
+            <p_gain>10.0</p_gain>
+            <i_gain>0.0</i_gain>
+            <d_gain>1.0</d_gain>
+            <i_max>0.0</i_max>
+            <i_min>0.0</i_min>
+            <cmd_max>10</cmd_max>
+            <cmd_min>-10</cmd_min>
+            <initial_position>0.0</initial_position>
+        </plugin>
+        <plugin filename="gz-sim-joint-position-controller-system" name="gz::sim::systems::JointPositionController">
+            <joint_name>front_steering_joint</joint_name>
+            <p_gain>10.0</p_gain>
+            <i_gain>0.0</i_gain>
+            <d_gain>1.0</d_gain>
+            <i_max>0.0</i_max>
+            <i_min>0.0</i_min>
+            <cmd_max>10</cmd_max>
+            <cmd_min>-10</cmd_min>
+            <initial_position>0.0</initial_position>
+        </plugin>
+        <plugin filename="gz-sim-joint-position-controller-system" name="gz::sim::systems::JointPositionController">
+            <joint_name>left_flap_joint</joint_name>
+            <p_gain>10.0</p_gain>
+            <i_gain>0.5</i_gain>
+            <d_gain>1.0</d_gain>
+            <i_max>0.2</i_max>
+            <i_min>-0.2</i_min>
+            <cmd_max>10</cmd_max>
+            <cmd_min>-10</cmd_min>
+            <initial_position>0.0</initial_position>
+        </plugin>
+        <plugin filename="gz-sim-joint-position-controller-system" name="gz::sim::systems::JointPositionController">
+            <joint_name>right_flap_joint</joint_name>
+            <p_gain>10.0</p_gain>
+            <i_gain>0.5</i_gain>
+            <d_gain>1.0</d_gain>
+            <i_max>0.2</i_max>
+            <i_min>-0.2</i_min>
+            <cmd_max>10</cmd_max>
+            <cmd_min>-10</cmd_min>
+            <initial_position>0.0</initial_position>
+        </plugin>
+        <plugin filename="gz-sim-joint-position-controller-system" name="gz::sim::systems::JointPositionController">
+            <joint_name>back_flap_joint</joint_name>
+            <p_gain>10.0</p_gain>
+            <i_gain>0.5</i_gain>
+            <d_gain>1.0</d_gain>
+            <i_max>0.2</i_max>
+            <i_min>-0.2</i_min>
+            <cmd_max>10</cmd_max>
+            <cmd_min>-10</cmd_min>
+            <initial_position>0.0</initial_position>
+        </plugin>
+        <plugin filename="gz-sim-joint-state-publisher-system" name="gz::sim::systems::JointStatePublisher">
+            <joint_name>left_tilt_joint</joint_name>
+            <joint_name>front_steering_joint</joint_name>
+            <joint_name>front_left_wheel_joint</joint_name>
+            <joint_name>front_right_wheel_joint</joint_name>
+            <joint_name>back_left_wheel_joint</joint_name>
+            <joint_name>back_right_wheel_joint</joint_name>
+            <joint_name>right_tilt_joint</joint_name>
+            <joint_name>left_propeller_joint</joint_name>
+            <joint_name>right_propeller_joint</joint_name>
+            <joint_name>back_propeller_joint</joint_name>
+            <joint_name>left_flap_joint</joint_name>
+            <joint_name>right_flap_joint</joint_name>
+            <joint_name>back_flap_joint</joint_name>
+        </plugin>
+        <plugin filename="gz-sim-lift-drag-system" name="gz::sim::systems::LiftDrag">
+            <link_name>main_frame</link_name>
+            <air_density>1.2041</air_density>
+            <area>0.0889255</area>
+            <a0>0.035</a0>
+            <cla>4.2</cla>
+            <cda>0.35</cda>
+            <cma>0.0</cma>
+            <alpha_stall>0.28</alpha_stall>
+            <cla_stall>-1.2</cla_stall>
+            <cda_stall>1.2</cda_stall>
+            <cma_stall>0.0</cma_stall>
+            <forward>1 0 0</forward>
+            <upward>0 0 1</upward>
+            <cp>-0.02 0.15 0.015</cp>
+        </plugin>
+        <plugin filename="gz-sim-lift-drag-system" name="gz::sim::systems::LiftDrag">
+            <link_name>main_frame</link_name>
+            <air_density>1.2041</air_density>
+            <area>0.0889255</area>
+            <a0>0.035</a0>
+            <cla>4.2</cla>
+            <cda>0.35</cda>
+            <cma>0.0</cma>
+            <alpha_stall>0.28</alpha_stall>
+            <cla_stall>-1.2</cla_stall>
+            <cda_stall>1.2</cda_stall>
+            <cma_stall>0.0</cma_stall>
+            <forward>1 0 0</forward>
+            <upward>0 0 1</upward>
+            <cp>-0.02 -0.15 0.015</cp>
+        </plugin>
+        <plugin filename="gz-sim-lift-drag-system" name="gz::sim::systems::LiftDrag">
+            <link_name>main_frame</link_name>
+            <air_density>1.2041</air_density>
+            <area>0.03</area>
+            <a0>0.25</a0>
+            <cla>0.0</cla>
+            <cda>0.45</cda>
+            <cma>0.0</cma>
+            <alpha_stall>1.0</alpha_stall>
+            <cla_stall>0.0</cla_stall>
+            <cda_stall>0.8</cda_stall>
+            <cma_stall>0.0</cma_stall>
+            <forward>1 0 0</forward>
+            <upward>0 0 1</upward>
+            <cp>-0.04 0 0.015</cp>
+        </plugin>
+        <plugin filename="gz-sim-lift-drag-system" name="gz::sim::systems::LiftDrag">
+            <link_name>main_frame</link_name>
+            <air_density>1.2041</air_density>
+            <area>0.004</area>
+            <a0>0.0</a0>
+            <cla>2.5</cla>
+            <cda>0.35</cda>
+            <cma>0.0</cma>
+            <alpha_stall>0.40</alpha_stall>
+            <cla_stall>-1.2</cla_stall>
+            <cda_stall>1.0</cda_stall>
+            <cma_stall>0.0</cma_stall>
+            <forward>1 0 0</forward>
+            <upward>0 1 0</upward>
+            <cp>-0.22 0 0.025</cp>
+        </plugin>
+        <plugin filename="gz-sim-lift-drag-system" name="gz::sim::systems::LiftDrag">
+            <link_name>left_flap</link_name>
+            <air_density>1.2041</air_density>
+            <area>0.006</area>
+            <a0>0.0</a0>
+            <cla>3.5</cla>
+            <cda>0.35</cda>
+            <cma>0.0</cma>
+            <alpha_stall>0.35</alpha_stall>
+            <cla_stall>-1.2</cla_stall>
+            <cda_stall>1.2</cda_stall>
+            <cma_stall>0.0</cma_stall>
+            <forward>1 0 0</forward>
+            <upward>0 0 1</upward>
+            <cp>-0.012 0 0</cp>
+        </plugin>
+        <plugin filename="gz-sim-lift-drag-system" name="gz::sim::systems::LiftDrag">
+            <link_name>right_flap</link_name>
+            <air_density>1.2041</air_density>
+            <area>0.006</area>
+            <a0>0.0</a0>
+            <cla>3.5</cla>
+            <cda>0.35</cda>
+            <cma>0.0</cma>
+            <alpha_stall>0.35</alpha_stall>
+            <cla_stall>-1.2</cla_stall>
+            <cda_stall>1.2</cda_stall>
+            <cma_stall>0.0</cma_stall>
+            <forward>1 0 0</forward>
+            <upward>0 0 1</upward>
+            <cp>-0.012 0 0</cp>
+        </plugin>
+        <plugin filename="gz-sim-lift-drag-system" name="gz::sim::systems::LiftDrag">
+            <link_name>back_flap</link_name>
+            <air_density>1.2041</air_density>
+            <area>0.008</area>
+            <a0>0.0</a0>
+            <cla>3.8</cla>
+            <cda>0.35</cda>
+            <cma>0.0</cma>
+            <alpha_stall>0.35</alpha_stall>
+            <cla_stall>-1.2</cla_stall>
+            <cda_stall>1.2</cda_stall>
+            <cma_stall>0.0</cma_stall>
+            <forward>1 0 0</forward>
+            <upward>0 0 1</upward>
+            <cp>-0.015 0 0</cp>
+        </plugin>
+        <plugin filename="gz-sim-thruster-system" name="gz::sim::systems::Thruster">
+            <namespace>tricopter_vtol</namespace>
+            <joint_name>left_propeller_joint</joint_name>
+            <use_angvel_cmd>1</use_angvel_cmd>
+            <velocity_control>true</velocity_control>
+            <thrust_coefficient>-0.0020000</thrust_coefficient>
+            <fluid_density>1.2041</fluid_density>
+            <propeller_diameter>0.254</propeller_diameter>
+            <max_thrust_cmd>838</max_thrust_cmd>
+            <min_thrust_cmd>-838</min_thrust_cmd>
+        </plugin>
+        <plugin filename="gz-sim-thruster-system" name="gz::sim::systems::Thruster">
+            <namespace>tricopter_vtol</namespace>
+            <joint_name>right_propeller_joint</joint_name>
+            <use_angvel_cmd>1</use_angvel_cmd>
+            <velocity_control>true</velocity_control>
+            <thrust_coefficient>0.0020000</thrust_coefficient>
+            <fluid_density>1.2041</fluid_density>
+            <propeller_diameter>0.254</propeller_diameter>
+            <max_thrust_cmd>838</max_thrust_cmd>
+            <min_thrust_cmd>-838</min_thrust_cmd>
+        </plugin>
+        <plugin filename="gz-sim-thruster-system" name="gz::sim::systems::Thruster">
+            <namespace>tricopter_vtol</namespace>
+            <joint_name>back_propeller_joint</joint_name>
+            <use_angvel_cmd>1</use_angvel_cmd>
+            <velocity_control>true</velocity_control>
+            <thrust_coefficient>0.0020000</thrust_coefficient>
+            <fluid_density>1.2041</fluid_density>
+            <propeller_diameter>0.254</propeller_diameter>
+            <max_thrust_cmd>838</max_thrust_cmd>
+            <min_thrust_cmd>-838</min_thrust_cmd>
+        </plugin>
+        <plugin name="ArduPilotPlugin" filename="ArduPilotPlugin">
+            <fdm_addr>127.0.0.1</fdm_addr>
+            <fdm_port_in>9002</fdm_port_in>
+            <connectionTimeoutMaxCount>5</connectionTimeoutMaxCount>
+            <lock_step>1</lock_step>
+            <no_time_sync>1</no_time_sync>
+            <have_32_channels>0</have_32_channels>
+            <modelXYZToAirplaneXForwardZDown degrees="true">0 0 0 180 0 0</modelXYZToAirplaneXForwardZDown>
+            <gazeboXYZToNED degrees="true">0 0 0 180 0 90</gazeboXYZToNED>
+            <imuName>main_frame::imu_sensor</imuName>
+            <sensor>
+                <type>range</type>
+                <index>1</index>
+                <topic>/model/tricopter_vtol/sonar/scan</topic>
+            </sensor>
+
+            <control channel="0">
+                <jointName>left_flap_joint</jointName>
+                <multiplier>1.0471975512</multiplier>
+                <offset>-0.5</offset>
+                <servo_min>1000</servo_min>
+                <servo_max>2000</servo_max>
+                <type>COMMAND</type>
+                <cmd_topic>/model/tricopter_vtol/joint/left_flap_joint/0/cmd_pos</cmd_topic>
+            </control>
+            <control channel="1">
+                <jointName>back_flap_joint</jointName>
+                <multiplier>1.0471975512</multiplier>
+                <offset>-0.5</offset>
+                <servo_min>1000</servo_min>
+                <servo_max>2000</servo_max>
+                <type>COMMAND</type>
+                <cmd_topic>/model/tricopter_vtol/joint/back_flap_joint/0/cmd_pos</cmd_topic>
+            </control>
+            <control channel="3">
+                <jointName>right_flap_joint</jointName>
+                <multiplier>1.0471975512</multiplier>
+                <offset>-0.5</offset>
+                <servo_min>1000</servo_min>
+                <servo_max>2000</servo_max>
+                <type>COMMAND</type>
+                <cmd_topic>/model/tricopter_vtol/joint/right_flap_joint/0/cmd_pos</cmd_topic>
+            </control>
+            <control channel="4">
+                <jointName>right_propeller_joint</jointName>
+                <multiplier>838</multiplier>
+                <offset>0</offset>
+                <servo_min>1000</servo_min>
+                <servo_max>2000</servo_max>
+                <type>COMMAND</type>
+                <cmd_topic>/model/tricopter_vtol/joint/right_propeller_joint/cmd_vel</cmd_topic>
+            </control>
+            <control channel="5">
+                <jointName>left_propeller_joint</jointName>
+                <multiplier>-838</multiplier>
+                <offset>0</offset>
+                <servo_min>1000</servo_min>
+                <servo_max>2000</servo_max>
+                <type>COMMAND</type>
+                <cmd_topic>/model/tricopter_vtol/joint/left_propeller_joint/cmd_vel</cmd_topic>
+            </control>
+            <control channel="7">
+                <jointName>back_propeller_joint</jointName>
+                <multiplier>838</multiplier>
+                <offset>0</offset>
+                <servo_min>1000</servo_min>
+                <servo_max>2000</servo_max>
+                <type>COMMAND</type>
+                <cmd_topic>/model/tricopter_vtol/joint/back_propeller_joint/cmd_vel</cmd_topic>
+            </control>
+            <control channel="6">
+                <jointName>front_steering_joint</jointName>
+                <multiplier>-1.0471975512</multiplier>
+                <offset>-0.5</offset>
+                <servo_min>1000</servo_min>
+                <servo_max>2000</servo_max>
+                <type>COMMAND</type>
+                <cmd_topic>/model/tricopter_vtol/joint/front_steering_joint/0/cmd_pos</cmd_topic>
+            </control>
+            <control channel="11">
+                <jointName>left_tilt_joint</jointName>
+                <multiplier>-1.88495559215</multiplier>
+                <offset>-1</offset>
+                <servo_min>1000</servo_min>
+                <servo_max>2000</servo_max>
+                <type>COMMAND</type>
+                <cmd_topic>/model/tricopter_vtol/joint/left_tilt_joint/0/cmd_pos</cmd_topic>
+            </control>
+            <control channel="12">
+                <jointName>right_tilt_joint</jointName>
+                <multiplier>-1.88495559215</multiplier>
+                <offset>-1</offset>
+                <servo_min>1000</servo_min>
+                <servo_max>2000</servo_max>
+                <type>COMMAND</type>
+                <cmd_topic>/model/tricopter_vtol/joint/right_tilt_joint/0/cmd_pos</cmd_topic>
+            </control>
+        </plugin>
+    </model>
+</sdf>

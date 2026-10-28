@@ -78,25 +78,55 @@ class DroneAutolandingService:
     def _tracking_target_loop(self):
         waiting_period = 1.0 / max(1, self.aruco_tracker.camera.get_fps())
         previous_status = None
+        camera_outage_started_s = None
+        camera_unavailable_after_s = 5.0
 
         while self._tracking_started:
             start_time = time.monotonic()
 
-            vis, tracking_result = self.aruco_tracker.track_target()
+            try:
+                vis, tracking_result = self.aruco_tracker.track_target()
+            except TimeoutError as error:
+                # A missed frame deadline is a recoverable sensor outage, not a
+                # fatal worker failure. Never leave an old target pose publishable.
+                now = time.monotonic()
+                if camera_outage_started_s is None:
+                    camera_outage_started_s = now
+                    logger.warning("Camera frames are stale; clearing target until fresh frames return: {}", error)
+                camera_state = (
+                    "UNAVAILABLE" if now - camera_outage_started_s >= camera_unavailable_after_s else "STALE"
+                )
+                self.frame_buffer.set_value(
+                    None,
+                    {
+                        "status": 2,  # TrackingStatus.NOT_FOUND
+                        "poses": {"estimated_pose_from_camera": None, "estimated_pose_to_uav": None},
+                        "marker_id": None,
+                        "confidence": None,
+                        "camera_state": camera_state,
+                    },
+                )
+                self.pose_buffer.set_value(None)
+                self.pose_buffer.set_uav_pose_value(None)
+                if camera_state != previous_status:
+                    logger.warning("Camera state: {}", camera_state)
+                    previous_status = camera_state
+            else:
+                if self._stop_event.is_set():
+                    break
+                camera_outage_started_s = None
+                metadata = tracking_result.to_dict()
+                metadata["camera_state"] = "OK"
+                self.frame_buffer.set_value(vis, metadata, timestamp=tracking_result.captured_at_s)
+                self.pose_buffer.set_value(tracking_result.pose, timestamp=tracking_result.captured_at_s)
+                self.pose_buffer.set_uav_pose_value(tracking_result.uav_pose, timestamp=tracking_result.captured_at_s)
+                if tracking_result.status != previous_status:
+                    logger.info("Target tracking: {}", tracking_result.status.name)
+                    previous_status = tracking_result.status
+
             if self._stop_event.is_set():
                 break
-            self.frame_buffer.set_value(vis, tracking_result.to_dict(), timestamp=tracking_result.captured_at_s)
-            self.pose_buffer.set_value(tracking_result.pose, timestamp=tracking_result.captured_at_s)
-
-            self.pose_buffer.set_uav_pose_value(tracking_result.uav_pose, timestamp=tracking_result.captured_at_s)
-            if tracking_result.status != previous_status:
-                logger.info("Target tracking: {}", tracking_result.status.name)
-                previous_status = tracking_result.status
-
-            end_time = time.monotonic()
-            elapsed_time = end_time - start_time
-            remaining_time = waiting_period - elapsed_time
-
+            remaining_time = waiting_period - (time.monotonic() - start_time)
             if remaining_time > 0:
                 self._stop_event.wait(remaining_time)
 

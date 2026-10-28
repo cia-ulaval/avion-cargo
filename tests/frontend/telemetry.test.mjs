@@ -69,3 +69,17 @@ test('stopped or silent telemetry clears the previously locked target', () => {
   setStreamState('stopped', 'Stopped');
   assert.equal(nodes.get('tracking-status').textContent, 'Searching');
 });
+
+
+test('camera outage is shown explicitly and stale target is not shown as locked', () => {
+  renderTracking({
+    status: 2,
+    cameraState: 'UNAVAILABLE',
+    markerId: null,
+    poseCamera: null,
+    poseUav: null,
+  });
+  assert.equal(nodes.get('tracking-status').textContent, 'Camera unavailable');
+  assert.equal(nodes.get('marker-id').textContent, '--');
+  assert.equal(nodes.get('target-state-pill').textContent, 'Camera unavailable');
+});
