@@ -1,19 +1,24 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <sdf version="1.9">
     <model name="tricopter_vtol">
+        <!-- Updated provisional physics: total link mass 1.590 kg; CAD inertia figures treated as
+        kg*m^2 because literal lbm*ft^2 conversion conflicts with the supplied component
+        mass/position data. Wing half-area estimated from level-flight CL point; validate against
+        CAD and Gazebo tests. -->
         <static>false</static>
         <self_collide>false</self_collide>
         <link name="main_frame">
             <pose>0 0 0 0 0 0</pose>
             <gravity>true</gravity>
             <inertial>
-                <mass>0.4444</mass>
+                <pose>-0.00253977 7.45545e-07 -0.00598538 0 0 0</pose>
+                <mass>1.403</mass>
                 <inertia>
-                    <ixx>0.0063</ixx>
-                    <iyy>0.0096</iyy>
-                    <izz>0.0152</izz>
+                    <ixx>0.00634438365</ixx>
+                    <iyy>0.00471196226</iyy>
+                    <izz>0.010694566</izz>
                     <ixy>0</ixy>
-                    <ixz>0</ixz>
+                    <ixz>-0.000226523392</ixz>
                     <iyz>0</iyz>
                 </inertia>
             </inertial>
@@ -120,11 +125,11 @@
             <pose>0.0685426 0.1409 0.0511394 0 0 0</pose>
             <gravity>true</gravity>
             <inertial>
-                <mass>0.035</mass>
+                <mass>0.042</mass>
                 <inertia>
-                    <ixx>0.00002</ixx>
-                    <iyy>0.00004</iyy>
-                    <izz>0.00004</izz>
+                    <ixx>2.4e-05</ixx>
+                    <iyy>4.8e-05</iyy>
+                    <izz>4.8e-05</izz>
                     <ixy>0</ixy>
                     <ixz>0</ixz>
                     <iyz>0</iyz>
@@ -153,11 +158,11 @@
             <pose>0.0685426 -0.1409 0.0511394 0 0 0</pose>
             <gravity>true</gravity>
             <inertial>
-                <mass>0.035</mass>
+                <mass>0.042</mass>
                 <inertia>
-                    <ixx>0.00002</ixx>
-                    <iyy>0.00004</iyy>
-                    <izz>0.00004</izz>
+                    <ixx>2.4e-05</ixx>
+                    <iyy>4.8e-05</iyy>
+                    <izz>4.8e-05</izz>
                     <ixy>0</ixy>
                     <ixz>0</ixz>
                     <iyz>0</iyz>
@@ -189,8 +194,8 @@
                 <mass>0.015</mass>
                 <inertia>
                     <ixx>0.00012</ixx>
-                    <iyy>0.00006</iyy>
-                    <izz>0.00006</izz>
+                    <iyy>6e-05</iyy>
+                    <izz>6e-05</izz>
                     <ixy>0</ixy>
                     <ixz>0</ixz>
                     <iyz>0</iyz>
@@ -222,8 +227,8 @@
                 <mass>0.015</mass>
                 <inertia>
                     <ixx>0.00012</ixx>
-                    <iyy>0.00006</iyy>
-                    <izz>0.00006</izz>
+                    <iyy>6e-05</iyy>
+                    <izz>6e-05</izz>
                     <ixy>0</ixy>
                     <ixz>0</ixz>
                     <iyz>0</iyz>
@@ -254,8 +259,8 @@
             <inertial>
                 <mass>0.015</mass>
                 <inertia>
-                    <ixx>0.00006</ixx>
-                    <iyy>0.00006</iyy>
+                    <ixx>6e-05</ixx>
+                    <iyy>6e-05</iyy>
                     <izz>0.00012</izz>
                     <ixy>0</ixy>
                     <ixz>0</ixz>
@@ -285,11 +290,11 @@
             <pose>-0.0918776 0.2095 0.0320133 0 0 0</pose>
             <gravity>true</gravity>
             <inertial>
-                <mass>0.012</mass>
+                <mass>0.007</mass>
                 <inertia>
-                    <ixx>0.00004</ixx>
-                    <iyy>0.00001</iyy>
-                    <izz>0.00004</izz>
+                    <ixx>2.33333333e-05</ixx>
+                    <iyy>5.83333333e-06</iyy>
+                    <izz>2.33333333e-05</izz>
                     <ixy>0</ixy>
                     <ixz>0</ixz>
                     <iyz>0</iyz>
@@ -318,11 +323,11 @@
             <pose>-0.0918776 -0.2095 0.0320133 0 0 0</pose>
             <gravity>true</gravity>
             <inertial>
-                <mass>0.012</mass>
+                <mass>0.007</mass>
                 <inertia>
-                    <ixx>0.00004</ixx>
-                    <iyy>0.00001</iyy>
-                    <izz>0.00004</izz>
+                    <ixx>2.33333333e-05</ixx>
+                    <iyy>5.83333333e-06</iyy>
+                    <izz>2.33333333e-05</izz>
                     <ixy>0</ixy>
                     <ixz>0</ixz>
                     <iyz>0</iyz>
@@ -351,13 +356,13 @@
             <pose>-0.361445 0 0.0477911 0 0 0</pose>
             <gravity>true</gravity>
             <inertial>
-                <mass>0.012</mass>
+                <mass>0.014</mass>
                 <inertia>
-                    <ixx>0.00002</ixx>
-                    <iyy>0.00001</iyy>
-                    <izz>0.00002</izz>
+                    <ixx>8.505e-05</ixx>
+                    <iyy>2.766e-06</iyy>
+                    <izz>8.779e-05</izz>
                     <ixy>0</ixy>
-                    <ixz>0</ixz>
+                    <ixz>1.684e-07</ixz>
                     <iyz>0</iyz>
                 </inertia>
             </inertial>
@@ -384,11 +389,11 @@
             <pose>0.155522 0 -0.0718702 0 0 0</pose>
             <gravity>true</gravity>
             <inertial>
-                <mass>0.025</mass>
+                <mass>0.01</mass>
                 <inertia>
-                    <ixx>0.00004</ixx>
-                    <iyy>0.00004</iyy>
-                    <izz>0.00006</izz>
+                    <ixx>1.6e-05</ixx>
+                    <iyy>1.6e-05</iyy>
+                    <izz>2.4e-05</izz>
                     <ixy>0</ixy>
                     <ixz>0</ixz>
                     <iyz>0</iyz>
@@ -417,11 +422,11 @@
             <pose relative_to="steer_frame">0 0.0555 -0.032 0 0 0</pose>
             <gravity>true</gravity>
             <inertial>
-                <mass>0.015</mass>
+                <mass>0.005</mass>
                 <inertia>
-                    <ixx>0.0000039</ixx>
-                    <iyy>0.0000068</iyy>
-                    <izz>0.0000039</izz>
+                    <ixx>1.3e-06</ixx>
+                    <iyy>2.26666667e-06</iyy>
+                    <izz>1.3e-06</izz>
                     <ixy>0</ixy>
                     <ixz>0</ixz>
                     <iyz>0</iyz>
@@ -429,12 +434,20 @@
             </inertial>
             <collision name="front_left_wheel_collision">
                 <pose>0 0 0 1.57079632679 0 0</pose>
-                <geometry><cylinder><radius>0.03</radius><length>0.021</length></cylinder></geometry>
+                <geometry>
+                    <cylinder>
+                        <radius>0.03</radius>
+                        <length>0.021</length>
+                    </cylinder>
+                </geometry>
             </collision>
             <visual name="front_left_wheel_visual">
                 <pose>-0.1555225 -0.0555 0.1038702 0 0 0</pose>
                 <geometry>
-                    <mesh><uri>meshes/front-left-wheel.obj</uri><scale>0.1 0.1 0.1</scale></mesh>
+                    <mesh>
+                        <uri>meshes/front-left-wheel.obj</uri>
+                        <scale>0.1 0.1 0.1</scale>
+                    </mesh>
                 </geometry>
             </visual>
         </link>
@@ -442,11 +455,11 @@
             <pose relative_to="steer_frame">0 -0.0554999 -0.032 0 0 0</pose>
             <gravity>true</gravity>
             <inertial>
-                <mass>0.015</mass>
+                <mass>0.005</mass>
                 <inertia>
-                    <ixx>0.0000039</ixx>
-                    <iyy>0.0000068</iyy>
-                    <izz>0.0000039</izz>
+                    <ixx>1.3e-06</ixx>
+                    <iyy>2.26666667e-06</iyy>
+                    <izz>1.3e-06</izz>
                     <ixy>0</ixy>
                     <ixz>0</ixz>
                     <iyz>0</iyz>
@@ -454,12 +467,20 @@
             </inertial>
             <collision name="front_right_wheel_collision">
                 <pose>0 0 0 1.57079632679 0 0</pose>
-                <geometry><cylinder><radius>0.03</radius><length>0.021</length></cylinder></geometry>
+                <geometry>
+                    <cylinder>
+                        <radius>0.03</radius>
+                        <length>0.021</length>
+                    </cylinder>
+                </geometry>
             </collision>
             <visual name="front_right_wheel_visual">
                 <pose>-0.1555225 0.0554999 0.1038702 0 0 0</pose>
                 <geometry>
-                    <mesh><uri>meshes/front-right-wheel.obj</uri><scale>0.1 0.1 0.1</scale></mesh>
+                    <mesh>
+                        <uri>meshes/front-right-wheel.obj</uri>
+                        <scale>0.1 0.1 0.1</scale>
+                    </mesh>
                 </geometry>
             </visual>
         </link>
@@ -467,11 +488,11 @@
             <pose relative_to="main_frame">-0.1369271 0.1348937 -0.1012611 0 0 0</pose>
             <gravity>true</gravity>
             <inertial>
-                <mass>0.015</mass>
+                <mass>0.005</mass>
                 <inertia>
-                    <ixx>0.0000039</ixx>
-                    <iyy>0.0000068</iyy>
-                    <izz>0.0000039</izz>
+                    <ixx>1.3e-06</ixx>
+                    <iyy>2.26666667e-06</iyy>
+                    <izz>1.3e-06</izz>
                     <ixy>0</ixy>
                     <ixz>0</ixz>
                     <iyz>0</iyz>
@@ -479,12 +500,20 @@
             </inertial>
             <collision name="back_left_wheel_collision">
                 <pose>0 0 0 1.57079632679 0 0</pose>
-                <geometry><cylinder><radius>0.03</radius><length>0.021</length></cylinder></geometry>
+                <geometry>
+                    <cylinder>
+                        <radius>0.03</radius>
+                        <length>0.021</length>
+                    </cylinder>
+                </geometry>
             </collision>
             <visual name="back_left_wheel_visual">
                 <pose>0.1369271 -0.1348937 0.1012611 0 0 0</pose>
                 <geometry>
-                    <mesh><uri>meshes/back-left-wheel.obj</uri><scale>0.1 0.1 0.1</scale></mesh>
+                    <mesh>
+                        <uri>meshes/back-left-wheel.obj</uri>
+                        <scale>0.1 0.1 0.1</scale>
+                    </mesh>
                 </geometry>
             </visual>
         </link>
@@ -492,11 +521,11 @@
             <pose relative_to="main_frame">-0.1369271 -0.135106 -0.1012611 0 0 0</pose>
             <gravity>true</gravity>
             <inertial>
-                <mass>0.015</mass>
+                <mass>0.005</mass>
                 <inertia>
-                    <ixx>0.0000039</ixx>
-                    <iyy>0.0000068</iyy>
-                    <izz>0.0000039</izz>
+                    <ixx>1.3e-06</ixx>
+                    <iyy>2.26666667e-06</iyy>
+                    <izz>1.3e-06</izz>
                     <ixy>0</ixy>
                     <ixz>0</ixz>
                     <iyz>0</iyz>
@@ -504,12 +533,20 @@
             </inertial>
             <collision name="back_right_wheel_collision">
                 <pose>0 0 0 1.57079632679 0 0</pose>
-                <geometry><cylinder><radius>0.03</radius><length>0.021</length></cylinder></geometry>
+                <geometry>
+                    <cylinder>
+                        <radius>0.03</radius>
+                        <length>0.021</length>
+                    </cylinder>
+                </geometry>
             </collision>
             <visual name="back_right_wheel_visual">
                 <pose>0.1369271 0.135106 0.1012611 0 0 0</pose>
                 <geometry>
-                    <mesh><uri>meshes/back-right-wheel.obj</uri><scale>0.1 0.1 0.1</scale></mesh>
+                    <mesh>
+                        <uri>meshes/back-right-wheel.obj</uri>
+                        <scale>0.1 0.1 0.1</scale>
+                    </mesh>
                 </geometry>
             </visual>
         </link>
@@ -520,8 +557,15 @@
             <child>steer_frame</child>
             <axis>
                 <xyz>0 0 1</xyz>
-                <limit><lower>-0.5235987756</lower><upper>0.5235987756</upper><effort>10</effort><velocity>2</velocity></limit>
-                <dynamics><damping>0.05</damping></dynamics>
+                <limit>
+                    <lower>-0.5235987756</lower>
+                    <upper>0.5235987756</upper>
+                    <effort>10</effort>
+                    <velocity>2</velocity>
+                </limit>
+                <dynamics>
+                    <damping>0.05</damping>
+                </dynamics>
             </axis>
         </joint>
         <joint name="front_left_wheel_joint" type="revolute">
@@ -530,8 +574,15 @@
             <child>front_left_wheel</child>
             <axis>
                 <xyz>0 1 0</xyz>
-                <limit><lower>-1000000</lower><upper>1000000</upper><effort>10</effort><velocity>100</velocity></limit>
-                <dynamics><damping>0.001</damping></dynamics>
+                <limit>
+                    <lower>-1000000</lower>
+                    <upper>1000000</upper>
+                    <effort>10</effort>
+                    <velocity>100</velocity>
+                </limit>
+                <dynamics>
+                    <damping>0.001</damping>
+                </dynamics>
             </axis>
         </joint>
         <joint name="front_right_wheel_joint" type="revolute">
@@ -540,8 +591,15 @@
             <child>front_right_wheel</child>
             <axis>
                 <xyz>0 1 0</xyz>
-                <limit><lower>-1000000</lower><upper>1000000</upper><effort>10</effort><velocity>100</velocity></limit>
-                <dynamics><damping>0.001</damping></dynamics>
+                <limit>
+                    <lower>-1000000</lower>
+                    <upper>1000000</upper>
+                    <effort>10</effort>
+                    <velocity>100</velocity>
+                </limit>
+                <dynamics>
+                    <damping>0.001</damping>
+                </dynamics>
             </axis>
         </joint>
         <joint name="back_left_wheel_joint" type="revolute">
@@ -550,8 +608,15 @@
             <child>back_left_wheel</child>
             <axis>
                 <xyz>0 1 0</xyz>
-                <limit><lower>-1000000</lower><upper>1000000</upper><effort>10</effort><velocity>100</velocity></limit>
-                <dynamics><damping>0.001</damping></dynamics>
+                <limit>
+                    <lower>-1000000</lower>
+                    <upper>1000000</upper>
+                    <effort>10</effort>
+                    <velocity>100</velocity>
+                </limit>
+                <dynamics>
+                    <damping>0.001</damping>
+                </dynamics>
             </axis>
         </joint>
         <joint name="back_right_wheel_joint" type="revolute">
@@ -560,8 +625,15 @@
             <child>back_right_wheel</child>
             <axis>
                 <xyz>0 1 0</xyz>
-                <limit><lower>-1000000</lower><upper>1000000</upper><effort>10</effort><velocity>100</velocity></limit>
-                <dynamics><damping>0.001</damping></dynamics>
+                <limit>
+                    <lower>-1000000</lower>
+                    <upper>1000000</upper>
+                    <effort>10</effort>
+                    <velocity>100</velocity>
+                </limit>
+                <dynamics>
+                    <damping>0.001</damping>
+                </dynamics>
             </axis>
         </joint>
 
@@ -792,7 +864,7 @@
         <plugin filename="gz-sim-lift-drag-system" name="gz::sim::systems::LiftDrag">
             <link_name>main_frame</link_name>
             <air_density>1.2041</air_density>
-            <area>0.045</area>
+            <area>0.0889255</area>
             <a0>0.035</a0>
             <cla>4.2</cla>
             <cda>0.35</cda>
@@ -808,7 +880,7 @@
         <plugin filename="gz-sim-lift-drag-system" name="gz::sim::systems::LiftDrag">
             <link_name>main_frame</link_name>
             <air_density>1.2041</air_density>
-            <area>0.045</area>
+            <area>0.0889255</area>
             <a0>0.035</a0>
             <cla>4.2</cla>
             <cda>0.35</cda>
@@ -906,33 +978,33 @@
             <joint_name>left_propeller_joint</joint_name>
             <use_angvel_cmd>1</use_angvel_cmd>
             <velocity_control>true</velocity_control>
-            <thrust_coefficient>-0.001705676074</thrust_coefficient>
+            <thrust_coefficient>-0.0020000</thrust_coefficient>
             <fluid_density>1.2041</fluid_density>
             <propeller_diameter>0.254</propeller_diameter>
-            <max_thrust_cmd>800</max_thrust_cmd>
-            <min_thrust_cmd>-800</min_thrust_cmd>
+            <max_thrust_cmd>838</max_thrust_cmd>
+            <min_thrust_cmd>-838</min_thrust_cmd>
         </plugin>
         <plugin filename="gz-sim-thruster-system" name="gz::sim::systems::Thruster">
             <namespace>tricopter_vtol</namespace>
             <joint_name>right_propeller_joint</joint_name>
             <use_angvel_cmd>1</use_angvel_cmd>
             <velocity_control>true</velocity_control>
-            <thrust_coefficient>0.001705676074</thrust_coefficient>
+            <thrust_coefficient>0.0020000</thrust_coefficient>
             <fluid_density>1.2041</fluid_density>
             <propeller_diameter>0.254</propeller_diameter>
-            <max_thrust_cmd>800</max_thrust_cmd>
-            <min_thrust_cmd>-800</min_thrust_cmd>
+            <max_thrust_cmd>838</max_thrust_cmd>
+            <min_thrust_cmd>-838</min_thrust_cmd>
         </plugin>
         <plugin filename="gz-sim-thruster-system" name="gz::sim::systems::Thruster">
             <namespace>tricopter_vtol</namespace>
             <joint_name>back_propeller_joint</joint_name>
             <use_angvel_cmd>1</use_angvel_cmd>
             <velocity_control>true</velocity_control>
-            <thrust_coefficient>0.001705676074</thrust_coefficient>
+            <thrust_coefficient>0.0020000</thrust_coefficient>
             <fluid_density>1.2041</fluid_density>
             <propeller_diameter>0.254</propeller_diameter>
-            <max_thrust_cmd>800</max_thrust_cmd>
-            <min_thrust_cmd>-800</min_thrust_cmd>
+            <max_thrust_cmd>838</max_thrust_cmd>
+            <min_thrust_cmd>-838</min_thrust_cmd>
         </plugin>
         <plugin name="ArduPilotPlugin" filename="ArduPilotPlugin">
             <fdm_addr>127.0.0.1</fdm_addr>
