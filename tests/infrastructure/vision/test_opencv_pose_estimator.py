@@ -15,6 +15,9 @@ def test_off_axis_tilted_distorted_marker_preserves_pnp_translation():
     corners, _ = cv2.projectPoints(
         square, np.float64([2.8, 0.3, 0.1]), translation, calibration.camera_matrix, calibration.dist_coeffs
     )
-    pose, _, tvec = OpenCVPoseEstimator().estimate_pose(corners.reshape(1, 4, 2), 0.4, calibration, center=True)
+    pose, rotation_matrix, _, tvec = OpenCVPoseEstimator().estimate_pose(
+        corners.reshape(1, 4, 2), 0.4, calibration, center=True
+    )
     np.testing.assert_allclose([pose.x, pose.y, pose.z], translation, atol=1e-5)
     np.testing.assert_allclose([pose.x, pose.y, pose.z], tvec[0, 0])
+    np.testing.assert_allclose(rotation_matrix.T @ rotation_matrix, np.eye(3), atol=1e-6)

@@ -52,6 +52,19 @@ RNGFND1_MIN          0.10
 RNGFND1_MAX          40.0
 RNGFND1_ORIENT       25
 
+# Autolanding
+PLND_ENABLED         1
+PLND_TYPE            1
+PLND_YAW_ALIGN       0
+PLND_ALT_MAX         8
+PLND_STRICT          0
+PLND_RET_BEHAVE      0
+PLND_RET_MAX         0
+PLND_ALT_MIN         1
+PLND_OPTIONS         0
+RC7_OPTION           39
+SCR_ENABLE           1
+
 # --- VTOL rate/angle control (Q_A_) ---
 Q_A_ACCEL_P_MAX        40000
 Q_A_ACCEL_R_MAX        40000

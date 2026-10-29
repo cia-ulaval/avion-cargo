@@ -11,6 +11,7 @@ from domain.camera import Camera
 from domain.camera_mount import CameraMount
 from domain.drone import Drone
 from domain.models import CalibrationData, TargetedMarker
+from domain.orientation_control import OrientationControlConfig
 from infrastructure.camera.frame_buffer import FrameBuffer
 from infrastructure.camera.opencv_capture_adapter import OpenCVCamera
 from infrastructure.communication.drone_status_buffer import DroneStatusBuffer
@@ -113,6 +114,7 @@ def build_tracking_service(
     detector_config: OpenCVArucoDetectorConfig,
     calibration_data: CalibrationData,
     camera_mount: CameraMount = CameraMount(),
+    orientation_control: OrientationControlConfig = OrientationControlConfig(),
 ) -> TrackingService:
     return TrackingService(
         camera=camera,
@@ -122,6 +124,7 @@ def build_tracking_service(
         calibration=calibration_data,
         annotator=OpenCVFrameAnnotator(),
         camera_mount=camera_mount,
+        orientation_control=orientation_control,
     )
 
 
@@ -142,6 +145,7 @@ def build_landing_service(config: AutolanderConfiguration, use_simulated_cam: bo
         detector_config=OpenCVArucoDetectorConfig(dictionary_id=config.targeted_marker.dictionary),
         calibration_data=calibration,
         camera_mount=config.camera_config.mount,
+        orientation_control=config.orientation_control,
     )
     frame_buffer = FrameBuffer()
     streamer = WebRTCContentStreamer(
@@ -163,4 +167,5 @@ def build_landing_service(config: AutolanderConfiguration, use_simulated_cam: bo
         pose_buffer=PoseBuffer(),
         drone_status_buffer=DroneStatusBuffer(),
         telemetry_dps=config.streaming_config.data.dps,
+        orientation_control=config.orientation_control,
     )

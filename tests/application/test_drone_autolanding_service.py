@@ -9,7 +9,9 @@ import pytest
 from application import drone_autolanding_service as autolanding_module
 from domain.buffer import DroneStatusBufferPort, FrameBufferPort, PoseBufferPort
 from domain.content_streamer import ContentStreamer
+from domain.drone import DroneMode
 from domain.models import Pose3D, TargetedMarker
+from domain.orientation_control import OrientationControlConfig
 
 
 @dataclass
@@ -40,6 +42,7 @@ class FakeDrone:
     status: Any
     service: autolanding_module.DroneAutolandingService | None = None
     target_messages: list[tuple[Pose3D, tuple[float, float]]] = field(default_factory=list)
+    yaw_inputs: list[tuple[int | None, int]] = field(default_factory=list)
 
     def get_status(self) -> Any:
         assert self.service is not None
@@ -49,12 +52,19 @@ class FakeDrone:
     def send_landing_target(self, position: Pose3D, target_size: tuple[float, float]) -> None:
         self.target_messages.append((position, target_size))
 
+    def set_yaw_input(self, pwm: int | None, *, channel: int = 4) -> None:
+        self.yaw_inputs.append((pwm, channel))
+
     def close(self) -> None:
         return None
 
 
 def build_service(
-    drone: FakeDrone, streamer: ContentStreamer | None = None, *, telemetry_dps: float = 5
+    drone: FakeDrone,
+    streamer: ContentStreamer | None = None,
+    *,
+    telemetry_dps: float = 5,
+    orientation_control: OrientationControlConfig = OrientationControlConfig(),
 ) -> autolanding_module.DroneAutolandingService:
     frame_buffer = Mock(spec=FrameBufferPort)
     frame_buffer.get_value.return_value = (None, None)
@@ -70,6 +80,7 @@ def build_service(
         pose_buffer=pose_buffer,
         drone_status_buffer=status_buffer,
         telemetry_dps=telemetry_dps,
+        orientation_control=orientation_control,
     )
     drone.service = service
     return service
@@ -96,6 +107,35 @@ def test_target_publication_preserves_target_distance_regardless_of_relative_alt
     service._target_publication_loop()
 
     assert drone.target_messages == [(Pose3D(x=0.2, y=-0.3, z=expected_z), (0.896, 0.896))]
+
+
+@pytest.mark.parametrize("mode", [DroneMode.QLOITER, DroneMode.QLAND])
+def test_marker_orientation_commands_bounded_yaw_input_by_default_in_vtol_modes(sample_drone_status, mode) -> None:
+    status = sample_drone_status()
+    status.mode = mode
+    drone = FakeDrone(status)
+    # No enable flag exists: marker heading alignment is mandatory in QLOITER/QLAND.
+    service = build_service(drone)
+    service.pose_buffer.get_uav_pose_value.return_value = Pose3D(0.0, 0.0, 2.0)
+    service.pose_buffer.get_target_yaw_error.return_value = 0.5
+    service._tracking_started = True
+
+    service._target_publication_loop()
+
+    # The active cycle commands a bounded correction, and loop exit releases it.
+    assert drone.yaw_inputs == [(1570, 4), (None, 4)]
+
+
+def test_orientation_control_releases_yaw_override_outside_vtol_modes(sample_drone_status) -> None:
+    status = sample_drone_status()
+    status.mode = DroneMode.LAND
+    drone = FakeDrone(status)
+    service = build_service(drone, orientation_control=OrientationControlConfig())
+    service._yaw_override_active = True
+
+    service._update_orientation_control(status, target_visible=True)
+
+    assert drone.yaw_inputs == [(None, 4)]
 
 
 def test_telemetry_payload_merges_latest_tracking_metadata_with_current_drone_status(sample_drone_status) -> None:
