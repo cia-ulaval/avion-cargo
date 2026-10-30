@@ -82,6 +82,8 @@ def build_drone(drone_connection_config: DroneConnectionConfiguration) -> Drone:
         address=drone_connection_config.address,
         port=drone_connection_config.port,
         baud_rate=drone_connection_config.baud_rate,
+        timeout=drone_connection_config.timeout,
+        fail_on_timeout=drone_connection_config.fail_on_timeout,
     )
     if drone_connection_config.use_serial:
         return DroneMavlinkSerialConnector(mavlink_params)

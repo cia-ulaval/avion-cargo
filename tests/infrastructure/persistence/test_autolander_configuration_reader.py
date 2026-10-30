@@ -34,7 +34,21 @@ def test_reader_maps_a_valid_json_file_to_runtime_configuration_objects(
         port=14550,
         baud_rate=921600,
     )
+<<<<<<< HEAD
     assert config.orientation_control == OrientationControlConfig()
+=======
+    assert config.drone_connection_config.timeout == 10.0
+    assert config.drone_connection_config.fail_on_timeout is True
+
+
+def test_reader_preserves_optional_fc_timeout_settings(tmp_path, valid_config_data):
+    valid_config_data["drone_connection"].update(timeout=0.25, fail_on_timeout=False)
+
+    config = AutolanderConfigurationReader(write_config(tmp_path, valid_config_data)).read()
+
+    assert config.drone_connection_config.timeout == 0.25
+    assert config.drone_connection_config.fail_on_timeout is False
+>>>>>>> 2fb442cf6d40dc177cc4617919bf70c063d94a44
 
 
 def test_reader_resolves_relative_calibration_paths_from_the_config_file_directory(
