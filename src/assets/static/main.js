@@ -12,3 +12,4 @@ updateCompass(null);
 renderTracking({});
 renderDrone({});
 setStreamState('stopped', 'Stopped');
+start();
