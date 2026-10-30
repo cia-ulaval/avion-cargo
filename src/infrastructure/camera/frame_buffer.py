@@ -30,7 +30,7 @@ class FrameBuffer(Buffer):
     def get_value(self) -> tuple[np.ndarray | None, dict[str, Any] | None]:
         with self.lock:
             if self._frame is None:
-                return None, None
+                return None, deepcopy(self._metadata)
             if not 0 <= time.monotonic() - self._timestamp < self.max_age_s:
                 return None, {**TrackingResult.not_found().to_dict(), "stale": True}
             return self._frame.copy(), deepcopy(self._metadata)

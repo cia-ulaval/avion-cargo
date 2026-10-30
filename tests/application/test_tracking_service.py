@@ -38,6 +38,7 @@ class FakePoseEstimator:
     pose: Pose3D
     rotation_vectors: np.ndarray
     translation_vectors: np.ndarray
+    rotation_matrix: np.ndarray = field(default_factory=lambda: np.eye(3))
     calls: list[dict[str, Any]] = field(default_factory=list)
 
     def estimate_pose(
@@ -47,7 +48,7 @@ class FakePoseEstimator:
         marker_length_m: float,
         calib: CalibrationData,
         center: bool,
-    ) -> tuple[Pose3D, np.ndarray, np.ndarray]:
+    ) -> tuple[Pose3D, np.ndarray, np.ndarray, np.ndarray]:
         self.calls.append(
             {
                 "corners": corners,
@@ -56,7 +57,7 @@ class FakePoseEstimator:
                 "center": center,
             }
         )
-        return self.pose, self.rotation_vectors, self.translation_vectors
+        return self.pose, self.rotation_matrix, self.rotation_vectors, self.translation_vectors
 
 
 def calibration_data(size=8) -> CalibrationData:
@@ -133,6 +134,8 @@ def test_tracking_estimates_first_detection_draws_overlays_and_converts_pose_to_
     assert result.marker_id == 41
     assert result.pose == Pose3D(x=3.0, y=-2.0, z=10.0)
     assert result.uav_pose == Pose3D(x=2.0, y=3.0, z=10.0)
+    assert result.target_yaw_error_rad == pytest.approx(np.pi / 2)
+    assert result.to_dict()["target_yaw_error_rad"] == pytest.approx(np.pi / 2)
 
     assert len(pose_estimator.calls) == 1
     assert pose_estimator.calls[0]["marker_length_m"] == pytest.approx(0.896)

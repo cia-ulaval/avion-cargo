@@ -1,0 +1,10 @@
+services:
+  dev:
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    environment:
+      DISPLAY: "${DOCKER_X11_DISPLAY:?Run update-docker-x11.sh first}"
+      XAUTHORITY: "/home/dev/.Xauthority"
+      SITL_RITW_TERMINAL: "screen -D -m"
+    volumes:
+      - "${DOCKER_XAUTHORITY:?Run update-docker-x11.sh first}:/home/dev/.Xauthority:ro"

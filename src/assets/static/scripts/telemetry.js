@@ -59,6 +59,7 @@ export function extractTrackingTelemetry(payload) {
     poseUav: payload?.poses?.estimated_pose_to_uav ?? payload?.estimated_pose_to_uav ?? payload?.uav_pose ?? null,
     markerId: payload?.marker_id ?? payload?.markerId ?? null,
     status: payload?.status,
+    cameraState: payload?.camera_state ?? 'OK',
     attitude: payload?.attitude ?? {},
   };
 }

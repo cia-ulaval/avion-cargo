@@ -114,6 +114,21 @@ def test_real_camera_does_not_require_a_simulation_topic(tmp_path, valid_config_
     ConfigurationValidator(write_config(tmp_path, valid_config_data)).validate()
 
 
+def test_orientation_control_config_is_validated(tmp_path, valid_config_data):
+    valid_config_data["orientation_control"] = {"yaw_channel": 9}
+    with pytest.raises(ValidationError, match="yaw_channel"):
+        ConfigurationValidator(write_config(tmp_path, valid_config_data)).validate()
+
+
+def test_validator_rejects_an_orientation_enable_flag_because_alignment_is_mandatory(
+    tmp_path: Path,
+    valid_config_data: dict,
+) -> None:
+    valid_config_data["orientation_control"] = {"enabled": False}
+    with pytest.raises(ValidationError, match="Unknown keys"):
+        ConfigurationValidator(write_config(tmp_path, valid_config_data)).validate()
+
+
 @pytest.mark.parametrize(
     "path,value",
     [
