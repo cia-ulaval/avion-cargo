@@ -337,7 +337,7 @@ h2 {
 }
 
 .video-stage video {
-  object-fit: cover;
+  object-fit: contain;
   background: #0b1015;
   z-index: 1;
 }
