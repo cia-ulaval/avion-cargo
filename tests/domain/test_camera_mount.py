@@ -17,3 +17,14 @@ def test_tilted_camera_and_lever_arm_transform_target_into_vehicle_frame():
 def test_non_rigid_mount_is_rejected(rotation):
     with pytest.raises(ValueError, match="orthonormal"):
         CameraMount(rotation=rotation)
+
+
+def test_marker_rotation_is_transformed_from_camera_optical_axes_to_body_frd():
+    import numpy as np
+
+    transformed = CameraMount().to_body_rotation(np.eye(3))
+
+    np.testing.assert_allclose(
+        transformed,
+        [[0.0, -1.0, 0.0], [1.0, 0.0, 0.0], [0.0, 0.0, 1.0]],
+    )

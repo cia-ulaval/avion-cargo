@@ -1,6 +1,7 @@
 from pathlib import Path
 
 from domain.models import TargetedMarker
+from domain.orientation_control import OrientationControlConfig
 from infrastructure.persistence.autolander_configuration_reader import AutolanderConfigurationReader
 from infrastructure.persistence.configuration_models import (
     DroneConnectionConfiguration,
@@ -33,6 +34,9 @@ def test_reader_maps_a_valid_json_file_to_runtime_configuration_objects(
         port=14550,
         baud_rate=921600,
     )
+<<<<<<< HEAD
+    assert config.orientation_control == OrientationControlConfig()
+=======
     assert config.drone_connection_config.timeout == 10.0
     assert config.drone_connection_config.fail_on_timeout is True
 
@@ -44,6 +48,7 @@ def test_reader_preserves_optional_fc_timeout_settings(tmp_path, valid_config_da
 
     assert config.drone_connection_config.timeout == 0.25
     assert config.drone_connection_config.fail_on_timeout is False
+>>>>>>> 2fb442cf6d40dc177cc4617919bf70c063d94a44
 
 
 def test_reader_resolves_relative_calibration_paths_from_the_config_file_directory(
@@ -75,3 +80,17 @@ def test_reader_preserves_configured_camera_mount(tmp_path, valid_config_data):
     from domain.models import Pose3D
 
     assert config.camera_config.mount.to_body(Pose3D(1, 2, 3)) == Pose3D(1.1, 2.2, 3.3)
+
+
+def test_reader_loads_orientation_control_settings(tmp_path, valid_config_data):
+    valid_config_data["orientation_control"] = {
+        "yaw_channel": 4,
+        "marker_axis": "y",
+        "marker_axis_sign": -1,
+        "yaw_input_sign": -1,
+        "gain_pwm_per_rad": 120.0,
+        "max_deflection_pwm": 150,
+        "deadband_deg": 2.5,
+    }
+    config = AutolanderConfigurationReader(write_config(tmp_path, valid_config_data)).read()
+    assert config.orientation_control == OrientationControlConfig(**valid_config_data["orientation_control"])

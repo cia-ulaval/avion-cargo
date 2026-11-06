@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import Any, Optional
 
 from domain.camera_mount import CameraMount
+from domain.orientation_control import OrientationControlConfig
 from utils.validators.validation_error import ValidationError
 
 
@@ -79,9 +80,10 @@ class ConfigurationValidator:
         self._validate_vision(raw)
         self._validate_streaming(raw)
         self._validate_drone_connection(raw)
+        self._validate_orientation_control(raw)
 
         # Optionnel: refuser les clés inconnues au root (strict)
-        allowed_root = {"camera", "vision", "streaming", "drone_connection"}
+        allowed_root = {"camera", "vision", "streaming", "drone_connection", "orientation_control"}
         extra = set(raw.keys()) - allowed_root
         if extra:
             raise ValidationError(f"Unknown root keys: {sorted(extra)}", "root")
@@ -206,6 +208,30 @@ class ConfigurationValidator:
         self._no_extra_keys(
             dc, {"use_serial", "address", "port", "baud_rate", "timeout", "fail_on_timeout"}, "drone_connection"
         )
+
+    def _validate_orientation_control(self, root: dict[str, Any]) -> None:
+        if "orientation_control" not in root:
+            return
+        settings = root["orientation_control"]
+        if not isinstance(settings, dict):
+            raise ValidationError("Expected object at 'orientation_control'", "orientation_control")
+        self._no_extra_keys(
+            settings,
+            {
+                "yaw_channel",
+                "marker_axis",
+                "marker_axis_sign",
+                "yaw_input_sign",
+                "gain_pwm_per_rad",
+                "max_deflection_pwm",
+                "deadband_deg",
+            },
+            "orientation_control",
+        )
+        try:
+            OrientationControlConfig(**settings)
+        except (TypeError, ValueError) as error:
+            raise ValidationError(str(error), "orientation_control") from error
 
     # -------------------------
     # Helpers

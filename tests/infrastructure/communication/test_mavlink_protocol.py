@@ -58,6 +58,36 @@ def test_position_branch_keeps_metric_values_and_omits_unknown_image_angles():
     assert message.position_valid == 1
 
 
+def test_yaw_override_changes_only_the_requested_rc_channel_and_can_be_released():
+    drone = connected_drone()
+    drone._target_system = 1
+    drone._target_component = 1
+
+    drone.set_yaw_input(1620, channel=4)
+    message = last_packet(drone)
+    assert message.get_type() == "RC_CHANNELS_OVERRIDE"
+    assert message.target_system == 1
+    assert message.target_component == 1
+    assert message.chan4_raw == 1620
+    assert (message.chan1_raw, message.chan2_raw, message.chan3_raw, message.chan5_raw) == (65535, 65535, 65535, 65535)
+
+    drone.set_yaw_input(None, channel=4)
+    release = last_packet(drone)
+    assert release.get_type() == "RC_CHANNELS_OVERRIDE"
+    assert release.chan4_raw == 0
+
+
+def test_yaw_override_rejects_invalid_pwm_and_channel_before_sending():
+    drone = connected_drone()
+    drone._target_system = 1
+    drone._target_component = 1
+    with pytest.raises(ValueError, match="yaw PWM"):
+        drone.set_yaw_input(2100)
+    with pytest.raises(ValueError, match="yaw RC channel"):
+        drone.set_yaw_input(1500, channel=9)
+    drone.connection.write.assert_not_called()
+
+
 @pytest.mark.parametrize("z", [0, -1])
 def test_target_at_or_above_vehicle_is_not_transmitted(z):
     drone = connected_drone()
