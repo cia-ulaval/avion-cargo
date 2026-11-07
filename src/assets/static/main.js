@@ -4,6 +4,13 @@ import { highlightMode, refreshRuntimeLabels, renderDrone, renderTracking, setSt
 
 refs.startButton.addEventListener('click', start);
 refs.stopButton.addEventListener('click', stop);
+document.getElementById('fullscreenButton').addEventListener('click', async () => {
+  try {
+    await refs.videoStage.requestFullscreen();
+  } catch (error) {
+    console.error('Fullscreen unavailable:', error);
+  }
+});
 window.addEventListener('beforeunload', stop);
 window.setInterval(refreshRuntimeLabels, 1000);
 
@@ -12,3 +19,4 @@ updateCompass(null);
 renderTracking({});
 renderDrone({});
 setStreamState('stopped', 'Stopped');
+start();

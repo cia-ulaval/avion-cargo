@@ -70,6 +70,7 @@ export async function start() {
     setText(refs.channelStateLabel, 'negotiated');
   } catch (error) {
     console.error(error);
+    await stop();
     setStreamState('error', 'Connection failed');
   }
 }
