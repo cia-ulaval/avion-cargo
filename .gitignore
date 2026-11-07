@@ -122,3 +122,12 @@ temp/
 # Texture du scénario Gazebo versionné
 !simulation/worlds/markers/aruco.png
 !simulation/worlds/markers/faruco.png
+
+# -------------------------------------------------
+# Logs files from simulations
+# -------------------------------------------------
+
+*.bin
+*.tlog
+*.tlog.*
+*.raw
