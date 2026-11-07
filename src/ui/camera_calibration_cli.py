@@ -2,6 +2,7 @@ import click
 from loguru import logger
 
 from composition import CameraCalibrationParameters, build_camera, build_camera_calibration_service
+from domain.markers import DEFAULT_ARUCO_DICTIONARY, SUPPORTED_ARUCO_DICTIONARY_IDS
 from domain.models import TargetedMarker
 from infrastructure.persistence.configuration_models import CameraConfiguration
 from infrastructure.vision.opencv_gridboard_calibration_engine import GridBoardCalibrationConfig, GridBoardSpec
@@ -11,14 +12,14 @@ from ui.calibration_report_presenter import show_calibration_report
 @click.command(context_settings={"help_option_names": ["-h", "--help"]})
 @click.option("-w", "markers_x", required=True, type=int, help="Markers X")
 @click.option("-hm", "markers_y", required=True, type=int, help="Markers Y")
-@click.option("-l", "marker_length", required=True, type=float, help="Marker length (meters)")
-@click.option("-s", "marker_separation", required=True, type=float, help="Marker separation (meters)")
+@click.option("-l", "marker_length", required=True, type=float, help="Marker length (in meters)")
+@click.option("-s", "marker_separation", required=True, type=float, help="Marker separation (in meters)")
 @click.option(
     "-d",
     "dictionary_id",
-    default=16,
+    default=DEFAULT_ARUCO_DICTIONARY,
     show_default=True,
-    type=click.IntRange(0, 16),
+    type=click.IntRange(min(SUPPORTED_ARUCO_DICTIONARY_IDS), max(SUPPORTED_ARUCO_DICTIONARY_IDS)),
     help="OpenCV dictionary id (0..16; 16 = DICT_ARUCO_ORIGINAL)",
 )
 @click.option("--rs", is_flag=True, help="Refine strategy (during calibration)")

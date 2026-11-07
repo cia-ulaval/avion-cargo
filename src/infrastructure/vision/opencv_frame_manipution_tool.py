@@ -108,19 +108,35 @@ class FrameManipulationTool:
         copy: bool = False,
     ) -> np.ndarray:
         """
-        Draw 3D axes for already-estimated poses.
+        Draw visible portions of pose axes, clipping them to the image.
         """
         out = frame.copy() if copy else frame
+        length = axis_style.axis_length_m
+        axes = np.float64([[0, 0, 0], [length, 0, 0], [0, length, 0], [0, 0, length]])
+        height, width = out.shape[:2]
 
         n = min(len(rotation_vectors), len(translation_vectors))
         for i in range(n):
-            cv2.drawFrameAxes(
-                out,
-                camera_matrix,
-                distortion_coefficients,
-                rotation_vectors[i],
-                translation_vectors[i],
-                axis_style.axis_length_m,
-                axis_style.thickness,
-            )
+            rvec = np.asarray(rotation_vectors[i], dtype=np.float64).reshape(3)
+            tvec = np.asarray(translation_vectors[i], dtype=np.float64).reshape(3)
+            if not np.all(np.isfinite(rvec)) or not np.all(np.isfinite(tvec)):
+                continue
+            rotation, _ = cv2.Rodrigues(rvec)
+            depths = (axes @ rotation.T + tvec)[:, 2]
+            if depths[0] <= 0:
+                continue
+            projected, _ = cv2.projectPoints(axes, rvec, tvec, camera_matrix, distortion_coefficients)
+            projected = projected.reshape(4, 2)
+            # drawFrameAxes warns on every frame when an endpoint is outside.
+            # Clip each projected segment explicitly and keep the visible part.
+            for endpoint, color in enumerate((Color.RED, Color.GREEN, Color.BLUE), start=1):
+                if depths[endpoint] <= 0:
+                    continue
+                segment = projected[[0, endpoint]]
+                if not np.all(np.isfinite(segment)) or np.any(np.abs(segment) >= np.iinfo(np.int32).max):
+                    continue
+                start, end = (tuple(point) for point in np.rint(segment).astype(np.int32))
+                visible, start, end = cv2.clipLine((0, 0, width, height), start, end)
+                if visible:
+                    cv2.line(out, start, end, color.bgr(), axis_style.thickness)
         return out

@@ -1,5 +1,8 @@
 from pathlib import Path
 
+import pytest
+
+from domain.markers import FractalType, MarkerType
 from domain.models import TargetedMarker
 from infrastructure.persistence.autolander_configuration_reader import AutolanderConfigurationReader
 from infrastructure.persistence.configuration_models import (
@@ -19,6 +22,7 @@ def test_reader_maps_a_valid_json_file_to_runtime_configuration_objects(
     config = AutolanderConfigurationReader(config_path).read()
 
     assert config.targeted_marker == TargetedMarker(id=29, length=0.896, dictionary=0)
+    assert config.targeted_marker.marker_type is MarkerType.ARUCO
     assert config.camera_config.id == 0
     assert config.camera_config.use_picamera is False
     assert config.camera_config.fps == 25
@@ -75,3 +79,23 @@ def test_reader_preserves_configured_camera_mount(tmp_path, valid_config_data):
     from domain.models import Pose3D
 
     assert config.camera_config.mount.to_body(Pose3D(1, 2, 3)) == Pose3D(1.1, 2.2, 3.3)
+
+
+@pytest.mark.parametrize("legacy_root_id", [False, True])
+def test_reader_maps_faruco_configuration_to_automatic_tracking(
+    tmp_path: Path, valid_config_data: dict, legacy_root_id: bool
+) -> None:
+    valid_config_data["vision"]["targeted_marker"] = {
+        "type": "faruco",
+        "length": 0.896,
+        "fractal_type": "FRACTAL_3L_6",
+    }
+    if legacy_root_id:
+        valid_config_data["vision"]["targeted_marker"]["fractal_id"] = 0
+    config = AutolanderConfigurationReader(write_config(tmp_path, valid_config_data)).read()
+
+    assert config.targeted_marker.marker_type is MarkerType.FARUCO
+    assert config.targeted_marker.fractal_type is FractalType.FRACTAL_3L_6
+    assert config.targeted_marker == TargetedMarker(
+        id=None, length=0.896, marker_type="faruco", fractal_type="FRACTAL_3L_6"
+    )

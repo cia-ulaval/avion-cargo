@@ -5,6 +5,14 @@ from pathlib import Path
 from typing import Any, Optional
 
 from domain.camera_mount import CameraMount
+from domain.markers import (
+    FRACTAL_ROOT_ID,
+    SUPPORTED_ARUCO_DICTIONARY_IDS,
+    SUPPORTED_FRACTAL_TYPES,
+    FractalType,
+    MarkerType,
+    aruco_dictionary_capacity,
+)
 from utils.validators.validation_error import ValidationError
 
 
@@ -133,12 +141,44 @@ class ConfigurationValidator:
         tm = self._req_obj(vision, "targeted_marker", "vision")
 
         self._req_number(tm, "length", "vision.targeted_marker", min_exclusive=0.0)
-        marker_id = self._req_int(tm, "id", "vision.targeted_marker", min_=0)
-        dictionary = self._req_int(tm, "aruco_dictionary", "vision.targeted_marker", min_=0, max_=16)
-        capacity = 1024 if dictionary == 16 else (50, 100, 250, 1000)[dictionary % 4]
-        if marker_id >= capacity:
-            raise ValidationError(f"Marker ID must be < {capacity} for this dictionary", "vision.targeted_marker.id")
-        self._no_extra_keys(tm, {"length", "id", "aruco_dictionary"}, "vision.targeted_marker")
+        marker_type_value = tm.get("type", MarkerType.ARUCO.value)
+        if not isinstance(marker_type_value, str):
+            raise ValidationError("Expected a string", "vision.targeted_marker.type")
+        try:
+            marker_type = MarkerType(marker_type_value)
+        except ValueError as error:
+            raise ValidationError(
+                f"Must be one of {tuple(kind.value for kind in MarkerType)}", "vision.targeted_marker.type"
+            ) from error
+
+        if marker_type is MarkerType.ARUCO:
+            marker_id = self._req_int(tm, "id", "vision.targeted_marker", min_=0)
+            dictionary = self._req_int(
+                tm,
+                "aruco_dictionary",
+                "vision.targeted_marker",
+                min_=min(SUPPORTED_ARUCO_DICTIONARY_IDS),
+                max_=max(SUPPORTED_ARUCO_DICTIONARY_IDS),
+            )
+            capacity = aruco_dictionary_capacity(dictionary)
+            if marker_id >= capacity:
+                raise ValidationError(
+                    f"Marker ID must be < {capacity} for this dictionary", "vision.targeted_marker.id"
+                )
+            self._no_extra_keys(tm, {"type", "length", "id", "aruco_dictionary"}, "vision.targeted_marker")
+        else:
+            # Existing configurations may still declare the built-in root ID.
+            # Level selection is automatic and this field is no longer needed.
+            if "fractal_id" in tm:
+                self._req_int(tm, "fractal_id", "vision.targeted_marker", min_=FRACTAL_ROOT_ID, max_=FRACTAL_ROOT_ID)
+            fractal_type = self._req_str(tm, "fractal_type", "vision.targeted_marker", allow_empty=False)
+            try:
+                FractalType(fractal_type)
+            except ValueError as error:
+                raise ValidationError(
+                    f"Must be one of {SUPPORTED_FRACTAL_TYPES}", "vision.targeted_marker.fractal_type"
+                ) from error
+            self._no_extra_keys(tm, {"type", "length", "fractal_id", "fractal_type"}, "vision.targeted_marker")
         self._no_extra_keys(vision, {"targeted_marker"}, "vision")
 
     def _validate_streaming(self, root: dict[str, Any]) -> None:

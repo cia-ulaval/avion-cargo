@@ -36,7 +36,7 @@ def test_calibration_assembly_detects_calibrates_and_saves(
     service = composition.build_camera_calibration_service(camera, parameters)
     for frame in frames:
         detected = service.frame_collector.detector.detect(frame, service.frame_collector.target)
-        assert {marker_id for marker_id, _ in detected} == set(range(20))
+        assert {detection.marker_id for detection in detected} == set(range(20))
     monkeypatch.setattr(service.frame_collector, "collect", lambda: frames)
     service.calibration_repository.default_calibration_filedir = tmp_path
 
