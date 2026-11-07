@@ -9,7 +9,8 @@
     "targeted_marker": {
       "length": 0.896,
       "id": 29,
-      "aruco_dictionary": 16
+      "aruco_dictionary": 16,
+      "type": "aruco"
     }
   },
   "streaming": {

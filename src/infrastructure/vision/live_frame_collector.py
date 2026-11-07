@@ -63,8 +63,8 @@ class LiveFrameCollector(FrameCollector):
                 vis = frame.copy() if self.cfg.show_overlays else frame
 
                 if self.cfg.show_overlays and len(detections) > 0:
-                    corners_list = [c for (_mid, c) in detections]
-                    ids_arr = np.array([[mid] for (mid, _c) in detections], dtype=np.int32)
+                    corners_list = [detection.corners for detection in detections]
+                    ids_arr = np.array([[detection.marker_id] for detection in detections], dtype=np.int32)
                     FrameManipulationTool.draw_detected_markers(vis, corners_list, ids_arr)
 
                 if self.cfg.show_overlays:
