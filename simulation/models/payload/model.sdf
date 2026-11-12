@@ -1,0 +1,301 @@
+<?xml version="1.0" ?>
+<sdf version="1.9">
+  <model name="payload">
+    <static>false</static>
+    <self_collide>false</self_collide>
+    <!-- Provisional: triangle side=0.18 m; total model link mass=0.15 kg; wheel radius=0.027 m. -->
+    <link name="chassis">
+      <inertial>
+        <pose>0 0 0.079 0 0 0</pose>
+        <mass>0.1095</mass>
+        <inertia>
+          <ixx>6.11375e-05</ixx>
+          <iyy>6.11375e-05</iyy>
+          <izz>0.00011086875</izz>
+          <ixy>0</ixy>
+          <ixz>0</ixz>
+          <iyz>0</iyz>
+        </inertia>
+      </inertial>
+      <visual name="center_body">
+        <pose>0 0 0.079 0 0 0</pose>
+        <geometry>
+          <cylinder>
+            <radius>0.045</radius>
+            <length>0.025</length>
+          </cylinder>
+        </geometry>
+        <material>
+          <ambient>0.82 0.12 0.14 1</ambient>
+          <diffuse>0.82 0.12 0.14 1</diffuse>
+        </material>
+      </visual>
+      <collision name="body_contact">
+        <pose>0 0 0.079 0 0 0</pose>
+        <geometry>
+          <cylinder>
+            <radius>0.045</radius>
+            <length>0.025</length>
+          </cylinder>
+        </geometry>
+      </collision>
+      <visual name="edge_0">
+        <pose>0.045 0.0259807621 0.079 0 0 2.0943951</pose>
+        <geometry>
+          <box>
+            <size>0.18 0.013 0.013</size>
+          </box>
+        </geometry>
+        <material>
+          <ambient>0.89 0.15 0.16 1</ambient>
+          <diffuse>0.89 0.15 0.16 1</diffuse>
+        </material>
+      </visual>
+      <visual name="edge_1">
+        <pose>-0.045 0.0259807621 0.079 0 0 4.1887902</pose>
+        <geometry>
+          <box>
+            <size>0.18 0.013 0.013</size>
+          </box>
+        </geometry>
+        <material>
+          <ambient>0.89 0.15 0.16 1</ambient>
+          <diffuse>0.89 0.15 0.16 1</diffuse>
+        </material>
+      </visual>
+      <visual name="edge_2">
+        <pose>-9.54517715e-18 -0.0519615242 0.079 0 0 6.28318531</pose>
+        <geometry>
+          <box>
+            <size>0.18 0.013 0.013</size>
+          </box>
+        </geometry>
+        <material>
+          <ambient>0.89 0.15 0.16 1</ambient>
+          <diffuse>0.89 0.15 0.16 1</diffuse>
+        </material>
+      </visual>
+    </link>
+    <link name="wheel_0">
+      <pose>0.0675499815 0.039 0.028 0 1.57079633 0.523598776</pose>
+      <inertial>
+        <mass>0.0135</mass>
+        <inertia>
+          <ixx>2.748375e-06</ixx>
+          <iyy>2.748375e-06</iyy>
+          <izz>4.92075e-06</izz>
+          <ixy>0</ixy>
+          <ixz>0</ixz>
+          <iyz>0</iyz>
+        </inertia>
+      </inertial>
+      <collision name="wheel_0_contact">
+        <geometry>
+          <cylinder>
+            <radius>0.027</radius>
+            <length>0.016</length>
+          </cylinder>
+        </geometry>
+        <surface>
+          <friction>
+            <ode>
+              <mu>1.2</mu>
+              <mu2>0.02</mu2>
+              <fdir1>0 1 0</fdir1>
+            </ode>
+          </friction>
+        </surface>
+      </collision>
+      <visual name="wheel_0_visual">
+        <pose>0 0 0 0 0 0</pose>
+        <geometry>
+          <cylinder>
+            <radius>0.027</radius>
+            <length>0.016</length>
+          </cylinder>
+        </geometry>
+        <material>
+          <ambient>0.08 0.08 0.09 1</ambient>
+          <diffuse>0.08 0.08 0.09 1</diffuse>
+        </material>
+      </visual>
+    </link>
+    <link name="wheel_1">
+      <pose>-0.0675499815 0.039 0.028 0 1.57079633 2.61799388</pose>
+      <inertial>
+        <mass>0.0135</mass>
+        <inertia>
+          <ixx>2.748375e-06</ixx>
+          <iyy>2.748375e-06</iyy>
+          <izz>4.92075e-06</izz>
+          <ixy>0</ixy>
+          <ixz>0</ixz>
+          <iyz>0</iyz>
+        </inertia>
+      </inertial>
+      <collision name="wheel_1_contact">
+        <geometry>
+          <cylinder>
+            <radius>0.027</radius>
+            <length>0.016</length>
+          </cylinder>
+        </geometry>
+        <surface>
+          <friction>
+            <ode>
+              <mu>1.2</mu>
+              <mu2>0.02</mu2>
+              <fdir1>0 1 0</fdir1>
+            </ode>
+          </friction>
+        </surface>
+      </collision>
+      <visual name="wheel_1_visual">
+        <pose>0 0 0 0 0 0</pose>
+        <geometry>
+          <cylinder>
+            <radius>0.027</radius>
+            <length>0.016</length>
+          </cylinder>
+        </geometry>
+        <material>
+          <ambient>0.08 0.08 0.09 1</ambient>
+          <diffuse>0.08 0.08 0.09 1</diffuse>
+        </material>
+      </visual>
+    </link>
+    <link name="wheel_2">
+      <pose>-1.43283676e-17 -0.078 0.028 0 1.57079633 4.71238898</pose>
+      <inertial>
+        <mass>0.0135</mass>
+        <inertia>
+          <ixx>2.748375e-06</ixx>
+          <iyy>2.748375e-06</iyy>
+          <izz>4.92075e-06</izz>
+          <ixy>0</ixy>
+          <ixz>0</ixz>
+          <iyz>0</iyz>
+        </inertia>
+      </inertial>
+      <collision name="wheel_2_contact">
+        <geometry>
+          <cylinder>
+            <radius>0.027</radius>
+            <length>0.016</length>
+          </cylinder>
+        </geometry>
+        <surface>
+          <friction>
+            <ode>
+              <mu>1.2</mu>
+              <mu2>0.02</mu2>
+              <fdir1>0 1 0</fdir1>
+            </ode>
+          </friction>
+        </surface>
+      </collision>
+      <visual name="wheel_2_visual">
+        <pose>0 0 0 0 0 0</pose>
+        <geometry>
+          <cylinder>
+            <radius>0.027</radius>
+            <length>0.016</length>
+          </cylinder>
+        </geometry>
+        <material>
+          <ambient>0.08 0.08 0.09 1</ambient>
+          <diffuse>0.08 0.08 0.09 1</diffuse>
+        </material>
+      </visual>
+    </link>
+    <joint name="wheel_0_joint" type="revolute">
+      <parent>chassis</parent>
+      <child>wheel_0</child>
+      <pose relative_to="wheel_0">0 0 0 0 0 0</pose>
+      <axis>
+        <xyz>0 0 1</xyz>
+        <limit>
+          <lower>-1e16</lower>
+          <upper>1e16</upper>
+          <effort>0.10</effort>
+          <velocity>25</velocity>
+        </limit>
+        <dynamics>
+          <damping>0.001</damping>
+        </dynamics>
+      </axis>
+    </joint>
+    <joint name="wheel_1_joint" type="revolute">
+      <parent>chassis</parent>
+      <child>wheel_1</child>
+      <pose relative_to="wheel_1">0 0 0 0 0 0</pose>
+      <axis>
+        <xyz>0 0 1</xyz>
+        <limit>
+          <lower>-1e16</lower>
+          <upper>1e16</upper>
+          <effort>0.10</effort>
+          <velocity>25</velocity>
+        </limit>
+        <dynamics>
+          <damping>0.001</damping>
+        </dynamics>
+      </axis>
+    </joint>
+    <joint name="wheel_2_joint" type="revolute">
+      <parent>chassis</parent>
+      <child>wheel_2</child>
+      <pose relative_to="wheel_2">0 0 0 0 0 0</pose>
+      <axis>
+        <xyz>0 0 1</xyz>
+        <limit>
+          <lower>-1e16</lower>
+          <upper>1e16</upper>
+          <effort>0.10</effort>
+          <velocity>25</velocity>
+        </limit>
+        <dynamics>
+          <damping>0.001</damping>
+        </dynamics>
+      </axis>
+    </joint>
+    <plugin filename="gz-sim-joint-controller-system" name="gz::sim::systems::JointController">
+      <joint_name>wheel_0_joint</joint_name>
+      <use_force_commands>true</use_force_commands>
+      <p_gain>0.02</p_gain>
+      <i_gain>0.001</i_gain>
+      <d_gain>0</d_gain>
+      <i_max>0.05</i_max>
+      <i_min>-0.05</i_min>
+      <cmd_max>0.10</cmd_max>
+      <cmd_min>-0.10</cmd_min>
+    </plugin>
+    <plugin filename="gz-sim-joint-controller-system" name="gz::sim::systems::JointController">
+      <joint_name>wheel_1_joint</joint_name>
+      <use_force_commands>true</use_force_commands>
+      <p_gain>0.02</p_gain>
+      <i_gain>0.001</i_gain>
+      <d_gain>0</d_gain>
+      <i_max>0.05</i_max>
+      <i_min>-0.05</i_min>
+      <cmd_max>0.10</cmd_max>
+      <cmd_min>-0.10</cmd_min>
+    </plugin>
+    <plugin filename="gz-sim-joint-controller-system" name="gz::sim::systems::JointController">
+      <joint_name>wheel_2_joint</joint_name>
+      <use_force_commands>true</use_force_commands>
+      <p_gain>0.02</p_gain>
+      <i_gain>0.001</i_gain>
+      <d_gain>0</d_gain>
+      <i_max>0.05</i_max>
+      <i_min>-0.05</i_min>
+      <cmd_max>0.10</cmd_max>
+      <cmd_min>-0.10</cmd_min>
+    </plugin>
+    <plugin filename="gz-sim-joint-state-publisher-system" name="gz::sim::systems::JointStatePublisher">
+      <joint_name>wheel_0_joint</joint_name>
+      <joint_name>wheel_1_joint</joint_name>
+      <joint_name>wheel_2_joint</joint_name>
+    </plugin>
+  </model>
+</sdf>
