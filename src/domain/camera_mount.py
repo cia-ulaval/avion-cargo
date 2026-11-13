@@ -19,7 +19,7 @@ class CameraMount:
         if rotation.shape != (3, 3) or not np.isfinite(rotation).all():
             raise ValueError("camera mount rotation must be a finite 3x3 matrix")
         if translation.shape != (3,) or not np.isfinite(translation).all():
-            raise ValueError("camera mount translation_m must contain three finite meters")
+            raise ValueError("camera mount translation_m must contain three finite values (in meters)")
         if not np.allclose(rotation.T @ rotation, np.eye(3), atol=1e-6) or not np.isclose(np.linalg.det(rotation), 1.0):
             raise ValueError("camera mount rotation must be orthonormal with determinant +1")
         object.__setattr__(self, "rotation", tuple(tuple(row) for row in rotation))

@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from typing import Optional
 
 import numpy as np
 
@@ -16,8 +17,8 @@ class FrameAnnotator(ABC):
         marker_id: int,
         corners: np.ndarray,
         calibration: CalibrationData,
-        rotation_vectors: np.ndarray,
-        translation_vectors: np.ndarray,
+        rotation_vectors: Optional[np.ndarray],
+        translation_vectors: Optional[np.ndarray],
     ) -> np.ndarray:
         """Return the annotated image, which may be a copy of the input."""
         raise NotImplementedError()

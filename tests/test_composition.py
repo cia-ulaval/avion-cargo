@@ -36,7 +36,7 @@ def test_calibration_assembly_detects_calibrates_and_saves(
     service = composition.build_camera_calibration_service(camera, parameters)
     for frame in frames:
         detected = service.frame_collector.detector.detect(frame, service.frame_collector.target)
-        assert {marker_id for marker_id, _ in detected} == set(range(20))
+        assert {detection.marker_id for detection in detected} == set(range(20))
     monkeypatch.setattr(service.frame_collector, "collect", lambda: frames)
     service.calibration_repository.default_calibration_filedir = tmp_path
 
@@ -104,9 +104,15 @@ def test_landing_assembly_shares_frame_buffer_and_preserves_configuration(
 
 
 @pytest.mark.parametrize("serial", [False, True])
-def test_drone_assembly_selects_transport_without_connecting(serial: bool) -> None:
+@pytest.mark.parametrize("fail_on_timeout", [False, True])
+def test_drone_assembly_selects_transport_without_connecting(serial: bool, fail_on_timeout: bool) -> None:
     config = DroneConnectionConfiguration(
-        serial, "/dev/ttyACM0" if serial else "127.0.0.1", None if serial else 14550, 57600
+        serial,
+        "/dev/ttyACM0" if serial else "127.0.0.1",
+        None if serial else 14550,
+        57600,
+        timeout=0.25,
+        fail_on_timeout=fail_on_timeout,
     )
 
     drone = composition.build_drone(config)
@@ -116,6 +122,8 @@ def test_drone_assembly_selects_transport_without_connecting(serial: bool) -> No
     assert drone.parameters.address == config.address
     assert drone.parameters.port == config.port
     assert drone.parameters.baud_rate == 57600
+    assert drone.parameters.timeout == 0.25
+    assert drone.parameters.fail_on_timeout is fail_on_timeout
 
 
 @pytest.mark.parametrize("simulation", [False, True])

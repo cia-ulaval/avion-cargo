@@ -7,6 +7,7 @@ import numpy as np
 
 from domain.camera_calibration_engine import CameraCalibrationEngine
 from domain.errors import InvalidCalibrationError
+from domain.markers import aruco_dictionary_capacity
 from domain.models import CalibrationReport
 
 
@@ -68,8 +69,7 @@ class OpenCVGridBoardCameraCalibrationEngine(CameraCalibrationEngine):
         if cfg.fix_aspect_ratio is not None and (not np.isfinite(cfg.fix_aspect_ratio) or cfg.fix_aspect_ratio <= 0):
             raise ValueError("Aspect ratio must be finite and positive")
 
-        if not 0 <= board.dictionary_id <= 16:
-            raise ValueError("dictionary_id must be in 0..16")
+        aruco_dictionary_capacity(board.dictionary_id)
 
         self._dictionary = cv2.aruco.getPredefinedDictionary(board.dictionary_id)
         self._board = cv2.aruco.GridBoard(

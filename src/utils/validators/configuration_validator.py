@@ -5,7 +5,14 @@ from pathlib import Path
 from typing import Any, Optional
 
 from domain.camera_mount import CameraMount
-from domain.orientation_control import OrientationControlConfig
+from domain.markers import (
+    FRACTAL_ROOT_ID,
+    SUPPORTED_ARUCO_DICTIONARY_IDS,
+    SUPPORTED_FRACTAL_TYPES,
+    FractalType,
+    MarkerType,
+    aruco_dictionary_capacity,
+)
 from utils.validators.validation_error import ValidationError
 
 
@@ -40,7 +47,9 @@ class ConfigurationValidator:
         "use_serial": bool,
         "address": str non-empty,
         "port": int in [1..65535] OR null,
-        "baud_rate": int>0
+        "baud_rate": int>0,
+        "timeout": float>0 (optional, default 10.0 seconds),
+        "fail_on_timeout": bool (optional, default true)
       }
     }
     """
@@ -78,10 +87,9 @@ class ConfigurationValidator:
         self._validate_vision(raw)
         self._validate_streaming(raw)
         self._validate_drone_connection(raw)
-        self._validate_orientation_control(raw)
 
         # Optionnel: refuser les clés inconnues au root (strict)
-        allowed_root = {"camera", "vision", "streaming", "drone_connection", "orientation_control"}
+        allowed_root = {"camera", "vision", "streaming", "drone_connection"}
         extra = set(raw.keys()) - allowed_root
         if extra:
             raise ValidationError(f"Unknown root keys: {sorted(extra)}", "root")
@@ -133,12 +141,44 @@ class ConfigurationValidator:
         tm = self._req_obj(vision, "targeted_marker", "vision")
 
         self._req_number(tm, "length", "vision.targeted_marker", min_exclusive=0.0)
-        marker_id = self._req_int(tm, "id", "vision.targeted_marker", min_=0)
-        dictionary = self._req_int(tm, "aruco_dictionary", "vision.targeted_marker", min_=0, max_=16)
-        capacity = 1024 if dictionary == 16 else (50, 100, 250, 1000)[dictionary % 4]
-        if marker_id >= capacity:
-            raise ValidationError(f"Marker ID must be < {capacity} for this dictionary", "vision.targeted_marker.id")
-        self._no_extra_keys(tm, {"length", "id", "aruco_dictionary"}, "vision.targeted_marker")
+        marker_type_value = tm.get("type", MarkerType.ARUCO.value)
+        if not isinstance(marker_type_value, str):
+            raise ValidationError("Expected a string", "vision.targeted_marker.type")
+        try:
+            marker_type = MarkerType(marker_type_value)
+        except ValueError as error:
+            raise ValidationError(
+                f"Must be one of {tuple(kind.value for kind in MarkerType)}", "vision.targeted_marker.type"
+            ) from error
+
+        if marker_type is MarkerType.ARUCO:
+            marker_id = self._req_int(tm, "id", "vision.targeted_marker", min_=0)
+            dictionary = self._req_int(
+                tm,
+                "aruco_dictionary",
+                "vision.targeted_marker",
+                min_=min(SUPPORTED_ARUCO_DICTIONARY_IDS),
+                max_=max(SUPPORTED_ARUCO_DICTIONARY_IDS),
+            )
+            capacity = aruco_dictionary_capacity(dictionary)
+            if marker_id >= capacity:
+                raise ValidationError(
+                    f"Marker ID must be < {capacity} for this dictionary", "vision.targeted_marker.id"
+                )
+            self._no_extra_keys(tm, {"type", "length", "id", "aruco_dictionary"}, "vision.targeted_marker")
+        else:
+            # Existing configurations may still declare the built-in root ID.
+            # Level selection is automatic and this field is no longer needed.
+            if "fractal_id" in tm:
+                self._req_int(tm, "fractal_id", "vision.targeted_marker", min_=FRACTAL_ROOT_ID, max_=FRACTAL_ROOT_ID)
+            fractal_type = self._req_str(tm, "fractal_type", "vision.targeted_marker", allow_empty=False)
+            try:
+                FractalType(fractal_type)
+            except ValueError as error:
+                raise ValidationError(
+                    f"Must be one of {SUPPORTED_FRACTAL_TYPES}", "vision.targeted_marker.fractal_type"
+                ) from error
+            self._no_extra_keys(tm, {"type", "length", "fractal_id", "fractal_type"}, "vision.targeted_marker")
         self._no_extra_keys(vision, {"targeted_marker"}, "vision")
 
     def _validate_streaming(self, root: dict[str, Any]) -> None:
@@ -163,6 +203,10 @@ class ConfigurationValidator:
         use_serial = self._req_bool(dc, "use_serial", "drone_connection")
         address = self._req_str(dc, "address", "drone_connection", allow_empty=False)
         self._req_int(dc, "baud_rate", "drone_connection", min_=1)
+        if "timeout" in dc:
+            self._req_number(dc, "timeout", "drone_connection", min_exclusive=0.0)
+        if "fail_on_timeout" in dc:
+            self._req_bool(dc, "fail_on_timeout", "drone_connection")
 
         # port can be null or int
         port_val = self._req_key(dc, "port", "drone_connection")
@@ -199,31 +243,9 @@ class ConfigurationValidator:
                 )
             self._validate_host_like(address, "drone_connection.address")
 
-        self._no_extra_keys(dc, {"use_serial", "address", "port", "baud_rate"}, "drone_connection")
-
-    def _validate_orientation_control(self, root: dict[str, Any]) -> None:
-        if "orientation_control" not in root:
-            return
-        settings = root["orientation_control"]
-        if not isinstance(settings, dict):
-            raise ValidationError("Expected object at 'orientation_control'", "orientation_control")
         self._no_extra_keys(
-            settings,
-            {
-                "yaw_channel",
-                "marker_axis",
-                "marker_axis_sign",
-                "yaw_input_sign",
-                "gain_pwm_per_rad",
-                "max_deflection_pwm",
-                "deadband_deg",
-            },
-            "orientation_control",
+            dc, {"use_serial", "address", "port", "baud_rate", "timeout", "fail_on_timeout"}, "drone_connection"
         )
-        try:
-            OrientationControlConfig(**settings)
-        except (TypeError, ValueError) as error:
-            raise ValidationError(str(error), "orientation_control") from error
 
     # -------------------------
     # Helpers

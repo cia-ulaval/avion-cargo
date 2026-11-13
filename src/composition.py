@@ -10,8 +10,8 @@ from application.tracking_service import TrackingService
 from domain.camera import Camera
 from domain.camera_mount import CameraMount
 from domain.drone import Drone
+from domain.markers import MarkerType
 from domain.models import CalibrationData, TargetedMarker
-from domain.orientation_control import OrientationControlConfig
 from infrastructure.camera.frame_buffer import FrameBuffer
 from infrastructure.camera.opencv_capture_adapter import OpenCVCamera
 from infrastructure.communication.drone_status_buffer import DroneStatusBuffer
@@ -21,6 +21,7 @@ from infrastructure.persistence.configuration_models import (
     CameraConfiguration,
     DroneConnectionConfiguration,
 )
+from infrastructure.vision.faruco_detector import FArUcoDetector
 from infrastructure.vision.live_frame_collector import LiveFrameCollector, LiveFrameCollectorConfig
 from infrastructure.vision.opencv_aruco_detector import OpenCVArucoDetector, OpenCVArucoDetectorConfig
 from infrastructure.vision.opencv_frame_annotator import OpenCVFrameAnnotator
@@ -82,6 +83,8 @@ def build_drone(drone_connection_config: DroneConnectionConfiguration) -> Drone:
         address=drone_connection_config.address,
         port=drone_connection_config.port,
         baud_rate=drone_connection_config.baud_rate,
+        timeout=drone_connection_config.timeout,
+        fail_on_timeout=drone_connection_config.fail_on_timeout,
     )
     if drone_connection_config.use_serial:
         return DroneMavlinkSerialConnector(mavlink_params)
@@ -111,20 +114,25 @@ def build_camera_calibration_service(
 def build_tracking_service(
     camera: Camera,
     target: TargetedMarker,
-    detector_config: OpenCVArucoDetectorConfig,
+    detector_config: Optional[OpenCVArucoDetectorConfig],
     calibration_data: CalibrationData,
     camera_mount: CameraMount = CameraMount(),
-    orientation_control: OrientationControlConfig = OrientationControlConfig(),
 ) -> TrackingService:
+    if target.marker_type is MarkerType.FARUCO:
+        detector = FArUcoDetector(target, calibration_data)
+        annotator = detector
+    else:
+        detector = OpenCVArucoDetector(detector_config or OpenCVArucoDetectorConfig(dictionary_id=target.dictionary))
+        annotator = OpenCVFrameAnnotator()
+
     return TrackingService(
         camera=camera,
-        detector=OpenCVArucoDetector(detector_config),
+        detector=detector,
         pose_estimator=OpenCVPoseEstimator(),
         target=target,
         calibration=calibration_data,
-        annotator=OpenCVFrameAnnotator(),
+        annotator=annotator,
         camera_mount=camera_mount,
-        orientation_control=orientation_control,
     )
 
 
@@ -142,10 +150,9 @@ def build_landing_service(config: AutolanderConfiguration, use_simulated_cam: bo
     tracker = build_tracking_service(
         camera=camera,
         target=config.targeted_marker,
-        detector_config=OpenCVArucoDetectorConfig(dictionary_id=config.targeted_marker.dictionary),
+        detector_config=None,
         calibration_data=calibration,
         camera_mount=config.camera_config.mount,
-        orientation_control=config.orientation_control,
     )
     frame_buffer = FrameBuffer()
     streamer = WebRTCContentStreamer(
@@ -167,5 +174,4 @@ def build_landing_service(config: AutolanderConfiguration, use_simulated_cam: bo
         pose_buffer=PoseBuffer(),
         drone_status_buffer=DroneStatusBuffer(),
         telemetry_dps=config.streaming_config.data.dps,
-        orientation_control=config.orientation_control,
     )

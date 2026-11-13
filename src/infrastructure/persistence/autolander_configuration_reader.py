@@ -3,6 +3,7 @@ from pathlib import Path
 from typing import Any, Optional
 
 from domain.camera_mount import CameraMount
+from domain.markers import FractalType, MarkerType
 from domain.models import TargetedMarker
 from infrastructure.persistence.configuration_models import (
     AutolanderConfiguration,
@@ -103,11 +104,21 @@ class AutolanderConfigurationReader:
         vision = self._require_dict(self._require(raw, "vision", "root"), "vision")
         tm = self._require_dict(self._require(vision, "targeted_marker", "vision"), "vision.targeted_marker")
 
+        marker_type = MarkerType(tm.get("type", MarkerType.ARUCO.value))
         length = float(self._require(tm, "length", "vision.targeted_marker"))
-        marker_id = int(self._require(tm, "id", "vision.targeted_marker"))
-        aruco_dictionary = int(self._require(tm, "aruco_dictionary", "vision.targeted_marker"))
 
-        return TargetedMarker(length=length, id=marker_id, dictionary=aruco_dictionary)
+        if marker_type is MarkerType.ARUCO:
+            marker_id = int(self._require(tm, "id", "vision.targeted_marker"))
+            aruco_dictionary = int(self._require(tm, "aruco_dictionary", "vision.targeted_marker"))
+            return TargetedMarker(
+                length=length,
+                id=marker_id,
+                dictionary=aruco_dictionary,
+                marker_type=marker_type,
+            )
+
+        fractal_type = FractalType(self._require(tm, "fractal_type", "vision.targeted_marker"))
+        return TargetedMarker(length=length, id=None, marker_type=marker_type, fractal_type=fractal_type)
 
     def _parse_streaming(self, raw: dict[str, Any]) -> StreamingConfiguration:
         streaming = self._require_dict(self._require(raw, "streaming", "root"), "streaming")
@@ -143,4 +154,6 @@ class AutolanderConfigurationReader:
             address=address,
             port=port,
             baud_rate=baud_rate,
+            timeout=float(dc.get("timeout", 10.0)),
+            fail_on_timeout=dc.get("fail_on_timeout", True),
         )

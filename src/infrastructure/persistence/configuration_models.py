@@ -42,6 +42,8 @@ class DroneConnectionConfiguration:
     address: str
     port: Optional[int]
     baud_rate: int
+    timeout: float = 10.0
+    fail_on_timeout: bool = True
 
 
 @dataclass(slots=True, frozen=True)

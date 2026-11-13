@@ -16,6 +16,30 @@ def test_validator_accepts_a_coherent_udp_configuration_with_relative_calibratio
     ConfigurationValidator(config_path).validate()
 
 
+@pytest.mark.parametrize(
+    "key,value",
+    [
+        ("timeout", 0),
+        ("timeout", -1),
+        ("timeout", float("nan")),
+        ("timeout", float("inf")),
+        ("timeout", True),
+        ("timeout", "10"),
+        ("timeout", None),
+        ("fail_on_timeout", "false"),
+        ("fail_on_timeout", 0),
+        ("fail_on_timeout", None),
+    ],
+)
+def test_validator_rejects_invalid_fc_timeout_settings(tmp_path, valid_config_data, key, value):
+    valid_config_data["drone_connection"][key] = value
+
+    with pytest.raises(ValidationError) as error:
+        ConfigurationValidator(write_config(tmp_path, valid_config_data)).validate()
+
+    assert error.value.path == f"drone_connection.{key}"
+
+
 def test_validator_rejects_serial_configuration_that_still_uses_a_network_port(
     tmp_path: Path,
     valid_config_data: dict,
@@ -90,21 +114,6 @@ def test_real_camera_does_not_require_a_simulation_topic(tmp_path, valid_config_
     ConfigurationValidator(write_config(tmp_path, valid_config_data)).validate()
 
 
-def test_orientation_control_config_is_validated(tmp_path, valid_config_data):
-    valid_config_data["orientation_control"] = {"yaw_channel": 9}
-    with pytest.raises(ValidationError, match="yaw_channel"):
-        ConfigurationValidator(write_config(tmp_path, valid_config_data)).validate()
-
-
-def test_validator_rejects_an_orientation_enable_flag_because_alignment_is_mandatory(
-    tmp_path: Path,
-    valid_config_data: dict,
-) -> None:
-    valid_config_data["orientation_control"] = {"enabled": False}
-    with pytest.raises(ValidationError, match="Unknown keys"):
-        ConfigurationValidator(write_config(tmp_path, valid_config_data)).validate()
-
-
 @pytest.mark.parametrize(
     "path,value",
     [
@@ -118,3 +127,49 @@ def test_validator_rejects_an_orientation_enable_flag_because_alignment_is_manda
 def test_invalid_configuration_fails_before_startup(tmp_path, valid_config_data, path, value):
     with pytest.raises(ValidationError):
         ConfigurationValidator(write_config(tmp_path, changed_config(valid_config_data, *path, value=value))).validate()
+
+
+@pytest.mark.parametrize("legacy_root_id", [False, True])
+def test_validator_accepts_faruco_configuration(tmp_path: Path, valid_config_data: dict, legacy_root_id: bool) -> None:
+    valid_config_data["vision"]["targeted_marker"] = {
+        "type": "faruco",
+        "length": 0.896,
+        "fractal_type": "FRACTAL_3L_6",
+    }
+    if legacy_root_id:
+        valid_config_data["vision"]["targeted_marker"]["fractal_id"] = 0
+
+    ConfigurationValidator(write_config(tmp_path, valid_config_data)).validate()
+
+
+def test_validator_rejects_unknown_faruco_preset(tmp_path: Path, valid_config_data: dict) -> None:
+    valid_config_data["vision"]["targeted_marker"] = {
+        "type": "faruco",
+        "length": 0.896,
+        "fractal_type": "FRACTAL_99L_99",
+    }
+
+    with pytest.raises(ValidationError) as error:
+        ConfigurationValidator(write_config(tmp_path, valid_config_data)).validate()
+
+    assert error.value.path == "vision.targeted_marker.fractal_type"
+
+
+@pytest.mark.parametrize("legacy_id", [True, None, "0", -1, 1])
+def test_validator_rejects_invalid_legacy_faruco_id(tmp_path: Path, valid_config_data: dict, legacy_id) -> None:
+    valid_config_data["vision"]["targeted_marker"] = {
+        "type": "faruco",
+        "length": 0.896,
+        "fractal_type": "FRACTAL_3L_6",
+        "fractal_id": legacy_id,
+    }
+    with pytest.raises(ValidationError) as error:
+        ConfigurationValidator(write_config(tmp_path, valid_config_data)).validate()
+    assert error.value.path == "vision.targeted_marker.fractal_id"
+
+
+def test_validator_still_requires_aruco_id(tmp_path: Path, valid_config_data: dict) -> None:
+    del valid_config_data["vision"]["targeted_marker"]["id"]
+    with pytest.raises(ValidationError) as error:
+        ConfigurationValidator(write_config(tmp_path, valid_config_data)).validate()
+    assert error.value.path == "vision.targeted_marker.id"
