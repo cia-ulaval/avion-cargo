@@ -35,6 +35,9 @@ la calibration de la caméra, les essais en simulation, l’utilisation sur Rasp
 Les commandes d’installation, d’exécution, de gestion des dépendances, de formatage et de tests sont regroupées dans
 **[Commandes pour développeurs](https://github.com/cia-ulaval/avion-cargo/wiki/Commandes-pour-developpeurs)**.
 
+Le [guide de simulation QuadPlane](simulation/README.md#tricopter-quadplane-avec-docker) décrit le lancement Docker
+et l'installation automatique du script nécessaire au centrage sur le marqueur en `QLOITER` et `QLAND`.
+
 ## Type de marqueur
 
 Le champ `vision.targeted_marker.type` accepte `aruco` (valeur par défaut pour les anciens fichiers de configuration) ou `faruco`.

@@ -29,6 +29,60 @@ Les modèles standards `runway`, `iris_with_gimbal` et `iris_with_standoffs` res
 
 Les sources et attributions des fichiers sont indiquées dans [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
 
+## Tricopter QuadPlane avec Docker
+
+Depuis la racine du dépôt, activez le scénario tricopter puis lancez la simulation :
+
+```bash
+docker compose -f compose.yaml -f compose-full-sim.yaml up -d dev
+COMPOSE_FILE=compose.yaml:compose-full-sim.yaml bash scripts/launch-simulation.sh
+```
+
+Ajoutez vos fichiers Compose habituels pour l'affichage ou le GPU aux deux commandes.
+Le lancement complet appelle directement [scripts/launch-sitl.sh](../scripts/launch-sitl.sh)
+depuis le dépôt monté dans le conteneur, y compris lorsque l'image Docker est ancienne.
+Compose monte également [docker/avion-sitl.sh](../docker/avion-sitl.sh) sur
+`/usr/local/bin/avion-sitl` : le raccourci `docker compose exec dev avion-sitl` utilise
+ainsi le lanceur du dépôt même avec une ancienne image. Ce montage est appliqué lors
+de la création du conteneur. Après une mise à jour du dépôt, arrêtez la simulation puis
+relancez la commande `docker compose ... up -d dev` ci-dessus avec vos fichiers Compose
+habituels pour recréer le conteneur si sa configuration a changé.
+
+Avant chaque démarrage d'ArduPlane, le lanceur vérifie et installe
+`scripts/plane_precland.lua` dans le dossier ArduPilot utilisé comme répertoire de travail
+de SITL. Il utilise l'applet fournie par la révision locale d'ArduPilot, répare un lien
+absent ou cassé et refuse de démarrer si la source manque. Un script personnalisé déjà
+présent est préservé et signalé pour inspection s'il diffère de l'applet fournie.
+Pour une installation native, définissez `AVION_ARDUPILOT_ROOT` avec le chemin d'ArduPilot.
+
+Pour démarrer uniquement SITL dans un conteneur existant avec le scénario tricopter,
+utilisez le lanceur du dépôt afin de bénéficier du correctif même sans reconstruire
+l'image ni recréer le conteneur :
+
+```bash
+docker compose exec dev bash /workspace/avion-cargo/scripts/launch-sitl.sh
+```
+
+Si `avion-sitl` affiche directement `SIM_VEHICLE: Start` sans le message
+`QuadPlane precision landing script ready`, l'ancien lanceur est encore installé dans
+le conteneur. Utilisez la commande explicite ci-dessus, ou recréez le conteneur pour
+appliquer le montage. Une modification du Dockerfile seule ne met pas à jour les fichiers
+d'un conteneur déjà créé.
+
+Le terminal doit afficher `QuadPlane precision landing script ready`, puis MAVProxy
+doit recevoir `PLND: Loaded`. Le fichier [tricopter-vtol.parm](config/tricopter-vtol.parm)
+active `SCR_ENABLE=1`, `PLND_ENABLED=1`, `PLND_TYPE=1` et affecte `RC7_OPTION=39`.
+En `QLOITER`, activez RC7 avec `rc 7 1900` et vérifiez `PLND: PrecLoiter enabled`.
+En `QLAND`, l'applet applique automatiquement les corrections lorsque la cible est acquise.
+
+`PrecLand: Init Complete` confirme seulement l'initialisation de l'estimateur : ce message
+ne prouve pas que l'applet de commande est chargée. Sans elle, la vision peut détecter le
+marqueur et transmettre `LANDING_TARGET` sans que le QuadPlane se recentre.
+Si `PLND: Loaded` manque malgré l'installation, vérifiez les paramètres effectivement
+chargés par SITL, notamment `SCR_ENABLE` et `PLND_ENABLED`, ainsi que les erreurs Lua.
+Redémarrez SITL après la restauration du script; un processus déjà lancé ne constitue
+pas une validation de son chargement au démarrage.
+
 ## Démarrer avec quatre terminaux
 
 Ouvrez chaque terminal à la racine du dépôt Autolander, là où se trouve `pyproject.toml`. Les exemples supposent qu'ArduPilot est installé dans `~/ardupilot` et son environnement Python dans `~/venv-ardupilot` ; adaptez ces chemins à votre installation.

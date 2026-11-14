@@ -81,7 +81,8 @@ RUN set -eux; \
     mkdir -p /home/dev/ardupilot/scripts; \
     ln -sfn \
       ../libraries/AP_Scripting/applets/plane_precland.lua \
-      /home/dev/ardupilot/scripts/plane_precland.lua
+      /home/dev/ardupilot/scripts/plane_precland.lua; \
+    test -s /home/dev/ardupilot/scripts/plane_precland.lua
 
 RUN set -eux; \
     ARDUPILOT_GAZEBO_REF="$(sed -n 's/^ardupilot_gazebo=//p' /tmp/versions.txt)"; \
@@ -104,6 +105,7 @@ RUN printf '%s\n' \
 COPY --chown=root:root docker/prepare-workspace.sh /usr/local/bin/prepare-workspace.sh
 COPY --chown=root:root docker/container-start.sh /usr/local/bin/container-start.sh
 COPY --chown=root:root docker/fix-volume-permissions.sh /usr/local/bin/fix-volume-permissions.sh
+COPY --chown=root:root docker/avion-sitl.sh /usr/local/bin/avion-sitl
 RUN sudo chmod 0755 /usr/local/bin/prepare-workspace.sh /usr/local/bin/container-start.sh /usr/local/bin/fix-volume-permissions.sh
 
 RUN pipx install --force 'poetry==2.4.3' \
@@ -117,28 +119,6 @@ RUN apt-get update \
 
 RUN <<'CREATE_LAUNCHERS'
 set -eu
-cat > /usr/local/bin/avion-sitl <<'SCRIPT'
-#!/usr/bin/env bash
-set -euo pipefail
-cd /home/dev/ardupilot
-
-VEHICLE="${AVION_SITL_VEHICLE:-ArduCopter}"
-FRAME="${AVION_SITL_FRAME:-JSON}"
-MODEL="${AVION_SITL_MODEL:-}"
-PARAM_FILE="${AVION_SITL_PARAM_FILE-/workspace/avion-cargo/simulation/config/gazebo-iris-gimbal.parm}"
-
-args=(-D -v "$VEHICLE" -f "$FRAME")
-if [[ -n "$MODEL" ]]; then
-  args+=(--model "$MODEL")
-fi
-
-if [[ -n "$PARAM_FILE" ]]; then
-  args+=("--add-param-file=$PARAM_FILE")
-fi
-
-exec ./Tools/autotest/sim_vehicle.py "${args[@]}"
-SCRIPT
-
 cat > /usr/local/bin/avion-gazebo <<'SCRIPT'
 #!/usr/bin/env bash
 set -eo pipefail
