@@ -1,4 +1,4 @@
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from threading import Event, Thread
 from typing import Any
 from unittest.mock import Mock
@@ -7,9 +7,15 @@ import numpy as np
 import pytest
 
 from application import drone_autolanding_service as autolanding_module
+from application.yaw_alignment_supervisor import YawAlignmentSupervisor
 from domain.buffer import DroneStatusBufferPort, FrameBufferPort, PoseBufferPort
 from domain.content_streamer import ContentStreamer
 from domain.models import Pose3D, TargetedMarker
+from domain.rigid_transform import RigidTransform
+from domain.tracking import TrackingResult
+from domain.yaw_alignment import YawAlignmentConfig
+from infrastructure.communication.drone_status_buffer import DroneStatusBuffer
+from infrastructure.vision.pose_buffer import PoseBuffer
 
 
 @dataclass
@@ -307,3 +313,62 @@ def test_transient_camera_timeout_clears_target_and_recovers(sample_drone_status
     recovered_metadata = service.frame_buffer.set_value.call_args_list[1].args[1]
     assert recovered_metadata["camera_state"] == "OK"
     service.pose_buffer.set_uav_pose_value.assert_called_with(pose, timestamp=12.0)
+
+
+def test_supervisor_thread_consumes_tracking_and_stops_with_mode_restoration(sample_drone_status):
+    import time
+
+    from domain.drone import Drone, DroneMode
+
+    service = build_service(FakeDrone(sample_drone_status()))
+    drone = Mock(spec=Drone)
+    service.drone = drone
+    service.pose_buffer = PoseBuffer()
+    service.drone_status_buffer = DroneStatusBuffer()
+    service.yaw_supervisor = YawAlignmentSupervisor(drone, YawAlignmentConfig(enabled=True))
+    drone.prepare_yaw_control.return_value = True
+    mode = [DroneMode.QLAND]
+    drone.request_mode.side_effect = lambda value, **_kwargs: mode.__setitem__(0, value)
+    commanded = Event()
+    drone.send_yaw_input.side_effect = lambda value: commanded.set() if value else None
+    drone.get_status.side_effect = service.drone_status_buffer.get_value
+    service.aruco_tracker.camera.open = Mock()
+    transform = RigidTransform.from_vectors([0, 0, 0.5], [0, 0, 5])
+
+    def fresh_tracking():
+        now = time.monotonic()
+        service.drone_status_buffer.set_value(
+            replace(
+                sample_drone_status(),
+                mode=mode[0],
+                armed=True,
+                groundspeed_mps=0,
+                speed=0,
+                roll_rad=0,
+                pitch_rad=0,
+                yaw_rad=0,
+                attitude_timestamp_s=now,
+                position_timestamp_s=now,
+                last_heartbeat_monotonic_s=now,
+            )
+        )
+        return np.zeros((2, 2, 3)), TrackingResult.detected(
+            transform.position,
+            29,
+            transform.position,
+            captured_at_s=now,
+            camera_from_marker=transform,
+            body_from_marker=transform,
+        )
+
+    service.aruco_tracker.track_target = fresh_tracking
+    try:
+        service.track_target()
+        assert commanded.wait(2)
+        service.stop_tracking()
+        assert not service._threads["yaw-supervisor"].is_alive()
+        assert service._worker_failure is None
+        drone.request_mode.assert_called_with(DroneMode.QLAND, expected_modes=(DroneMode.GUIDED, DroneMode.QLAND))
+        drone.release_yaw_control.assert_called()
+    finally:
+        service.stop()

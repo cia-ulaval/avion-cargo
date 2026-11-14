@@ -13,6 +13,7 @@ from domain.markers import (
     MarkerType,
     aruco_dictionary_capacity,
 )
+from domain.yaw_alignment import YawAlignmentConfig
 from utils.validators.validation_error import ValidationError
 
 
@@ -87,9 +88,15 @@ class ConfigurationValidator:
         self._validate_vision(raw)
         self._validate_streaming(raw)
         self._validate_drone_connection(raw)
+        if "yaw_alignment" in raw:
+            yaw_alignment = self._req_obj(raw, "yaw_alignment", "root")
+            try:
+                YawAlignmentConfig(**yaw_alignment)
+            except (TypeError, ValueError) as error:
+                raise ValidationError(str(error), "yaw_alignment") from error
 
         # Optionnel: refuser les clés inconnues au root (strict)
-        allowed_root = {"camera", "vision", "streaming", "drone_connection"}
+        allowed_root = {"camera", "vision", "streaming", "drone_connection", "yaw_alignment"}
         extra = set(raw.keys()) - allowed_root
         if extra:
             raise ValidationError(f"Unknown root keys: {sorted(extra)}", "root")

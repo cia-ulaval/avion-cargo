@@ -50,6 +50,16 @@ def test_reader_preserves_optional_fc_timeout_settings(tmp_path, valid_config_da
     assert config.drone_connection_config.fail_on_timeout is False
 
 
+def test_alignment_requires_explicit_configuration_and_preserves_marker_direction(tmp_path, valid_config_data):
+    path = write_config(tmp_path, valid_config_data)
+    assert not AutolanderConfigurationReader(path).read().yaw_alignment.enabled
+    valid_config_data["yaw_alignment"] = {"enabled": True, "marker_forward_deg": 90, "trigger_deg": 15}
+    config = AutolanderConfigurationReader(write_config(tmp_path, valid_config_data)).read()
+    assert config.yaw_alignment.enabled
+    assert config.yaw_alignment.marker_forward_deg == 90
+    assert config.yaw_alignment.trigger_deg == 15
+
+
 def test_reader_resolves_relative_calibration_paths_from_the_config_file_directory(
     tmp_path: Path,
     valid_config_data: dict,

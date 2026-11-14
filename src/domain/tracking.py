@@ -3,6 +3,7 @@ from enum import Enum, auto
 from typing import Any, Optional
 
 from .models import Pose3D
+from .rigid_transform import RigidTransform
 
 
 class TrackingStatus(Enum):
@@ -18,6 +19,8 @@ class TrackingResult:
     marker_id: Optional[int] = None
     confidence: Optional[float] = None
     captured_at_s: Optional[float] = None  # local monotonic capture time
+    camera_from_marker: Optional[RigidTransform] = None
+    body_from_marker: Optional[RigidTransform] = None
 
     @staticmethod
     def not_found(captured_at_s: Optional[float] = None) -> "TrackingResult":
@@ -30,6 +33,8 @@ class TrackingResult:
         uav_pose: Optional[Pose3D] = None,
         confidence: Optional[float] = None,
         captured_at_s: Optional[float] = None,
+        camera_from_marker: Optional[RigidTransform] = None,
+        body_from_marker: Optional[RigidTransform] = None,
     ) -> "TrackingResult":
         return TrackingResult(
             status=TrackingStatus.DETECTED,
@@ -38,6 +43,8 @@ class TrackingResult:
             marker_id=marker_id,
             confidence=confidence,
             captured_at_s=captured_at_s,
+            camera_from_marker=camera_from_marker,
+            body_from_marker=body_from_marker,
         )
 
     def to_dict(self) -> dict[str, Any]:
@@ -49,4 +56,8 @@ class TrackingResult:
             },
             "marker_id": self.marker_id,
             "confidence": self.confidence,
+            "transforms": {
+                "camera_from_marker": self.camera_from_marker.to_list() if self.camera_from_marker else None,
+                "body_from_marker": self.body_from_marker.to_list() if self.body_from_marker else None,
+            },
         }

@@ -24,6 +24,10 @@
       "fps": 15
     }
   },
+  "yaw_alignment": {
+    "enabled": true,
+    "marker_forward_deg": 0.0
+  },
   "drone_connection": {
     "use_serial": false,
     "address": "127.0.0.1",

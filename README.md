@@ -24,6 +24,9 @@
 Le logiciel détecte la cible, estime sa position et la transmet au contrôleur de vol via MAVLink.
 Il diffuse également la vidéo et la télémétrie dans un navigateur.
 
+Le [superviseur d’alignement QuadPlane](docs/yaw-alignment.md) peut interrompre une descente en `QLAND`,
+aligner le lacet sur le marqueur en `GUIDED` VTOL, puis demander le retour en `QLAND`.
+
 ## Documentation
 
 Consultez le **[wiki du projet](https://github.com/cia-ulaval/avion-cargo/wiki)** pour l’installation,

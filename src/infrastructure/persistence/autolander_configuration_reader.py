@@ -5,6 +5,7 @@ from typing import Any, Optional
 from domain.camera_mount import CameraMount
 from domain.markers import FractalType, MarkerType
 from domain.models import TargetedMarker
+from domain.yaw_alignment import YawAlignmentConfig
 from infrastructure.persistence.configuration_models import (
     AutolanderConfiguration,
     CameraConfiguration,
@@ -42,6 +43,7 @@ class AutolanderConfigurationReader:
             camera_config=camera_cfg,
             streaming_config=streaming_cfg,
             drone_connection_config=drone_cfg,
+            yaw_alignment=YawAlignmentConfig(**raw.get("yaw_alignment", {})),
         )
 
     # --------- internals ---------

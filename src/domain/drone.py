@@ -86,6 +86,11 @@ class DroneStatus:
     heading_deg: float | None
     last_heartbeat_monotonic_s: float | None = None
     heartbeat_timeout_s: float = 3.0
+    roll_rad: float | None = None
+    pitch_rad: float | None = None
+    yaw_rad: float | None = None
+    attitude_timestamp_s: float | None = None
+    position_timestamp_s: float | None = None
 
     @property
     def connected(self) -> bool:
@@ -103,7 +108,22 @@ class DroneStatus:
 
 
 class Drone(ABC):
-    """Receive vehicle telemetry and send target measurements, without flight control."""
+    """Vehicle telemetry, target measurements and optional supervised yaw control."""
+
+    def prepare_yaw_control(self) -> bool:
+        """Poll nonblocking QuadPlane/RC preflight checks; true once ready."""
+        raise NotImplementedError("This drone adapter does not support yaw control")
+
+    def request_mode(self, mode: DroneMode, *, expected_modes: tuple[DroneMode, ...] | None = None) -> bool:
+        """Request a mode; its application must be confirmed through telemetry."""
+        raise NotImplementedError("This drone adapter does not support mode changes")
+
+    def send_yaw_input(self, value: float) -> None:
+        """Send a calibrated yaw stick input in [-1, 1], in GUIDED VTOL only."""
+        raise NotImplementedError("This drone adapter does not support yaw control")
+
+    def release_yaw_control(self) -> None:
+        """Release only the RC channel owned by this adapter."""
 
     def close(self) -> None:
         """Release the connection; adapters owning a transport override this."""

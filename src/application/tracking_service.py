@@ -1,6 +1,6 @@
 import time
 from dataclasses import dataclass
-from typing import Optional, Tuple
+from typing import Tuple
 
 import numpy as np
 
@@ -9,7 +9,7 @@ from domain.camera_mount import CameraMount
 from domain.frame_annotator import FrameAnnotator
 from domain.marker_detection import MarkerDetection
 from domain.marker_detector import MarkerDetector
-from domain.models import CalibrationData, Pose3D, TargetedMarker
+from domain.models import CalibrationData, TargetedMarker
 from domain.pose_estimator import PoseEstimator
 from domain.tracking import TrackingResult
 
@@ -32,12 +32,6 @@ class TrackingService:
     calibration: CalibrationData
     annotator: FrameAnnotator
     camera_mount: CameraMount = CameraMount()
-
-    def _to_uav_pose(self, estimated_pose: Optional[Pose3D]) -> Optional[Pose3D]:
-        if estimated_pose is None:
-            return None
-
-        return self.camera_mount.to_body(estimated_pose)
 
     def track_target(self) -> Tuple[np.ndarray, TrackingResult]:
         """
@@ -71,16 +65,18 @@ class TrackingService:
         pose = None
         rotation_vectors = None
         translation_vectors = None
+        camera_from_marker = None
         if detection is not None and detection.has_pose:
             # Use the detector's pose directly.
             rotation_vectors = detection.rotation_vectors
             translation_vectors = detection.translation_vectors
-            x, y, z = np.asarray(translation_vectors).reshape(-1)[:3]
-            pose = Pose3D(x=float(x), y=float(y), z=float(z))
+            camera_from_marker = detection.camera_from_marker
         elif not self.target.requires_detector_pose:
-            pose, rotation_vectors, translation_vectors = self.pose_estimator.estimate_pose(
+            camera_from_marker, rotation_vectors, translation_vectors = self.pose_estimator.estimate_pose(
                 corners=corners, marker_length_m=self.target.length, calib=self.calibration, center=True
             )
+        if camera_from_marker is not None:
+            pose = camera_from_marker.position
         frame = self.annotator.annotate(
             frame,
             marker_id=marker_id,
@@ -92,8 +88,14 @@ class TrackingService:
         if pose is None or pose.z <= 0:
             return frame, TrackingResult.not_found(captured_at_s=captured_at_s)
 
+        body_from_marker = self.camera_mount.transform_to_body(camera_from_marker)
         return frame, TrackingResult.detected(
-            pose=pose, marker_id=marker_id, uav_pose=self._to_uav_pose(pose), captured_at_s=captured_at_s
+            pose=pose,
+            marker_id=marker_id,
+            uav_pose=body_from_marker.position,
+            captured_at_s=captured_at_s,
+            camera_from_marker=camera_from_marker,
+            body_from_marker=body_from_marker,
         )
 
     def get_target(self) -> TargetedMarker:
