@@ -18,15 +18,17 @@ if grep -q '^include-system-site-packages = false$' .venv/pyvenv.cfg; then
 fi
 
 poetry env use "$ROOT/.venv/bin/python"
-poetry install --with dev
+poetry install --with dev,faruco
 
 poetry run python - <<'PY'
 import cv2
 import rclpy
+from faruco_bridge import Detector
 from sensor_msgs.msg import Image
 
 print(f"Python dependencies ready; OpenCV={cv2.__version__}; ArUco={hasattr(cv2, 'aruco')}")
 print(f"ROS 2 image message available: {Image.__name__}")
+print(f"FArUco detector available: {Detector.__name__}")
 PY
 
 poetry run precision_landing --help >/dev/null

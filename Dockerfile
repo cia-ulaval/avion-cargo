@@ -130,7 +130,7 @@ export GZ_CONFIG_PATH="${GZ_CONFIG_PATH:-/usr/share/gz}"
 export GZ_SIM_SYSTEM_PLUGIN_PATH="/home/dev/ardupilot_gazebo/build${GZ_SIM_SYSTEM_PLUGIN_PATH:+:${GZ_SIM_SYSTEM_PLUGIN_PATH}}"
 export GZ_SIM_RESOURCE_PATH="/workspace/avion-cargo/simulation/models:/workspace/avion-cargo/simulation/worlds:/home/dev/ardupilot_gazebo/models:/home/dev/ardupilot_gazebo/worlds${GZ_SIM_RESOURCE_PATH:+:${GZ_SIM_RESOURCE_PATH}}"
 
-WORLD="${AVION_WORLD:-/workspace/avion-cargo/simulation/worlds/iris_runway_aruco.sdf}"
+WORLD="${AVION_WORLD:-/workspace/avion-cargo/simulation/worlds/iris_runway_faruco.sdf}"
 
 exec gz sim -v4 -r "$WORLD"
 SCRIPT

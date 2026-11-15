@@ -128,7 +128,8 @@
         <visual name="visual">
           <geometry>
             <box>
-              <size>1.0185 1.0185 0.001</size>
+              <!-- 8 ft (2.4384 m) outer marker occupies 1248 of the texture's 1440 pixels. -->
+              <size>2.8135384615384615 2.8135384615384615 0.001</size>
             </box>
           </geometry>
           <material>
@@ -138,7 +139,7 @@
             <emissive>0 0 0 1</emissive>
             <pbr>
               <metal>
-                <albedo_map>markers/aruco.png</albedo_map>
+                <albedo_map>markers/faruco.png</albedo_map>
                 <metalness>0.0</metalness>
                 <roughness>1.0</roughness>
               </metal>
@@ -148,7 +149,7 @@
         <collision name="collision">
           <geometry>
             <box>
-              <size>1.0185 1.0185 0.001</size>
+              <size>2.8135384615384615 2.8135384615384615 0.001</size>
             </box>
           </geometry>
         </collision>

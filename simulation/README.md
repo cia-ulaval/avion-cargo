@@ -1,6 +1,8 @@
 # Simulation complète d'Autolander
 
-Ce dossier fournit le monde et les réglages utilisés pour l'essai du 25 septembre 2026. Il rassemble la cible ArUco, la caméra modifiée, les paramètres SITL et la configuration d'Autolander. Vous pouvez ainsi reprendre une simulation complète depuis le dépôt.
+Ce dossier fournit les mondes Iris et tricopter, la caméra modifiée, les paramètres SITL
+et la configuration d'Autolander. La simulation utilise une cible FArUco `FRACTAL_5L_6`
+de **8 pieds de côté (2,4384 m)**, mesurés sur le marqueur extérieur hors marge blanche.
 
 La procédure suit les quatre terminaux de l'essai. Elle démarre le contrôleur et le monde, relaie les images vers ROS 2, puis lance Autolander lorsque les deux flux sont disponibles.
 
@@ -10,6 +12,7 @@ Installez Autolander, ArduPilot SITL, ROS 2 Jazzy, Gazebo Harmonic et le plugin 
 
 ```bash
 sudo apt install ros-jazzy-ros-gz-image
+poetry install --with faruco
 ```
 
 La commande `image_bridge` est décrite dans la [documentation de ros_gz_image](https://docs.ros.org/en/jazzy/p/ros_gz_image/). Les révisions présentes lors de la copie sont conservées dans [versions.txt](versions.txt). Utilisez ces révisions d'ArduPilot et du plugin pour retrouver la même base de simulation.
@@ -20,14 +23,22 @@ Les modèles standards `runway`, `iris_with_gimbal` et `iris_with_standoffs` res
 
 | Fichier | Utilisation |
 | --- | --- |
-| [worlds/iris_runway_aruco.sdf](worlds/iris_runway_aruco.sdf) | Monde Iris avec une cible au sol ; son nom interne reste `iris_runway`. |
-| [worlds/markers/aruco.png](worlds/markers/aruco.png) | Texture de la cible, référencée par un chemin relatif. |
+| [worlds/iris_runway_faruco.sdf](worlds/iris_runway_faruco.sdf) | Monde Iris avec une cible FArUco au sol ; son nom interne reste `iris_runway`. |
+| [worlds/tricopter_full_mission.sdf](worlds/tricopter_full_mission.sdf) | Monde tricopter avec la même cible FArUco de 8 pieds. |
+| [worlds/markers/faruco.png](worlds/markers/faruco.png) | Texture fractale à cinq niveaux, référencée par un chemin relatif. |
 | [models/gimbal_small_3d/model.sdf](models/gimbal_small_3d/model.sdf) | Caméra de 640 × 480 pixels, cadence demandée de 30 Hz et réglages optiques de l'essai. |
 | [config/gazebo-iris-gimbal.parm](config/gazebo-iris-gimbal.parm) | Paramètres du véhicule et de la nacelle pour SITL. |
-| [config/autolanding_config.json](config/autolanding_config.json) | Configuration d'Autolander : topic caméra, cible ID 29 du dictionnaire 16, côté de 0,896 m et port MAVLink 14550. |
+| [config/autolanding_config.json](config/autolanding_config.json) | Configuration Iris : topic caméra, cible FArUco de 2,4384 m et port MAVLink 14550. |
+| [config/autolanding_config_tricopter_vtol.json](config/autolanding_config_tricopter_vtol.json) | Configuration tricopter : caméra vers le bas, même cible FArUco et supervision du lacet. |
 | [calibration/pi_camera_calibration.yaml](calibration/pi_camera_calibration.yaml) | Calibration référencée lors de l'essai, conservée avec ses valeurs d'origine. |
 
 Les sources et attributions des fichiers sont indiquées dans [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+
+La texture de 1440 pixels contient un marqueur extérieur de 1248 pixels et une marge
+blanche de 96 pixels de chaque côté. Les surfaces Gazebo mesurent donc 2,8135384615 m
+de côté, afin que le marqueur lui-même mesure exactement 2,4384 m, comme `targeted_marker.length`.
+Le niveau fractal est choisi automatiquement par le détecteur selon la portion visible.
+L'ancien monde `iris_runway_aruco.sdf` reste disponible pour des essais ArUco avec une configuration adaptée.
 
 ## Tricopter QuadPlane avec Docker
 
@@ -39,6 +50,10 @@ COMPOSE_FILE=compose.yaml:compose-full-sim.yaml bash scripts/launch-simulation.s
 ```
 
 Ajoutez vos fichiers Compose habituels pour l'affichage ou le GPU aux deux commandes.
+La préparation Docker installe le groupe optionnel `faruco`. Pour un conteneur existant
+dont les dépendances ont déjà été préparées, exécutez `docker compose exec dev poetry install --with dev,faruco`.
+Après un changement de cible ou de dimensions, relancez Gazebo et Autolander pour charger
+à la fois le monde et les paramètres de détection.
 Le lancement complet appelle directement [scripts/launch-sitl.sh](../scripts/launch-sitl.sh)
 depuis le dépôt monté dans le conteneur, y compris lorsque l'image Docker est ancienne.
 Compose monte également [docker/avion-sitl.sh](../docker/avion-sitl.sh) sur
@@ -107,7 +122,7 @@ Chargez ROS 2 avec `source /opt/ros/jazzy/setup.zsh` sous Zsh, ou `source /opt/r
 ARDUPILOT_GAZEBO_DIR="$HOME/gz_ws/src/ardupilot_gazebo"
 export GZ_SIM_SYSTEM_PLUGIN_PATH="$ARDUPILOT_GAZEBO_DIR/build${GZ_SIM_SYSTEM_PLUGIN_PATH:+:$GZ_SIM_SYSTEM_PLUGIN_PATH}"
 export GZ_SIM_RESOURCE_PATH="$PWD/simulation/models:$PWD/simulation/worlds:$ARDUPILOT_GAZEBO_DIR/models:$ARDUPILOT_GAZEBO_DIR/worlds${GZ_SIM_RESOURCE_PATH:+:$GZ_SIM_RESOURCE_PATH}"
-gz sim -v4 -r simulation/worlds/iris_runway_aruco.sdf
+gz sim -v4 -r simulation/worlds/iris_runway_faruco.sdf
 ```
 
 Si vous avez suivi l'installation du wiki dans `~/ardupilot_gazebo`, utilisez `ARDUPILOT_GAZEBO_DIR="$HOME/ardupilot_gazebo"`. Gardez les deux dossiers du scénario en tête de `GZ_SIM_RESOURCE_PATH` : Gazebo doit charger la caméra fournie ici. La simulation doit rester en lecture pour publier les images. Le topic attendu est `/world/iris_runway/model/iris_with_gimbal/model/gimbal/link/pitch_link/sensor/camera/image`.
@@ -141,7 +156,8 @@ poetry run precision_landing simulation/config/autolanding_config.json --gz-simu
 
 Le JSON trouve la calibration à partir de son propre dossier. Le journal doit confirmer la connexion MAVLink, `ROS camera ready`, le démarrage du suivi et le serveur WebRTC sur `http://127.0.0.1:8085`. Ouvrez cette adresse et cliquez sur **Start stream**. Vérifiez le renouvellement de l'image, la présence de la cible et les valeurs de pose.
 
-Si l'état reste `NOT_FOUND`, vérifiez d'abord que la cible est visible, puis le dictionnaire `16`, l'ID `29`, la taille `0.896` et la texture chargée par Gazebo.
+Si l'état reste `NOT_FOUND`, vérifiez que la cible est visible, que `faruco-bridge` est installé,
+puis le type `faruco`, le preset `FRACTAL_5L_6`, la taille `2.4384` et la texture chargée par Gazebo.
 
 Pour terminer, arrêtez Autolander avec `Ctrl+C`, puis le pont d'images, SITL et Gazebo dans leurs terminaux.
 

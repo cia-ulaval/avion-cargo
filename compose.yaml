@@ -30,6 +30,7 @@ services:
       ROS_DOMAIN_ID: "42"
       ROS_LOCALHOST_ONLY: "1"
       PYTHONUNBUFFERED: "1"
+      AVION_WORLD: /workspace/avion-cargo/simulation/worlds/iris_runway_faruco.sdf
     ipc: host
     ports:
       - "127.0.0.1:8085:8086"
