@@ -61,6 +61,8 @@ def test_alignment_requires_explicit_configuration_and_preserves_marker_directio
         "detection_loss_timeout_s": 3,
         "attempt_timeout_s": 40,
         "max_attempts": 5,
+        "retry_descent_m": 2.5,
+        "min_height_m": 4,
         "cooldown_s": 0.5,
     }
     config = AutolanderConfigurationReader(write_config(tmp_path, valid_config_data)).read()
@@ -71,6 +73,8 @@ def test_alignment_requires_explicit_configuration_and_preserves_marker_directio
     assert config.yaw_alignment.detection_loss_timeout_s == 3
     assert config.yaw_alignment.attempt_timeout_s == 40
     assert config.yaw_alignment.max_attempts == 5
+    assert config.yaw_alignment.retry_descent_m == 2.5
+    assert config.yaw_alignment.min_height_m == 4
     assert config.yaw_alignment.cooldown_s == 0.5
 
 

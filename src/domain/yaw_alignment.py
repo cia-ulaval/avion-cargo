@@ -29,6 +29,7 @@ class YawAlignmentConfig:
     detection_loss_timeout_s: float = 1.5
     attempt_timeout_s: float = 30.0
     max_attempts: int = 3
+    retry_descent_m: float = 0.0
     min_height_m: float = 3.0
     max_horizontal_distance_m: float = 2.0
     max_groundspeed_mps: float = 0.8
@@ -49,6 +50,8 @@ class YawAlignmentConfig:
             value = getattr(self, field.name)
             if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(value):
                 raise ValueError(f"{field.name} must be finite and numeric")
+            if field.name == "retry_descent_m" and value == 0:
+                continue
             if field.name != "marker_forward_deg" and value <= 0:
                 raise ValueError(f"{field.name} must be positive")
         if not 0 < self.tolerance_deg < self.trigger_deg <= 180:

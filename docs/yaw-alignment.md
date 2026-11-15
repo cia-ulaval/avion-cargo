@@ -27,7 +27,9 @@ mobile demande une transformation de montage actualisée; ce superviseur suppose
 La télémétrie expose ces matrices dans `transforms.camera_from_marker` et
 `transforms.body_from_marker`. Les anciennes positions `poses` restent disponibles.
 Le champ `yaw_alignment` contient l’état, l’erreur en degrés, le motif d’arrêt éventuel,
-le nombre de tentatives (`attempts`) et sa limite (`max_attempts`).
+le nombre de tentatives de la série (`attempts`), sa limite (`max_attempts`), le cumul
+depuis le désarmement (`total_attempts`) et l'altitude relative à atteindre pour permettre
+une nouvelle série (`retry_below_altitude_m`). Cette dernière n'est pas une hauteur au-dessus du marqueur.
 
 L’axe +X du marqueur représente son avant lorsque `marker_forward_deg` vaut zéro.
 Une valeur de 90° choisit son axe +Y. Le calcul projette cet axe dans le plan horizontal
@@ -49,9 +51,10 @@ dans `simulation/config/autolanding_config_tricopter_vtol.json`.
   "detection_stable_time_s": 1.0,
   "detection_loss_timeout_s": 1.5,
   "max_attempts": 3,
+  "retry_descent_m": 2.0,
   "attempt_timeout_s": 30.0,
   "cooldown_s": 1.0,
-  "min_height_m": 3.0,
+  "min_height_m": 4.0,
   "max_horizontal_distance_m": 2.0,
   "max_yaw_input": 0.25,
   "hold_stable_time_s": 0.5,
@@ -146,8 +149,23 @@ Le retour en descente peut donc avoir lieu sans alignement terminé.
 
 `max_attempts` est un entier positif, par défaut 3. Chaque demande de pause envoyée compte,
 qu'elle aboutisse à un alignement ou soit abandonnée. Après la dernière tentative et le
-retour confirmé en `QLAND`, l'état `EXHAUSTED` interdit toute nouvelle pause ou rotation.
-Le compteur se réinitialise au désarmement, pas à chaque passage en `QLAND`.
+retour confirmé en `QLAND`, l'état `EXHAUSTED` suspend les nouvelles tentatives.
+Avec `retry_descent_m: 0` (valeur par défaut), il reste bloquant jusqu'au désarmement.
+La configuration tricopter utilise `retry_descent_m: 2.0` : une nouvelle série est autorisée
+après au moins 2 m de descente supplémentaire, uniquement en `QLAND`, avec une détection
+stable, une télémétrie fraîche, un centrage admissible et une erreur dépassant `trigger_deg`.
+La référence est la plus basse altitude relative entre le dernier maintien et le retour
+en descente, sans jamais remonter celle d'une série précédente. Une remontée ne renouvelle
+donc pas le budget au même niveau. Les tentatives restantes dans une série conservent
+le délai `cooldown_s` et la confirmation de détection, sans exiger ces 2 m supplémentaires.
+
+`min_height_m` impose la hauteur minimale au-dessus du marqueur, compensée de l'attitude.
+La simulation tricopter la fixe à 4 m (valeur générique par défaut : 3 m).
+Sous ce seuil, aucune tentative ne démarre. Une tentative en cours reprend `QLAND`
+si une mesure valide confirme le franchissement du seuil. Sans mesure valide, les
+délais de perte de détection et de tentative continuent de s'appliquer.
+Les erreurs techniques `FAILED` et les interventions externes `SUSPENDED` ne sont
+jamais réarmées par une descente supplémentaire.
 
 Une télémétrie périmée suspend la rotation et impose une nouvelle stabilisation.
 L’absence d’acquittement de la consigne (`hold_timeout_s`, 10 s) ou un refus de commande

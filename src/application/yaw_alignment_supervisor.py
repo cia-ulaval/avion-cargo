@@ -46,6 +46,8 @@ class YawAlignmentSupervisor:
         self._alignment_started_s = None
         self._attempt_started_s = None
         self._attempts = 0
+        self._total_attempts = 0
+        self._retry_reference_altitude_m = None
         self._last_tracking_sample_s = None
         self._detection_since = None
         self._detection_target = None
@@ -61,6 +63,12 @@ class YawAlignmentSupervisor:
                 "hold_position": asdict(self._hold_position) if self._hold_position else None,
                 "attempts": self._attempts,
                 "max_attempts": self.config.max_attempts,
+                "total_attempts": self._total_attempts,
+                "retry_below_altitude_m": (
+                    self._retry_reference_altitude_m - self.config.retry_descent_m
+                    if self._retry_reference_altitude_m is not None and self.config.retry_descent_m > 0
+                    else None
+                ),
             }
 
     def observe_tracking(self, tracking: TrackingResult | None, now: float) -> None:
@@ -169,7 +177,7 @@ class YawAlignmentSupervisor:
             and 0 <= now - last < min(self.config.target_loss_grace_s, self.config.max_age_s)
         )
 
-    def _error(self, status: DroneStatus, tracking: TrackingResult | None, now: float) -> float | None:
+    def _marker_offset(self, status: DroneStatus, tracking: TrackingResult | None, now: float):
         if not self._telemetry_valid(status, now) or tracking is None:
             return None
         if tracking.captured_at_s is None or not 0 <= now - tracking.captured_at_s < self.config.max_age_s:
@@ -177,12 +185,34 @@ class YawAlignmentSupervisor:
         if tracking.status is not TrackingStatus.DETECTED or tracking.body_from_marker is None:
             return None
         try:
-            north, east, down = marker_offset_ned(tracking.body_from_marker, status)
+            offset = marker_offset_ned(tracking.body_from_marker, status)
+            return offset if all(math.isfinite(value) for value in offset) else None
+        except ValueError:
+            return None
+
+    def _error(self, status: DroneStatus, tracking: TrackingResult | None, now: float) -> float | None:
+        offset = self._marker_offset(status, tracking, now)
+        if offset is None:
+            return None
+        try:
+            north, east, down = offset
             if down < self.config.min_height_m or math.hypot(north, east) > self.config.max_horizontal_distance_m:
                 return None
             return marker_heading_error_rad(tracking.body_from_marker, status, self.config.marker_forward_deg)
         except ValueError:
             return None
+
+    def _exhaust(self, status: DroneStatus, now: float) -> None:
+        # Measure further descent independently of changing fractal levels. Never
+        # raise this reference after a climb, which could recycle the same band.
+        references = [self._retry_reference_altitude_m]
+        if self._hold_position is not None:
+            references.append(self._hold_position.relative_altitude_m)
+        if self._telemetry_valid(status, now):
+            references.append(status.relative_altitude)
+        references = [value for value in references if value is not None and math.isfinite(value)]
+        self._retry_reference_altitude_m = min(references) if references else None
+        self._transition(AlignmentState.EXHAUSTED, now, "attempt_limit_reached")
 
     def step(self, status: DroneStatus | None, tracking: TrackingResult | None, now: float) -> None:
         with self._lock:
@@ -202,6 +232,8 @@ class YawAlignmentSupervisor:
                 self._alignment_started_s = self._last_target_capture_s = None
                 self._attempt_started_s = None
                 self._attempts = 0
+                self._total_attempts = 0
+                self._retry_reference_altitude_m = None
                 self._reset_detection(now)
                 self._stable_since = self._hold_stable_since = None
                 self._preflight_ready = False
@@ -218,8 +250,26 @@ class YawAlignmentSupervisor:
                 self._owns_session = False
                 self._transition(AlignmentState.SUSPENDED, now, "external_mode_change")
                 return
-            if self.state in (AlignmentState.SUSPENDED, AlignmentState.EXHAUSTED):
+            if self.state is AlignmentState.SUSPENDED:
                 return
+            if self.state is AlignmentState.EXHAUSTED:
+                error = self._error(status, tracking, now)
+                self.error_deg = None if error is None else math.degrees(error)
+                if (
+                    self.config.retry_descent_m <= 0
+                    or self._retry_reference_altitude_m is None
+                    or status.mode is not DroneMode.QLAND
+                    or not math.isfinite(status.relative_altitude)
+                    or status.relative_altitude > self._retry_reference_altitude_m - self.config.retry_descent_m
+                    or now - self._state_since < self.config.cooldown_s
+                    or error is None
+                    or abs(self.error_deg) < self.config.trigger_deg
+                    or not self._detection_stable(now)
+                ):
+                    return
+                self._attempts = 0
+                self._retry_reference_altitude_m = status.relative_altitude
+                self._transition(AlignmentState.MONITORING, now, "retry_after_descent")
             if self.state is AlignmentState.FAILED:
                 if self._owns_session and status.mode is DroneMode.GUIDED:
                     if not self._hold_requested:
@@ -239,7 +289,7 @@ class YawAlignmentSupervisor:
                 if status.mode is not DroneMode.QLAND:
                     return
                 if self._attempts >= self.config.max_attempts:
-                    self._transition(AlignmentState.EXHAUSTED, now, "attempt_limit_reached")
+                    self._exhaust(status, now)
                     return
                 if self._preflight_ready and (error is None or abs(self.error_deg) < self.config.trigger_deg):
                     return
@@ -280,6 +330,7 @@ class YawAlignmentSupervisor:
                     self._transition(AlignmentState.SUSPENDED, now, "external_mode_change")
                 else:
                     self._attempts += 1
+                    self._total_attempts += 1
                     self._attempt_started_s = now
                     logger.info("Yaw alignment attempt {}/{}", self._attempts, self.config.max_attempts)
                 return
@@ -289,6 +340,10 @@ class YawAlignmentSupervisor:
                 AlignmentState.WAIT_TARGET,
                 AlignmentState.ALIGNING,
             ):
+                offset = self._marker_offset(status, tracking, now)
+                if offset is not None and offset[2] < self.config.min_height_m:
+                    self._return(now, "below_min_height")
+                    return
                 if now - self._attempt_started_s >= self.config.attempt_timeout_s:
                     self._return(now, "attempt_timeout")
                     return
@@ -383,7 +438,7 @@ class YawAlignmentSupervisor:
                     self._owns_session = False
                     self._reset_detection(now)
                     if self._attempts >= self.config.max_attempts:
-                        self._transition(AlignmentState.EXHAUSTED, now, "attempt_limit_reached")
+                        self._exhaust(status, now)
                     else:
                         self._transition(AlignmentState.COOLDOWN, now, self.reason)
                 elif now - self._state_since >= self.config.mode_timeout_s:

@@ -472,6 +472,114 @@ def test_successful_alignment_also_counts_toward_pause_limit(scenario):
     assert drone.request_mode.call_count == 2
 
 
+def exhaust_retry_series(scenario):
+    supervisor, drone, step, _ = scenario
+    supervisor.config = replace(supervisor.config, max_attempts=1, retry_descent_m=2, min_height_m=4)
+    step(mode=DroneMode.QLAND, relative_altitude=10, marker_position=(0, 0, 10))
+    step(100.1, relative_altitude=10)
+    step(101.6, error=None, not_found=True, relative_altitude=10)
+    step(101.7, mode=DroneMode.QLAND, relative_altitude=10)
+    assert supervisor.state is AlignmentState.EXHAUSTED
+    assert supervisor.to_dict()["retry_below_altitude_m"] == 8
+    assert drone.request_mode.call_count == 2
+    return supervisor, drone, step
+
+
+@pytest.mark.parametrize(
+    "conditions",
+    [
+        {"relative_altitude": 8.01},
+        {"relative_altitude": 12},
+        {"relative_altitude": float("nan")},
+        {"marker_position": (0, 0, 3.99)},
+        {"marker_position": (3, 0, 8)},
+        {"mode": DroneMode.QLOITER},
+        {"position_timestamp_s": 100},
+        {"attitude_timestamp_s": 100},
+        {"captured_at": 100, "frames": False},
+        {"error": 2},
+        {"error": None, "not_found": True},
+    ],
+)
+def test_exhausted_requires_descent_and_all_alignment_conditions(scenario, conditions):
+    supervisor, drone, step = exhaust_retry_series(scenario)
+    inputs = dict(mode=DroneMode.QLAND, relative_altitude=8, marker_position=(0, 0, 8))
+    inputs.update(conditions)
+    step(103, **inputs)
+    assert supervisor.state is AlignmentState.EXHAUSTED
+    assert drone.request_mode.call_count == 2
+
+
+def test_exhausted_retries_lower_only_after_new_stable_detection(scenario):
+    supervisor, drone, step = exhaust_retry_series(scenario)
+    step(103, mode=DroneMode.QLAND, relative_altitude=8, error=None, not_found=True)
+    step(103.1, mode=DroneMode.QLAND, relative_altitude=8, marker_position=(0, 0, 8))
+    assert supervisor.state is AlignmentState.EXHAUSTED
+    step(104.2, mode=DroneMode.QLAND, relative_altitude=8, marker_position=(0, 0, 8))
+    assert supervisor.state is AlignmentState.WAIT_GUIDED
+    assert supervisor.to_dict()["attempts"] == 1
+    assert supervisor.to_dict()["total_attempts"] == 2
+    assert drone.request_mode.call_count == 3
+    # A climb after rearming cannot grant another series at the same level.
+    step(104.3, relative_altitude=10)
+    step(105.8, relative_altitude=10, error=None, not_found=True)
+    step(105.9, mode=DroneMode.QLAND, relative_altitude=10)
+    assert supervisor.state is AlignmentState.EXHAUSTED
+    assert supervisor.to_dict()["retry_below_altitude_m"] == 6
+    step(107.1, mode=DroneMode.QLAND, relative_altitude=8)
+    assert supervisor.state is AlignmentState.EXHAUSTED
+    step(107.2, mode=DroneMode.QLAND, relative_altitude=6)
+    assert supervisor.state is AlignmentState.WAIT_GUIDED
+    assert supervisor.to_dict()["total_attempts"] == 3
+    step(108, armed=False)
+    assert supervisor.to_dict()["total_attempts"] == 0
+    assert supervisor.to_dict()["retry_below_altitude_m"] is None
+
+
+@pytest.mark.parametrize("height,starts", [(3.99, False), (4, True), (4.01, True)])
+def test_configured_minimum_height_gates_first_attempt(scenario, height, starts):
+    supervisor, drone, step, _ = scenario
+    supervisor.config = replace(supervisor.config, min_height_m=4)
+    step(mode=DroneMode.QLAND, marker_position=(0, 0, height))
+    assert (supervisor.state is AlignmentState.WAIT_GUIDED) is starts
+    assert drone.request_mode.call_count == int(starts)
+
+
+@pytest.mark.parametrize("phase", ["WAIT_GUIDED", "HOLDING", "ALIGNING"])
+def test_crossing_minimum_height_returns_to_landing(scenario, phase):
+    supervisor, drone, step, align = scenario
+    supervisor.config = replace(supervisor.config, min_height_m=4)
+    if phase == "ALIGNING":
+        align()
+    else:
+        step(mode=DroneMode.QLAND)
+        if phase == "HOLDING":
+            step(100.1)
+    drone.send_yaw_input.reset_mock()
+    step(101, marker_position=(0, 0, 3.9))
+    assert supervisor.state is AlignmentState.WAIT_RETURN
+    assert supervisor.reason == "below_min_height"
+    drone.send_yaw_input.assert_not_called()
+    drone.request_mode.assert_called_with(DroneMode.QLAND, expected_modes=(DroneMode.GUIDED, DroneMode.QLAND))
+
+
+@pytest.mark.parametrize("technical_failure", [False, True])
+def test_descent_retry_does_not_rearm_command_failure_or_external_intervention(scenario, technical_failure):
+    supervisor, drone, step, align = scenario
+    supervisor.config = replace(supervisor.config, retry_descent_m=2, min_height_m=4)
+    align()
+    if technical_failure:
+        drone.position_hold_accepted.return_value = False
+        step(101)
+        expected = AlignmentState.FAILED
+    else:
+        step(101, mode=DroneMode.QLOITER)
+        expected = AlignmentState.SUSPENDED
+    step(103, relative_altitude=4, marker_position=(0, 0, 4))
+    assert supervisor.state is expected
+    assert drone.request_mode.call_count == 1
+
+
 def test_attempt_deadline_bounds_waiting_for_hover(scenario):
     supervisor, drone, step, _ = scenario
     step(mode=DroneMode.QLAND)

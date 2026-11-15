@@ -72,6 +72,9 @@ def test_vertical_marker_axis_has_no_heading(sample_drone_status):
         {"max_attempts": 1.5},
         {"max_attempts": True},
         {"max_attempts": "3"},
+        {"retry_descent_m": -1},
+        {"retry_descent_m": float("nan")},
+        {"retry_descent_m": True},
     ],
 )
 def test_invalid_alignment_settings_are_rejected(values):
