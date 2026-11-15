@@ -46,6 +46,9 @@ def scenario(monkeypatch, sample_drone_status):
         captured_at=None,
         not_found=False,
         frames=True,
+        marker_position=(0, 0, 5),
+        marker_id=29,
+        target_identity=None,
         **kwargs,
     ):
         clock[0] = now
@@ -65,14 +68,16 @@ def scenario(monkeypatch, sample_drone_status):
         status = replace(status, **kwargs)
         tracking = TrackingResult.not_found(captured_at_s=now) if not_found else None
         if error is not None:
-            transform = RigidTransform.from_vectors([0, 0, math.radians(error)], [0, 0, 5])
+            transform = RigidTransform.from_vectors([0, 0, math.radians(error)], marker_position)
             tracking = TrackingResult.detected(
                 transform.position,
-                29,
+                marker_id,
                 transform.position,
                 captured_at_s=now if captured_at is None else captured_at,
                 body_from_marker=transform,
             )
+            if target_identity is not None:
+                tracking = replace(tracking, target_identity=target_identity)
         if frames and captured_at is None:
             while last_frame[0] + 0.04 < now:
                 last_frame[0] += 0.04
@@ -485,3 +490,51 @@ def test_loss_timeout_never_overwrites_external_mode(scenario):
     step(103, error=None, mode=DroneMode.QRTL)
     assert supervisor.state is AlignmentState.SUSPENDED
     assert drone.request_mode.call_count == 1
+
+
+def test_braking_tilt_does_not_turn_visible_target_into_detection_loss(scenario):
+    supervisor, drone, step, _ = scenario
+    step(mode=DroneMode.QLAND, marker_position=(0, 0, 20))
+    step(100.1, marker_position=(0, 0, 20))
+    roll = math.radians(10)
+    # A target directly below a tilted aircraft is > 3 m off its body Z axis,
+    # but remains horizontally centred in NED and continuously detected.
+    position = (0, 20 * math.sin(roll), 20 * math.cos(roll))
+    for tick in range(2, 21):
+        step(100 + tick / 10, roll_rad=roll, marker_position=position, speed=1)
+        assert supervisor.state is AlignmentState.HOLDING
+        assert supervisor.error_deg is not None
+    step(102.1, marker_position=(0, 0, 20))
+    step(102.7, marker_position=(0, 0, 20))
+    assert supervisor.state is AlignmentState.ALIGNING
+    assert drone.send_yaw_input.call_args.args[0] > 0
+    assert drone.request_mode.call_count == 1
+
+
+@pytest.mark.parametrize("position", [(3, 0, 5), (0, 0, 2)])
+def test_visible_but_geometrically_ineligible_target_never_starts_rotation(scenario, position):
+    supervisor, drone, step, _ = scenario
+    for tick in range(20):
+        step(100 + tick / 10, mode=DroneMode.QLAND, marker_position=position)
+    drone.request_mode.assert_not_called()
+    assert supervisor.to_dict()["attempts"] == 0
+
+
+@pytest.mark.parametrize("fractal", [True, False])
+def test_fractal_level_change_preserves_target_identity_but_aruco_id_change_does_not(scenario, fractal):
+    supervisor, drone, step, _ = scenario
+    step(99.99, armed=False, frames=False)
+    for tick in range(13):
+        step(
+            100 + tick / 10,
+            mode=DroneMode.QLAND,
+            marker_id=tick % 5,
+            target_identity="faruco:FRACTAL_5L_6" if fractal else None,
+        )
+        if supervisor.state is AlignmentState.WAIT_GUIDED:
+            break
+    if fractal:
+        assert supervisor.state is AlignmentState.WAIT_GUIDED
+        assert supervisor.to_dict()["attempts"] == 1
+    else:
+        drone.request_mode.assert_not_called()

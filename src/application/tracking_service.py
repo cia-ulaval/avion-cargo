@@ -9,6 +9,7 @@ from domain.camera_mount import CameraMount
 from domain.frame_annotator import FrameAnnotator
 from domain.marker_detection import MarkerDetection
 from domain.marker_detector import MarkerDetector
+from domain.markers import MarkerType
 from domain.models import CalibrationData, TargetedMarker
 from domain.pose_estimator import PoseEstimator
 from domain.tracking import TrackingResult
@@ -89,6 +90,13 @@ class TrackingService:
             return frame, TrackingResult.not_found(captured_at_s=captured_at_s)
 
         body_from_marker = self.camera_mount.transform_to_body(camera_from_marker)
+        # Fractal levels share the bridge's common physical target frame.
+        # Keep the visible level for annotation, but a stable identity for tracking.
+        target_identity = (
+            f"faruco:{self.target.fractal_type.value}"
+            if self.target.marker_type is MarkerType.FARUCO
+            else f"aruco:{self.target.dictionary}:{marker_id}"
+        )
         return frame, TrackingResult.detected(
             pose=pose,
             marker_id=marker_id,
@@ -96,6 +104,7 @@ class TrackingService:
             captured_at_s=captured_at_s,
             camera_from_marker=camera_from_marker,
             body_from_marker=body_from_marker,
+            target_identity=target_identity,
         )
 
     def get_target(self) -> TargetedMarker:

@@ -9,7 +9,7 @@ from loguru import logger
 
 from domain.drone import Drone, DroneMode, DroneStatus, HoldPosition
 from domain.tracking import TrackingResult, TrackingStatus
-from domain.yaw_alignment import YawAlignmentConfig, marker_heading_error_rad
+from domain.yaw_alignment import YawAlignmentConfig, marker_heading_error_rad, marker_offset_ned
 
 
 class AlignmentState(str, Enum):
@@ -48,7 +48,7 @@ class YawAlignmentSupervisor:
         self._attempts = 0
         self._last_tracking_sample_s = None
         self._detection_since = None
-        self._detection_marker_id = None
+        self._detection_target = None
         self._last_stable_detection_s = None
 
     def to_dict(self) -> dict:
@@ -83,16 +83,12 @@ class YawAlignmentSupervisor:
             if tracking.status is not TrackingStatus.DETECTED or tracking.body_from_marker is None:
                 self._detection_since = None
                 return
-            position = tracking.body_from_marker.position
-            if (
-                position.z < self.config.min_height_m
-                or math.hypot(position.x, position.y) > self.config.max_horizontal_distance_m
-            ):
-                self._detection_since = None
-                return
-            if self._detection_since is None or tracking.marker_id != self._detection_marker_id:
+            # Visibility is independent of the vehicle's tilt and distance limits.
+            # Geometry still gates yaw in _error(), after attitude compensation.
+            identity = tracking.target_identity or f"marker:{tracking.marker_id}"
+            if self._detection_since is None or identity != self._detection_target:
                 self._detection_since = captured
-            self._detection_marker_id = tracking.marker_id
+            self._detection_target = identity
             if captured - self._detection_since >= self.config.detection_stable_time_s:
                 self._last_stable_detection_s = captured
 
@@ -105,7 +101,7 @@ class YawAlignmentSupervisor:
         )
 
     def _reset_detection(self, now: float) -> None:
-        self._detection_since = self._detection_marker_id = self._last_stable_detection_s = None
+        self._detection_since = self._detection_target = self._last_stable_detection_s = None
         self._last_tracking_sample_s = now
 
     def _transition(self, state: AlignmentState, now: float, reason: str | None = None) -> None:
@@ -180,13 +176,10 @@ class YawAlignmentSupervisor:
             return None
         if tracking.status is not TrackingStatus.DETECTED or tracking.body_from_marker is None:
             return None
-        position = tracking.body_from_marker.position
-        if (
-            position.z < self.config.min_height_m
-            or math.hypot(position.x, position.y) > self.config.max_horizontal_distance_m
-        ):
-            return None
         try:
+            north, east, down = marker_offset_ned(tracking.body_from_marker, status)
+            if down < self.config.min_height_m or math.hypot(north, east) > self.config.max_horizontal_distance_m:
+                return None
             return marker_heading_error_rad(tracking.body_from_marker, status, self.config.marker_forward_deg)
         except ValueError:
             return None

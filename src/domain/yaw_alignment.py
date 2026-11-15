@@ -61,28 +61,38 @@ class YawAlignmentConfig:
             raise ValueError("hold_stable_time_s must be shorter than hold_timeout_s")
 
 
-def marker_heading_error_rad(transform: RigidTransform, status: DroneStatus, forward_deg: float = 0) -> float:
-    """Project the chosen marker axis into horizontal NED, compensating body tilt.
-
-    The marker's +X axis is forward at zero offset. Positive error requests
-    clockwise yaw viewed from above, matching BODY_FRD/NED conventions.
-    """
+def body_to_ned_rotation(status: DroneStatus) -> np.ndarray:
+    """Use the same attitude convention for target geometry and heading."""
     roll, pitch, yaw = status.roll_rad, status.pitch_rad, status.yaw_rad
     if any(value is None or not math.isfinite(value) for value in (roll, pitch, yaw)):
         raise ValueError("A finite NED vehicle attitude is required for heading alignment")
     cr, sr = math.cos(roll), math.sin(roll)
     cp, sp = math.cos(pitch), math.sin(pitch)
     cy, sy = math.cos(yaw), math.sin(yaw)
-    ned_from_body = np.array(
+    return np.array(
         [
             [cy * cp, cy * sp * sr - sy * cr, cy * sp * cr + sy * sr],
             [sy * cp, sy * sp * sr + cy * cr, sy * sp * cr - cy * sr],
             [-sp, cp * sr, cp * cr],
         ]
     )
+
+
+def marker_offset_ned(transform: RigidTransform, status: DroneStatus) -> np.ndarray:
+    """Relative target offset along north, east and vertical down, in metres."""
+    return body_to_ned_rotation(status) @ transform.as_matrix()[:3, 3]
+
+
+def marker_heading_error_rad(transform: RigidTransform, status: DroneStatus, forward_deg: float = 0) -> float:
+    """Project the chosen marker axis into horizontal NED, compensating body tilt.
+
+    The marker's +X axis is forward at zero offset. Positive error requests
+    clockwise yaw viewed from above, matching BODY_FRD/NED conventions.
+    """
+    ned_from_body = body_to_ned_rotation(status)
     offset = math.radians(forward_deg)
     forward = ned_from_body @ transform.as_matrix()[:3, :3] @ [math.cos(offset), math.sin(offset), 0]
     if math.hypot(forward[0], forward[1]) < 0.2:
         raise ValueError("Marker forward axis has no reliable horizontal heading")
-    error = math.atan2(forward[1], forward[0]) - yaw
+    error = math.atan2(forward[1], forward[0]) - status.yaw_rad
     return math.atan2(math.sin(error), math.cos(error))

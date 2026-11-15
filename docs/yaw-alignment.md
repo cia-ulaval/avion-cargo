@@ -63,13 +63,24 @@ dans `simulation/config/autolanding_config_tricopter_vtol.json`.
 
 Par défaut, la boucle tourne à 10 Hz. Elle exige une pose et des échantillons d’attitude
 et de position âgés de moins de 0,4 s, une vitesse horizontale inférieure à 0,8 m/s,
-et une cible à au moins 3 m sur l’axe bas du véhicule. Les paramètres du contrôleur sont
+et une cible à au moins 3 m sous le véhicule, selon la verticale terrestre. La distance
+horizontale à la cible est également calculée dans le repère NED après compensation de
+l'inclinaison, et non à partir des seules composantes X/Y du repère drone. Les paramètres du contrôleur sont
 lus avant toute prise de contrôle. Tant que la détection clignote, le superviseur laisse
 le drone descendre en `QLAND`. Il exige une détection continue du même marqueur pendant
 `detection_stable_time_s` avant de suspendre l'atterrissage. Cette continuité est évaluée
 sur chaque image caméra, y compris les pertes entre deux passages de la supervision.
 Une image répétée ne prolonge pas la fenêtre; une interruption de caméra, une pose inutilisable
 ou un intervalle entre captures atteignant `max_age_s` la réinitialise.
+
+La continuité visuelle est indépendante des seuils géométriques de rotation. Une cible
+visible pendant le freinage reste détectée lorsque le drone s'incline; son décalage dans
+l'image ne doit pas être assimilé à une disparition. La rotation attend toujours que
+le maintien et les limites de distance soient respectés.
+
+Pour FArUco, `marker_id` indique le niveau visible. `target_identity` identifie la cible
+fractale commune : passer d'un niveau à un autre ne réinitialise pas la continuité.
+Pour ArUco, cette identité inclut le dictionnaire et l'ID effectivement détecté.
 
 Une fois la détection stable et l'erreur supérieure au seuil, le superviseur mémorise la latitude, la longitude
 et l’altitude relative au home avant de demander `GUIDED`. Une fois ce mode confirmé,
@@ -168,6 +179,8 @@ les changements de mode, la consigne géographique fixe, son acquittement, le fr
 les observations périmées, les clignotements entre les ticks de supervision, les pertes de cible
 et de liaison, les reprises de descente, la limite de tentatives, les échecs techniques,
 le thread et son arrêt, ainsi que les paquets MAVLink réellement encodés.
+Les tests natifs FArUco utilisent aussi la texture de simulation aux cinq niveaux et
+dans les deux sens de rotation pour vérifier la chaîne détection → pose → commande de lacet.
 La trace `tests/fixtures/quadplane_hold_settling.csv` rejoue un freinage réel SITL/Gazebo
 à 4 Hz avec une supervision à 10 Hz : la stabilité n'est confirmée qu'après environ
 10,2 s. Ce cas vérifie qu'un maintien lent ne bloque plus définitivement le lacet.
