@@ -4,7 +4,7 @@ from unittest.mock import Mock
 import pytest
 from pymavlink.dialects.v20 import ardupilotmega as mavlink2
 
-from domain.drone import DroneMode
+from domain.drone import DroneMode, HoldPosition
 from tests.infrastructure.communication.test_mavlink_protocol import connected_drone, last_packet
 
 
@@ -153,3 +153,59 @@ def test_mode_request_rechecks_pending_failsafe_heartbeat_before_sending(vehicle
     assert not vehicle.request_mode(DroneMode.QLAND, expected_modes=(DroneMode.GUIDED, DroneMode.QLAND))
     assert vehicle.status.mode is DroneMode.QRTL
     vehicle.connection.write.assert_not_called()
+
+
+def test_hold_command_fixes_all_position_axes_without_forcing_mode(vehicle):
+    target = HoldPosition(46.78, -71.27, 12.5)
+    assert vehicle.request_position_hold(target)
+    message = last_packet(vehicle)
+    assert message.get_type() == "COMMAND_INT"
+    assert message.command == mavlink2.MAV_CMD_DO_REPOSITION
+    assert message.frame == mavlink2.MAV_FRAME_GLOBAL_RELATIVE_ALT_INT
+    assert (message.target_system, message.target_component) == (7, 1)
+    assert (message.x, message.y, message.z) == (467800000, -712700000, 12.5)
+    assert message.param2 == 0  # Reject if another mode has taken control.
+    assert vehicle.position_hold_accepted() is None
+
+
+@pytest.mark.parametrize(
+    "result,accepted",
+    [
+        (mavlink2.MAV_RESULT_ACCEPTED, True),
+        (mavlink2.MAV_RESULT_DENIED, False),
+        (mavlink2.MAV_RESULT_IN_PROGRESS, None),
+    ],
+)
+def test_hold_acceptance_requires_ack_and_resets_for_next_command(vehicle, result, accepted):
+    target = HoldPosition(46.78, -71.27, 12.5)
+    ack = mavlink2.MAVLink_command_ack_message(mavlink2.MAV_CMD_DO_REPOSITION, result)
+    vehicle._handle_message(ack)
+    assert vehicle.position_hold_accepted() is None
+    vehicle.request_position_hold(target)
+    vehicle._handle_message(ack)
+    assert vehicle.position_hold_accepted() is accepted
+    vehicle.request_position_hold(target)
+    assert vehicle.position_hold_accepted() is None
+
+
+def test_hold_rejects_other_recipient_ack_and_other_flight_mode(vehicle):
+    target = HoldPosition(46.78, -71.27, 12.5)
+    vehicle.request_position_hold(target)
+    ack = mavlink2.MAVLink_command_ack_message(
+        mavlink2.MAV_CMD_DO_REPOSITION,
+        mavlink2.MAV_RESULT_ACCEPTED,
+        target_system=42,
+        target_component=42,
+    )
+    vehicle._handle_message(ack)
+    assert vehicle.position_hold_accepted() is None
+    vehicle.status.mode = DroneMode.QRTL
+    vehicle.connection.write.reset_mock()
+    assert not vehicle.request_position_hold(target)
+    vehicle.connection.write.assert_not_called()
+
+
+@pytest.mark.parametrize("values", [(float("nan"), 0, 5), (91, 0, 5), (0, 181, 5), (0, 0, float("inf"))])
+def test_invalid_hold_coordinates_are_rejected(values):
+    with pytest.raises(ValueError):
+        HoldPosition(*values)

@@ -56,7 +56,23 @@ def test_vertical_marker_axis_has_no_heading(sample_drone_status):
 
 @pytest.mark.parametrize(
     "values",
-    [{"trigger_deg": 2}, {"gain_per_rad": float("nan")}, {"max_age_s": 0}, {"enabled": "true"}, {"max_yaw_input": 2}],
+    [
+        {"trigger_deg": 2},
+        {"gain_per_rad": float("nan")},
+        {"max_age_s": 0},
+        {"target_loss_grace_s": 0},
+        {"target_loss_grace_s": float("inf")},
+        {"enabled": "true"},
+        {"max_yaw_input": 2},
+        {"detection_stable_time_s": 0},
+        {"detection_loss_timeout_s": float("inf")},
+        {"attempt_timeout_s": -1},
+        {"max_attempts": 0},
+        {"max_attempts": -1},
+        {"max_attempts": 1.5},
+        {"max_attempts": True},
+        {"max_attempts": "3"},
+    ],
 )
 def test_invalid_alignment_settings_are_rejected(values):
     with pytest.raises(ValueError):

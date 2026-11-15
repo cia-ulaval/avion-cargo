@@ -1,3 +1,4 @@
+import math
 import time
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
@@ -107,6 +108,25 @@ class DroneStatus:
         return self.last_signal_gpio_s > 0 and 0 <= (now_s - self.last_signal_gpio_s) < window_s
 
 
+@dataclass(frozen=True, slots=True)
+class HoldPosition:
+    latitude_deg: float
+    longitude_deg: float
+    relative_altitude_m: float
+
+    def __post_init__(self):
+        if not all(math.isfinite(v) for v in (self.latitude_deg, self.longitude_deg, self.relative_altitude_m)):
+            raise ValueError("Hold position must be finite")
+        if not -90 <= self.latitude_deg <= 90 or not -180 <= self.longitude_deg <= 180:
+            raise ValueError("Invalid hold latitude/longitude")
+
+    def horizontal_error_m(self, status: DroneStatus) -> float:
+        north = math.radians(status.latitude - self.latitude_deg)
+        east = math.radians((status.longitude - self.longitude_deg + 180) % 360 - 180)
+        east *= math.cos(math.radians(self.latitude_deg))
+        return 6371000.0 * math.hypot(north, east)
+
+
 class Drone(ABC):
     """Vehicle telemetry, target measurements and optional supervised yaw control."""
 
@@ -121,6 +141,14 @@ class Drone(ABC):
     def send_yaw_input(self, value: float) -> None:
         """Send a calibrated yaw stick input in [-1, 1], in GUIDED VTOL only."""
         raise NotImplementedError("This drone adapter does not support yaw control")
+
+    def request_position_hold(self, position: HoldPosition) -> bool:
+        """Set a fixed GUIDED position/altitude; never switch an external mode."""
+        raise NotImplementedError("This drone adapter does not support position hold")
+
+    def position_hold_accepted(self) -> bool | None:
+        """Latest hold command ACK: accepted, rejected, or still pending."""
+        raise NotImplementedError("This drone adapter does not support position hold")
 
     def release_yaw_control(self) -> None:
         """Release only the RC channel owned by this adapter."""

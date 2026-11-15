@@ -19,11 +19,21 @@ class YawAlignmentConfig:
     alignment_timeout_s: float = 15.0
     mode_timeout_s: float = 5.0
     preparation_timeout_s: float = 8.0
-    cooldown_s: float = 10.0
+    hold_timeout_s: float = 10.0
+    hold_stable_time_s: float = 0.5
+    hold_horizontal_tolerance_m: float = 0.5
+    hold_altitude_tolerance_m: float = 0.3
+    hold_speed_mps: float = 0.3
+    cooldown_s: float = 1.0
+    detection_stable_time_s: float = 1.0
+    detection_loss_timeout_s: float = 1.5
+    attempt_timeout_s: float = 30.0
+    max_attempts: int = 3
     min_height_m: float = 3.0
     max_horizontal_distance_m: float = 2.0
     max_groundspeed_mps: float = 0.8
     max_age_s: float = 0.4
+    target_loss_grace_s: float = 0.25
     max_yaw_input: float = 0.25
     gain_per_rad: float = 0.6
     marker_forward_deg: float = 0.0
@@ -31,6 +41,8 @@ class YawAlignmentConfig:
     def __post_init__(self) -> None:
         if not isinstance(self.enabled, bool):
             raise ValueError("enabled must be a boolean")
+        if isinstance(self.max_attempts, bool) or not isinstance(self.max_attempts, int):
+            raise ValueError("max_attempts must be a positive integer")
         for field in fields(self):
             if field.name == "enabled":
                 continue
@@ -45,6 +57,8 @@ class YawAlignmentConfig:
             raise ValueError("max_yaw_input must be <= 1 and rate_hz <= 100")
         if self.stable_time_s >= self.alignment_timeout_s:
             raise ValueError("stable_time_s must be shorter than alignment_timeout_s")
+        if self.hold_stable_time_s >= self.hold_timeout_s:
+            raise ValueError("hold_stable_time_s must be shorter than hold_timeout_s")
 
 
 def marker_heading_error_rad(transform: RigidTransform, status: DroneStatus, forward_deg: float = 0) -> float:

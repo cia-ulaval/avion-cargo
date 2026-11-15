@@ -9,7 +9,7 @@ from loguru import logger
 from pymavlink import mavutil
 from pymavlink.dialects.v20 import ardupilotmega as mavlink2
 
-from domain.drone import Drone, DroneMode, DroneStatus
+from domain.drone import Drone, DroneMode, DroneStatus, HoldPosition
 from domain.models import Pose3D
 
 from .mavlink_connection_params import MavlinkConnectionParams
@@ -36,6 +36,8 @@ class DroneMavlinkBase(Drone):
         self._yaw_telemetry_requested = False
         self._yaw_channel: int | None = None
         self._link_was_alive = False
+        self._hold_requested = False
+        self._hold_accepted: bool | None = None
         self.status: DroneStatus = DroneStatus(
             DroneMode.UNKNOWN,
             groundspeed_mps=0.0,
@@ -111,6 +113,8 @@ class DroneMavlinkBase(Drone):
             self._parameter_requests.clear()
             self._yaw_telemetry_requested = False
             self._link_was_alive = False
+            self._hold_requested = False
+            self._hold_accepted = None
             if connection is not None:
                 connection.close()
                 logger.info("MAVLink connection closed")
@@ -254,6 +258,37 @@ class DroneMavlinkBase(Drone):
             )
             return True
 
+    def request_position_hold(self, position: HoldPosition) -> bool:
+        with self._lock:
+            self._require_connected()
+            self._update_status()
+            if not self.status.connected or self.status.mode is not DroneMode.GUIDED:
+                return False
+            self._hold_requested = True
+            self._hold_accepted = None
+            # ArduPlane consumes DO_REPOSITION for all three position axes.
+            # Flags=0 also rejects the command if an external mode wins the race.
+            self.connection.mav.command_int_send(
+                self._target_system,
+                self._target_component,
+                mavlink2.MAV_FRAME_GLOBAL_RELATIVE_ALT_INT,
+                mavlink2.MAV_CMD_DO_REPOSITION,
+                0,
+                0,
+                -1,
+                0,
+                0,
+                float("nan"),
+                round(position.latitude_deg * 1e7),
+                round(position.longitude_deg * 1e7),
+                position.relative_altitude_m,
+            )
+            return True
+
+    def position_hold_accepted(self) -> bool | None:
+        with self._lock:
+            return self._hold_accepted
+
     def send_yaw_input(self, value: float) -> None:
         with self._lock:
             if not math.isfinite(value) or not -1 <= value <= 1:
@@ -376,6 +411,14 @@ class DroneMavlinkBase(Drone):
             if isinstance(name, bytes):
                 name = name.decode("ascii")
             self._flight_parameters[name.rstrip("\x00")] = float(message.param_value)
+        elif message_type == "COMMAND_ACK" and message.command == mavlink2.MAV_CMD_DO_REPOSITION:
+            if (
+                self._hold_requested
+                and message.target_system in (0, self.connection.source_system)
+                and message.target_component in (0, self.connection.source_component)
+            ):
+                if message.result != mavlink2.MAV_RESULT_IN_PROGRESS:
+                    self._hold_accepted = message.result == mavlink2.MAV_RESULT_ACCEPTED
         elif message_type == "COMMAND_ACK" and message.command == mavlink2.MAV_CMD_DO_SET_MODE:
             if message.result not in (mavlink2.MAV_RESULT_ACCEPTED, mavlink2.MAV_RESULT_IN_PROGRESS):
                 logger.error("Autopilot rejected mode change (MAV_RESULT={})", message.result)

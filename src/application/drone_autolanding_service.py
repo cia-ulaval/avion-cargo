@@ -111,6 +111,8 @@ class DroneAutolandingService:
                 self.pose_buffer.set_value(None)
                 self.pose_buffer.set_uav_pose_value(None)
                 self.pose_buffer.set_tracking_result(None)
+                if self.yaw_supervisor is not None:
+                    self.yaw_supervisor.observe_tracking(None, now)
                 if camera_state != previous_status:
                     logger.warning("Camera state: {}", camera_state)
                     previous_status = camera_state
@@ -118,6 +120,8 @@ class DroneAutolandingService:
                 if self._stop_event.is_set():
                     break
                 camera_outage_started_s = None
+                if self.yaw_supervisor is not None:
+                    self.yaw_supervisor.observe_tracking(tracking_result, time.monotonic())
                 metadata = tracking_result.to_dict()
                 metadata["camera_state"] = "OK"
                 self.frame_buffer.set_value(vis, metadata, timestamp=tracking_result.captured_at_s)
@@ -173,7 +177,11 @@ class DroneAutolandingService:
         try:
             while self._tracking_started:
                 start = time.monotonic()
-                supervisor.step(self.drone_status_buffer.get_value(), self.pose_buffer.get_tracking_result(), start)
+                status = self.drone_status_buffer.get_value()
+                tracking = self.pose_buffer.get_tracking_result()
+                # Publishers may update either buffer after this loop started.
+                # Check ages against a time sampled after reading both snapshots.
+                supervisor.step(status, tracking, time.monotonic())
                 self._stop_event.wait(max(0.0, interval - (time.monotonic() - start)))
         finally:
             # Drain pending heartbeats before deciding whether our GUIDED session

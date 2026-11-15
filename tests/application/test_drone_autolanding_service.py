@@ -270,6 +270,7 @@ def test_publication_continues_for_minutes_without_target_or_after_target_loss(
 
 def test_transient_camera_timeout_clears_target_and_recovers(sample_drone_status):
     service = build_service(FakeDrone(sample_drone_status()))
+    service.yaw_supervisor = Mock(spec=YawAlignmentSupervisor)
     frame = np.zeros((2, 2, 3), dtype=np.uint8)
     pose = Pose3D(0.1, 0.2, 1.0)
     recovered_result = type(
@@ -313,9 +314,64 @@ def test_transient_camera_timeout_clears_target_and_recovers(sample_drone_status
     recovered_metadata = service.frame_buffer.set_value.call_args_list[1].args[1]
     assert recovered_metadata["camera_state"] == "OK"
     service.pose_buffer.set_uav_pose_value.assert_called_with(pose, timestamp=12.0)
+    observations = service.yaw_supervisor.observe_tracking.call_args_list
+    assert observations[0].args[0] is None
+    assert observations[1].args[0] is recovered_result
 
 
-def test_supervisor_thread_consumes_tracking_and_stops_with_mode_restoration(sample_drone_status):
+def test_camera_reports_each_detection_and_loss_without_waiting_for_supervision(monkeypatch, sample_drone_status):
+    clock = [100.0]
+    monkeypatch.setattr(autolanding_module.time, "monotonic", lambda: clock[0])
+    service = build_service(FakeDrone(sample_drone_status()))
+    service.yaw_supervisor = Mock(spec=YawAlignmentSupervisor)
+    transform = RigidTransform.from_vectors([0, 0, 0.5], [0, 0, 5])
+    frames = [
+        TrackingResult.detected(transform.position, 29, captured_at_s=100, body_from_marker=transform),
+        TrackingResult.not_found(captured_at_s=100.04),
+        TrackingResult.detected(transform.position, 29, captured_at_s=100.08, body_from_marker=transform),
+    ]
+    service.aruco_tracker.track_target = Mock(side_effect=[(np.zeros((2, 2, 3)), result) for result in frames])
+
+    def next_frame(_delay):
+        clock[0] += 0.04
+        if service.aruco_tracker.track_target.call_count == len(frames):
+            service.request_stop()
+
+    service._stop_event.wait = Mock(side_effect=next_frame)
+    service._tracking_started = True
+    service._tracking_target_loop()
+    assert [call.args[0] for call in service.yaw_supervisor.observe_tracking.call_args_list] == frames
+    service.yaw_supervisor.step.assert_not_called()
+
+
+def test_supervision_checks_freshness_after_reading_concurrent_buffers(monkeypatch, sample_drone_status):
+    clock = [100.0]
+    monkeypatch.setattr(autolanding_module.time, "monotonic", lambda: clock[0])
+    service = build_service(FakeDrone(sample_drone_status()))
+    supervisor = Mock(spec=YawAlignmentSupervisor)
+    supervisor.config = YawAlignmentConfig(enabled=True)
+    supervisor.step.side_effect = lambda *_args: service.request_stop()
+    service.yaw_supervisor = supervisor
+
+    def newly_published_status():
+        clock[0] += 0.01
+        return replace(sample_drone_status(), attitude_timestamp_s=clock[0], position_timestamp_s=clock[0])
+
+    def newly_published_tracking():
+        clock[0] += 0.01
+        return TrackingResult.not_found(captured_at_s=clock[0])
+
+    service.drone_status_buffer.get_value.side_effect = newly_published_status
+    service.pose_buffer.get_tracking_result.side_effect = newly_published_tracking
+    service._tracking_started = True
+    service._supervision_loop()
+
+    status, tracking, checked_at = supervisor.step.call_args.args
+    assert checked_at >= status.position_timestamp_s
+    assert checked_at >= tracking.captured_at_s
+
+
+def test_supervisor_thread_consumes_tracking_and_stops_without_resuming_landing(sample_drone_status):
     import time
 
     from domain.drone import Drone, DroneMode
@@ -327,6 +383,8 @@ def test_supervisor_thread_consumes_tracking_and_stops_with_mode_restoration(sam
     service.drone_status_buffer = DroneStatusBuffer()
     service.yaw_supervisor = YawAlignmentSupervisor(drone, YawAlignmentConfig(enabled=True))
     drone.prepare_yaw_control.return_value = True
+    drone.request_position_hold.return_value = True
+    drone.position_hold_accepted.return_value = True
     mode = [DroneMode.QLAND]
     drone.request_mode.side_effect = lambda value, **_kwargs: mode.__setitem__(0, value)
     commanded = Event()
@@ -368,7 +426,7 @@ def test_supervisor_thread_consumes_tracking_and_stops_with_mode_restoration(sam
         service.stop_tracking()
         assert not service._threads["yaw-supervisor"].is_alive()
         assert service._worker_failure is None
-        drone.request_mode.assert_called_with(DroneMode.QLAND, expected_modes=(DroneMode.GUIDED, DroneMode.QLAND))
+        drone.request_mode.assert_called_once_with(DroneMode.GUIDED, expected_modes=(DroneMode.QLAND,))
         drone.release_yaw_control.assert_called()
     finally:
         service.stop()
