@@ -5,6 +5,7 @@ from shared.contracts.geometry import PositionEstimate
 from shared.contracts.messages import (
     CommandReceipt,
     PayloadOperationEvent,
+    PayloadStatusReport,
     PlaneEvent,
 )
 from shared.contracts.payload_state import PayloadState
@@ -17,7 +18,7 @@ class PlanePeer(Protocol):
 
     def events(self) -> AsyncIterator[PlaneEvent]:
         """
-        Yield plane telemetry, DLZ snapshots, and docking commands.
+        Yield plane telemetry, DLZ snapshots, commands, and status queries.
         """
         ...
 
@@ -37,6 +38,12 @@ class PlanePeer(Protocol):
         """
         Accept or reject an incoming command promptly, before physical completion.
         """
+        ...
+
+    async def respond_status_request(
+        self, request_id: str, report: PayloadStatusReport
+    ) -> None:
+        """Return the application's current status snapshot for a plane query."""
         ...
 
     async def report_operation_event(self, event: PayloadOperationEvent) -> None:

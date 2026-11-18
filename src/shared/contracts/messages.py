@@ -61,7 +61,18 @@ class UndockRequest:
     target_position: Position
 
 
-PlaneEvent: TypeAlias = PlaneHeadingUpdated | DLZStateUpdated | DockRequest | UndockRequest
+@dataclass(frozen=True, slots=True)
+class PayloadStatusRequested:
+    request_id: str
+
+
+PlaneEvent: TypeAlias = (
+    PlaneHeadingUpdated
+    | DLZStateUpdated
+    | DockRequest
+    | UndockRequest
+    | PayloadStatusRequested
+)
 
 
 @dataclass(frozen=True, slots=True)
