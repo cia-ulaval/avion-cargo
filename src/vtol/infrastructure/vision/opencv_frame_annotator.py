@@ -1,0 +1,28 @@
+from typing import Optional
+
+import numpy as np
+
+from vtol.domain.frame_annotator import FrameAnnotator
+from vtol.domain.models import CalibrationData
+from vtol.infrastructure.vision.opencv_frame_manipution_tool import FrameManipulationTool
+
+
+class OpenCVFrameAnnotator(FrameAnnotator):
+    """Draw marker outlines and pose axes using OpenCV."""
+
+    def annotate(
+        self,
+        frame: np.ndarray,
+        *,
+        marker_id: int,
+        corners: np.ndarray,
+        calibration: CalibrationData,
+        rotation_vectors: Optional[np.ndarray],
+        translation_vectors: Optional[np.ndarray],
+    ) -> np.ndarray:
+        frame = FrameManipulationTool.draw_detected_markers(frame, [corners], np.array([[marker_id]], dtype=np.int32))
+        if rotation_vectors is None or translation_vectors is None:
+            return frame
+        return FrameManipulationTool.draw_axes_for_poses(
+            frame, calibration.camera_matrix, calibration.dist_coeffs, rotation_vectors, translation_vectors
+        )
