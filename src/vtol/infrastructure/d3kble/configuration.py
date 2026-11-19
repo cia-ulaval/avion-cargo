@@ -73,8 +73,6 @@ class D3KDeviceConfiguration:
     baudrate: int
     ready_timeout_s: float
     uwb: UwbDeviceConfiguration
-    # None preserves the BLE state configured in firmware/NVS. Explicit True
-    # starts BLE and explicit False stops it for this application session.
     ble_enabled: bool | None = None
     payloads: tuple[PayloadPeerConfiguration, ...] = ()
 
@@ -116,15 +114,15 @@ class VtolRuntimeConfiguration:
         if not isinstance(root, dict):
             raise ValueError("VTOL configuration must be a JSON object")
 
-        # The normal application configuration nests this section alongside
-        # autolanding. Accept a direct d3kble section as well for focused tests
-        # and tooling, but the shipped VTOL example uses the combined format.
         raw = root.get("d3kble", root)
+
         if not isinstance(raw, dict):
             raise ValueError("d3kble configuration must be an object")
+        
         _no_extra_keys(raw, {"devices"}, "d3kble")
 
         raw_devices = raw.get("devices")
+
         if not isinstance(raw_devices, list) or not raw_devices:
             raise ValueError("d3kble.devices must be a non-empty list")
 
@@ -184,8 +182,10 @@ class VtolRuntimeConfiguration:
 
 def _parse_device(raw: Any, index: int) -> D3KDeviceConfiguration:
     name = f"d3kble.devices[{index}]"
+    
     if not isinstance(raw, dict):
         raise ValueError(f"{name} must be an object")
+    
     _no_extra_keys(
         raw,
         {"device_id", "uart_device", "baudrate", "ready_timeout_s", "uwb", "ble"},
@@ -196,15 +196,14 @@ def _parse_device(raw: Any, index: int) -> D3KDeviceConfiguration:
     uart_device = raw.get("uart_device")
     baudrate = raw.get("baudrate", 460800)
     ready_timeout_s = raw.get("ready_timeout_s", 10.0)
-
-    # The UWB section itself is optional. An omitted section, an empty object,
-    # or null all mean that runtime UWB settings should be left as configured
-    # on the board (for example, through d3km).
     raw_uwb = raw.get("uwb", {})
+
     if raw_uwb is None:
         raw_uwb = {}
+
     if not isinstance(raw_uwb, dict):
         raise ValueError(f"{name}.uwb must be an object")
+    
     _no_extra_keys(
         raw_uwb,
         {
@@ -224,6 +223,7 @@ def _parse_device(raw: Any, index: int) -> D3KDeviceConfiguration:
     )
 
     raw_target_ids = raw_uwb.get("target_ids")
+
     if raw_target_ids is not None and not isinstance(raw_target_ids, list):
         raise ValueError(f"{name}.uwb.target_ids must be a list or null")
 
@@ -240,22 +240,23 @@ def _parse_device(raw: Any, index: int) -> D3KDeviceConfiguration:
         timeout_ms=raw_uwb.get("timeout_ms"),
         retries=raw_uwb.get("retries"),
     )
-
-    # BLE is optional. An omitted section or omitted ``enabled`` value leaves
-    # the board's firmware/NVS BLE state untouched. The designated payload
-    # board and auxiliary wing boards can be provisioned differently.
     raw_ble = raw.get("ble", {})
+
     if raw_ble is None:
         raw_ble = {}
+
     if not isinstance(raw_ble, dict):
         raise ValueError(f"{name}.ble must be an object or null")
+    
     _no_extra_keys(raw_ble, {"enabled", "payloads"}, f"{name}.ble")
     ble_enabled = raw_ble.get("enabled")
     raw_payloads = raw_ble.get("payloads", [])
+
     if not isinstance(raw_payloads, list):
         raise ValueError(f"{name}.ble.payloads must be a list")
 
     payloads: list[PayloadPeerConfiguration] = []
+
     for peer_index, item in enumerate(raw_payloads):
         if not isinstance(item, dict):
             raise ValueError(f"{name}.ble.payloads[{peer_index}] must be an object")

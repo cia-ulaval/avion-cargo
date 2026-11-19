@@ -75,7 +75,6 @@ class ConfigurationValidator:
     def validate(self) -> None:
         p = self.config_path
 
-        # ---- file checks
         if not isinstance(p, Path):
             raise ValidationError("config_path must be a pathlib.Path", "root")
 
@@ -88,7 +87,6 @@ class ConfigurationValidator:
         if not p.is_file():
             raise ValidationError(f"Configuration path is not a file: {p}", "root")
 
-        # ---- parse JSON
         try:
             raw = json.loads(p.read_text(encoding="utf-8"))
         except json.JSONDecodeError as e:
@@ -97,9 +95,6 @@ class ConfigurationValidator:
         if not isinstance(raw, dict):
             raise ValidationError("Root JSON must be an object/dict", "root")
 
-        # A complete VTOL configuration groups the existing autolanding
-        # settings beside the D3Kble hardware configuration. Keep accepting
-        # the original flat autolanding-only file for existing CLI workflows.
         if "autolanding" in raw:
             autolanding = self._req_obj(raw, "autolanding", "root")
             self._req_obj(raw, "d3kble", "root")
@@ -107,7 +102,6 @@ class ConfigurationValidator:
         else:
             autolanding = raw
 
-        # ---- autolanding schema validation
         self._validate_camera(autolanding)
         self._validate_vision(autolanding)
         self._validate_streaming(autolanding)
@@ -116,15 +110,11 @@ class ConfigurationValidator:
         if "autolanding" not in raw:
             self._no_extra_keys(raw, {"camera", "vision", "streaming", "drone_connection"}, "root")
 
-    # -------------------------
-    # Section validators
-    # -------------------------
-
     def _validate_camera(self, root: dict[str, Any]) -> None:
         camera = self._req_obj(root, "camera", "root")
 
         cid = self._req_int(camera, "id", "camera", min_=0)
-        _ = cid  # for clarity
+        _ = cid
 
         self._req_bool(camera, "use_picamera", "camera")
         self._req_int(camera, "fps", "camera", min_=1, max_=240)
@@ -189,8 +179,6 @@ class ConfigurationValidator:
                 )
             self._no_extra_keys(tm, {"type", "length", "id", "aruco_dictionary"}, "vision.targeted_marker")
         else:
-            # Existing configurations may still declare the built-in root ID.
-            # Level selection is automatic and this field is no longer needed.
             if "fractal_id" in tm:
                 self._req_int(tm, "fractal_id", "vision.targeted_marker", min_=FRACTAL_ROOT_ID, max_=FRACTAL_ROOT_ID)
             fractal_type = self._req_str(tm, "fractal_type", "vision.targeted_marker", allow_empty=False)
@@ -230,7 +218,6 @@ class ConfigurationValidator:
         if "fail_on_timeout" in dc:
             self._req_bool(dc, "fail_on_timeout", "drone_connection")
 
-        # port can be null or int
         port_val = self._req_key(dc, "port", "drone_connection")
         if port_val is None:
             port: Optional[int] = None
@@ -241,23 +228,17 @@ class ConfigurationValidator:
                 raise ValidationError("port must be in [1..65535]", "drone_connection.port")
             port = port_val
 
-        # Coherence rules
         if use_serial:
-            # pour Serial, port n’est généralement pas utilisé
             if port is not None:
                 raise ValidationError("When use_serial=true, port must be null", "drone_connection.port")
-            # adresse attendue: device path non vide
             if not address.startswith("/"):
-                # On reste tolérant, mais on protège contre un IP typo
                 raise ValidationError(
                     "When use_serial=true, address should be a device path like '/dev/serial0'",
                     "drone_connection.address",
                 )
         else:
-            # pour UDP/TCP, port requis
             if port is None:
                 raise ValidationError("When use_serial=false, port is required (not null)", "drone_connection.port")
-            # adresse attendue: ip/host (simple check)
             if address.startswith("/"):
                 raise ValidationError(
                     "When use_serial=false, address should be an IP/hostname, not a device path",
@@ -268,10 +249,6 @@ class ConfigurationValidator:
         self._no_extra_keys(
             dc, {"use_serial", "address", "port", "baud_rate", "timeout", "fail_on_timeout"}, "drone_connection"
         )
-
-    # -------------------------
-    # Helpers
-    # -------------------------
 
     @staticmethod
     def _req_key(d: dict[str, Any], key: str, parent_path: str) -> Any:
@@ -301,7 +278,6 @@ class ConfigurationValidator:
         max_: Optional[int] = None,
     ) -> int:
         v = self._req_key(d, key, parent_path)
-        # bool est un int en Python -> on l’exclut
         if not isinstance(v, int) or isinstance(v, bool):
             raise ValidationError("Expected an integer", f"{parent_path}.{key}")
         if min_ is not None and v < min_:
@@ -350,7 +326,6 @@ class ConfigurationValidator:
 
     @staticmethod
     def _validate_host_like(host: str, path: str) -> None:
-        # Tolérant: hostname ou IPv4
         ipv4 = re.compile(r"^\d{1,3}(\.\d{1,3}){3}$")
         hostname = re.compile(r"^(?=.{1,253}$)([a-zA-Z0-9-]{1,63}\.)*[a-zA-Z0-9-]{1,63}$")
 

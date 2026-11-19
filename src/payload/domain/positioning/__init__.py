@@ -1,1 +1,0 @@
-"""Payload positioning domain contracts."""

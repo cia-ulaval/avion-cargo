@@ -1,5 +1,3 @@
-"""VTOL-side interface to one remote payload."""
-
 from collections.abc import AsyncIterator
 from typing import Protocol
 

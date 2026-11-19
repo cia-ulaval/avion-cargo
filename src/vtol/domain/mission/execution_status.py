@@ -4,11 +4,8 @@ from dataclasses import dataclass
 
 @dataclass(frozen=True, slots=True)
 class MissionExecutionStatus:
-    """Latest observed ArduPilot mission progress.
-
-    ``current_item_seq`` identifies the item currently reported by the flight
-    controller. ``last_reached_item_seq`` is updated only by
-    ``MISSION_ITEM_REACHED`` and therefore has different semantics.
+    """
+    Latest observed ArduPilot mission progress.
     """
 
     current_item_seq: int | None = None

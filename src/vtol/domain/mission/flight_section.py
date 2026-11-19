@@ -2,10 +2,8 @@ from enum import IntEnum
 
 
 class FlightSection(IntEnum):
-    """Application-level phases of an Avion Cargo mission.
-
-    These values identify VTOL application phases. They are not ArduPilot
-    mission-item sequence numbers or ground-station directives.
+    """
+    Application-level phases of an Avion Cargo mission.
     """
 
     PLANE_TAKEOFF = 1

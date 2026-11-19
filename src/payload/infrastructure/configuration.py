@@ -13,7 +13,6 @@ class PayloadRuntimeConfiguration:
     uart_device: str
     plane_peer_id: int
     anchor_id_by_target_id: dict[int, str]
-    # None means keep the corresponding value provisioned on the D3K board.
     uwb_role: str | None = None
     uwb_target_ids_override: tuple[int, ...] | None = None
     uwb_period_ms: int | None = None

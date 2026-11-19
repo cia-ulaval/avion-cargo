@@ -1,5 +1,3 @@
-"""Payload-side ranging adapter backed by ``D3KNode.uwb``."""
-
 from __future__ import annotations
 
 import asyncio
@@ -12,20 +10,14 @@ from typing import Any
 from payload.domain.positioning.distance_sensor import DistanceSensor
 from payload.domain.positioning.events import DistanceEvent, DistanceFailure, DistanceSample
 from shared.contracts.messages import FailureReason
-from shared.infrastructure.d3kble.types import D3KNodeLike, MeasurementSubscriptionLike
+from shared.infrastructure.d3kble.types import D3KNodeLike
 
 logger = logging.getLogger(__name__)
 
 
 class D3kbleDistanceSensor(DistanceSensor):
-    """Adapt d3kble's synchronous measurement subscriptions to async events.
-
-    ``anchor_id_by_target_id`` explicitly maps firmware UWB target IDs to
-    application anchor IDs. It is intentionally not related to BLE peer IDs.
-    The adapter observes ranges but does not select UWB roles or schedules.
-    ``event_overflow`` applies to this adapter's async queue; the underlying
-    D3KNode subscription always uses ``drop_oldest`` to protect its event
-    dispatch thread from a queue-full exception.
+    """
+    Adapt d3kble's synchronous measurement subscriptions to async events.
     """
 
     def __init__(
@@ -76,8 +68,6 @@ class D3kbleDistanceSensor(DistanceSensor):
         stop_worker = threading.Event()
         subscription = self._node.uwb.measurements.subscribe(
             maxsize=self._subscription_size,
-            # Never propagate queue.Full into D3KNode's event-routing thread.
-            # The adapter applies the requested overflow policy on its own queue.
             overflow="drop_oldest",
         )
 
@@ -159,7 +149,5 @@ class D3kbleDistanceSensor(DistanceSensor):
             try:
                 await asyncio.shield(worker)
             except asyncio.CancelledError:
-                # The stop flag and bounded subscription poll let the worker
-                # exit promptly even if the consuming task is being cancelled.
                 await asyncio.shield(worker)
                 raise

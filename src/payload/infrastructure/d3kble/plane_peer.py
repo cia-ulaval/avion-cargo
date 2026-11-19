@@ -1,5 +1,3 @@
-"""Payload-side d3kble adapter for its remote plane."""
-
 from __future__ import annotations
 
 import asyncio
@@ -39,11 +37,8 @@ _EVENTS_CLOSED = object()
 
 
 class D3kblePlanePeer(PlanePeer):
-    """Receive plane telemetry/commands and report payload telemetry/results.
-
-    Incoming dock/undock requests are surfaced as events. The adapter waits
-    only for the application's immediate acceptance/rejection receipt; it
-    does not execute a movement or alter the physical payload state.
+    """
+    Receive plane telemetry/commands and report payload telemetry/results.
     """
 
     def __init__(
@@ -114,9 +109,6 @@ class D3kblePlanePeer(PlanePeer):
                 if isinstance(event, (DockRequest, UndockRequest)):
                     pending = self._pending_commands.get(event.command_id)
                     if pending is None or pending.done():
-                        # A command may have timed out before the application
-                        # began consuming events. Never deliver that stale
-                        # command later, after the plane was told it was rejected.
                         continue
                 elif isinstance(event, PayloadStatusRequested):
                     pending = self._pending_status_requests.get(event.request_id)
