@@ -29,20 +29,13 @@ class PayloadApplicationRuntime:
         self.distance_sensor = distance_sensor
 
     async def run(self, stop_event: asyncio.Event) -> None:
-        try:
-            async with asyncio.TaskGroup() as group:
-                plane_task = group.create_task(self._consume_plane_events(), name="payload-plane-events")
-                distance_task = group.create_task(self._consume_distance_events(), name="payload-distance-events")
-                await asyncio.sleep(0)
-                await self.distance_sensor.start_ranging()
-                await stop_event.wait()
-                plane_task.cancel()
-                distance_task.cancel()
-        finally:
-            try:
-                await self.distance_sensor.stop_ranging()
-            except Exception:
-                logger.exception("Could not stop payload UWB ranging cleanly")
+        async with asyncio.TaskGroup() as group:
+            plane_task = group.create_task(self._consume_plane_events(), name="payload-plane-events")
+            distance_task = group.create_task(self._consume_distance_events(), name="payload-distance-events")
+            await asyncio.sleep(0)
+            await stop_event.wait()
+            plane_task.cancel()
+            distance_task.cancel()
 
     async def _consume_plane_events(self) -> None:
         async for event in self.plane_peer.events():
