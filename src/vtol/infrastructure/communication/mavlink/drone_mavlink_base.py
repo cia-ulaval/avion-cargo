@@ -9,7 +9,8 @@ from loguru import logger
 from pymavlink import mavutil
 from pymavlink.dialects.v20 import ardupilotmega as mavlink2
 
-from vtol.domain.drone import Drone, DroneMode, DroneStatus
+from vtol.domain.drone import Drone, DroneMode, DroneStatus, LandedState
+from vtol.domain.mission.execution_status import MissionExecutionStatus
 from vtol.domain.models import Pose3D
 
 from .mavlink_connection_params import MavlinkConnectionParams
@@ -32,6 +33,7 @@ class DroneMavlinkBase(Drone):
         self._target_component: int | None = None
         self._last_sent_heartbeat_s: float | None = None
         self._link_was_alive = False
+        self._mission_execution_status = MissionExecutionStatus()
         self.status: DroneStatus = DroneStatus(
             DroneMode.UNKNOWN,
             groundspeed_mps=0.0,
@@ -96,6 +98,8 @@ class DroneMavlinkBase(Drone):
             connection, self.connection = self.connection, None
             self.status.last_heartbeat_s = 0.0
             self.status.last_heartbeat_monotonic_s = None
+            self.status.landed_state = LandedState.UNKNOWN
+            self._mission_execution_status = MissionExecutionStatus()
             self._target_system = self._target_component = None
             self._last_sent_heartbeat_s = None
             self._link_was_alive = False
@@ -122,10 +126,20 @@ class DroneMavlinkBase(Drone):
             if alive != self._link_was_alive:
                 if alive:
                     logger.info("MAVLink heartbeat recovered")
+                    self._request_status_streams()
                 else:
                     logger.warning("MAVLink heartbeat expired; vehicle connection lost")
+                    self._mission_execution_status = MissionExecutionStatus()
+                    self.status.landed_state = LandedState.UNKNOWN
+                    self._target_system = self._target_component = None
+                    self.connection.target_system = None
+                    self.connection.target_component = None
                 self._link_was_alive = alive
             return replace(self.status)
+
+    def get_mission_execution_status(self) -> MissionExecutionStatus:
+        with self._lock:
+            return self._mission_execution_status
 
     def send_landing_target(self, uav_pose: Pose3D, target_size: tuple[float, float]) -> None:
         with self._lock:
@@ -173,8 +187,7 @@ class DroneMavlinkBase(Drone):
             if received_message is None:
                 break
             if self._target_system is None:
-                if self._accept_autopilot_heartbeat(received_message):
-                    self._request_status_streams()
+                self._accept_autopilot_heartbeat(received_message)
             elif self._is_from_autopilot(received_message):
                 self._handle_message(received_message)
             if time.monotonic() >= deadline:
@@ -186,7 +199,8 @@ class DroneMavlinkBase(Drone):
     def _handle_message(self, message) -> None:
         message_type = message.get_type()
         if message_type == "HEARTBEAT":
-            self.status.mode = DroneMode.from_str(mavutil.mode_string_v10(message))
+            self.status.mode_name = mavutil.mode_string_v10(message)
+            self.status.mode = DroneMode.from_str(self.status.mode_name)
             self.status.armed = bool(message.base_mode & mavlink2.MAV_MODE_FLAG_SAFETY_ARMED)
             self.status.last_heartbeat_s = time.time()
             self.status.last_heartbeat_monotonic_s = time.monotonic()
@@ -205,9 +219,37 @@ class DroneMavlinkBase(Drone):
             self.status.relative_altitude = float(message.relative_alt) / 1000.0
             self.status.speed = float(message.vz) / 100.0
             self.status.heading_deg = None if message.hdg == 65535 else message.hdg / 100.0
+        elif message_type == "EXTENDED_SYS_STATE":
+            self.status.landed_state = LandedState.from_mavlink(int(message.landed_state))
+        elif message_type == "MISSION_CURRENT":
+            self._update_mission_current(message)
+        elif message_type == "MISSION_ITEM_REACHED":
+            self._update_mission_item_reached(message)
         elif message_type == "COMMAND_ACK" and message.command == mavlink2.MAV_CMD_SET_MESSAGE_INTERVAL:
             if message.result not in (mavlink2.MAV_RESULT_ACCEPTED, mavlink2.MAV_RESULT_IN_PROGRESS):
                 logger.warning("Autopilot rejected a telemetry rate request (MAV_RESULT={})", message.result)
+
+    def _update_mission_current(self, message) -> None:
+        mission_id_value = getattr(message, "mission_id", None)
+        mission_id = int(mission_id_value) if mission_id_value not in (None, 0) else None
+        previous = self._mission_execution_status
+        if mission_id is not None and previous.mission_id != mission_id:
+            previous = MissionExecutionStatus(mission_id=mission_id)
+        self._mission_execution_status = MissionExecutionStatus(
+            current_item_seq=int(message.seq),
+            last_reached_item_seq=previous.last_reached_item_seq,
+            last_updated_monotonic_s=time.monotonic(),
+            mission_id=mission_id if mission_id is not None else previous.mission_id,
+        )
+
+    def _update_mission_item_reached(self, message) -> None:
+        previous = self._mission_execution_status
+        self._mission_execution_status = MissionExecutionStatus(
+            current_item_seq=previous.current_item_seq,
+            last_reached_item_seq=int(message.seq),
+            last_updated_monotonic_s=time.monotonic(),
+            mission_id=previous.mission_id,
+        )
 
     def _maintain_heartbeat(self) -> None:
         if (
@@ -222,6 +264,8 @@ class DroneMavlinkBase(Drone):
             (mavlink2.MAVLINK_MSG_ID_SYS_STATUS, 1),
             (mavlink2.MAVLINK_MSG_ID_GPS_RAW_INT, 2),
             (mavlink2.MAVLINK_MSG_ID_GLOBAL_POSITION_INT, 10),
+            (mavlink2.MAVLINK_MSG_ID_MISSION_CURRENT, 1),
+            (mavlink2.MAVLINK_MSG_ID_EXTENDED_SYS_STATE, 2),
         ):
             self.connection.mav.command_long_send(
                 self._target_system,
@@ -236,7 +280,10 @@ class DroneMavlinkBase(Drone):
                 0,
                 0,
             )
-        logger.info("Requested MAVLink status streams (position 10 Hz, HUD 5 Hz, GPS 2 Hz, battery 1 Hz)")
+        logger.info(
+            "Requested MAVLink telemetry streams (position 10 Hz, HUD 5 Hz, GPS 2 Hz, "
+            "mission progress 1 Hz, landed state 2 Hz, battery 1 Hz)"
+        )
 
     def _send_heartbeat(self):
         self._require_connected()
@@ -260,6 +307,8 @@ class DroneMavlinkBase(Drone):
             return False
         self._target_system = message.get_srcSystem()
         self._target_component = message.get_srcComponent()
+        self._mission_execution_status = MissionExecutionStatus()
+        self.status.landed_state = LandedState.UNKNOWN
         self.connection.target_system = self._target_system
         self.connection.target_component = self._target_component
         self._handle_message(message)

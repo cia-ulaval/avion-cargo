@@ -173,3 +173,31 @@ def test_validator_still_requires_aruco_id(tmp_path: Path, valid_config_data: di
     with pytest.raises(ValidationError) as error:
         ConfigurationValidator(write_config(tmp_path, valid_config_data)).validate()
     assert error.value.path == "vision.targeted_marker.id"
+
+
+def test_validator_accepts_combined_vtol_configuration(tmp_path, valid_config_data):
+    import json
+
+    config_path = tmp_path / "vtol.json"
+    config_path.write_text(
+        json.dumps({"autolanding": valid_config_data, "d3kble": {"devices": []}}),
+        encoding="utf-8",
+    )
+
+    ConfigurationValidator(config_path).validate()
+
+
+def test_validator_rejects_unknown_keys_in_combined_vtol_root(tmp_path, valid_config_data):
+    import json
+
+    config_path = tmp_path / "vtol.json"
+    config_path.write_text(
+        json.dumps({"autolanding": valid_config_data, "d3kble": {}, "mystery": True}),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ValidationError) as error:
+        ConfigurationValidator(config_path).validate()
+
+    assert error.value.path == "root"
+    assert "Unknown keys" in error.value.message

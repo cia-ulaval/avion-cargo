@@ -18,9 +18,24 @@ from vtol.utils.validators.validation_error import ValidationError
 
 class ConfigurationValidator:
     """
-    Validate a JSON configuration file for Autolander.
-    Expected schema:
+    Validate the existing autolanding section in either the legacy flat
+    configuration or the combined VTOL configuration:
 
+    {
+      "autolanding": {
+        "camera": { ... },
+        "vision": { ... },
+        "streaming": { ... },
+        "drone_connection": { ... }
+      },
+      "d3kble": { "devices": [ ... ] }
+    }
+
+    The detailed D3K device schema is validated by VtolRuntimeConfiguration.
+    The original flat camera/vision/streaming/drone_connection format remains
+    supported for existing autolanding and simulation configurations.
+
+    Autolanding section:
     {
       "camera": {
         "id": int>=0,
@@ -82,17 +97,24 @@ class ConfigurationValidator:
         if not isinstance(raw, dict):
             raise ValidationError("Root JSON must be an object/dict", "root")
 
-        # ---- schema validation
-        self._validate_camera(raw)
-        self._validate_vision(raw)
-        self._validate_streaming(raw)
-        self._validate_drone_connection(raw)
+        # A complete VTOL configuration groups the existing autolanding
+        # settings beside the D3Kble hardware configuration. Keep accepting
+        # the original flat autolanding-only file for existing CLI workflows.
+        if "autolanding" in raw:
+            autolanding = self._req_obj(raw, "autolanding", "root")
+            self._req_obj(raw, "d3kble", "root")
+            self._no_extra_keys(raw, {"autolanding", "d3kble"}, "root")
+        else:
+            autolanding = raw
 
-        # Optionnel: refuser les clés inconnues au root (strict)
-        allowed_root = {"camera", "vision", "streaming", "drone_connection"}
-        extra = set(raw.keys()) - allowed_root
-        if extra:
-            raise ValidationError(f"Unknown root keys: {sorted(extra)}", "root")
+        # ---- autolanding schema validation
+        self._validate_camera(autolanding)
+        self._validate_vision(autolanding)
+        self._validate_streaming(autolanding)
+        self._validate_drone_connection(autolanding)
+
+        if "autolanding" not in raw:
+            self._no_extra_keys(raw, {"camera", "vision", "streaming", "drone_connection"}, "root")
 
     # -------------------------
     # Section validators

@@ -1,5 +1,3 @@
-"""Assemble application services with their concrete adapters."""
-
 import os
 from dataclasses import dataclass
 from typing import Optional
@@ -7,6 +5,11 @@ from typing import Optional
 from vtol.application.autolanding.camera_calibration_service import CameraCalibrationService
 from vtol.application.autolanding.drone_autolanding_service import DroneAutolandingService
 from vtol.application.autolanding.tracking_service import TrackingService
+from vtol.application.flight_controller_runtime import FlightControllerObservationRuntime
+from vtol.application.mission.observation_store import MissionObservationStore
+from vtol.application.mission.orchestrator import MissionOrchestrator
+from vtol.application.payload_coordination.runtime import VtolPayloadCommunicationRuntime
+from vtol.application.runtime import VtolApplicationRuntime
 from vtol.domain.camera import Camera
 from vtol.domain.camera_mount import CameraMount
 from vtol.domain.drone import Drone
@@ -15,12 +18,14 @@ from vtol.domain.models import CalibrationData, TargetedMarker
 from vtol.infrastructure.camera.frame_buffer import FrameBuffer
 from vtol.infrastructure.camera.opencv_capture_adapter import OpenCVCamera
 from vtol.infrastructure.communication.drone_status_buffer import DroneStatusBuffer
+from vtol.infrastructure.d3kble.runtime import VtolD3kbleApplication, build_vtol_d3kble_application
 from vtol.infrastructure.persistence.calibration_repository import CalibrationRepository
 from vtol.infrastructure.persistence.configuration_models import (
     AutolanderConfiguration,
     CameraConfiguration,
     DroneConnectionConfiguration,
 )
+from vtol.infrastructure.persistence.vtol_application_configuration import VtolApplicationConfiguration
 from vtol.infrastructure.vision.faruco_detector import FArUcoDetector
 from vtol.infrastructure.vision.live_frame_collector import LiveFrameCollector, LiveFrameCollectorConfig
 from vtol.infrastructure.vision.opencv_aruco_detector import OpenCVArucoDetector, OpenCVArucoDetectorConfig
@@ -175,3 +180,63 @@ def build_landing_service(config: AutolanderConfiguration, use_simulated_cam: bo
         drone_status_buffer=DroneStatusBuffer(),
         telemetry_dps=config.streaming_config.data.dps,
     )
+
+
+
+@dataclass
+class VtolApplication:
+    """Own the VTOL Pi's flight-controller, D3K and mission application runtime."""
+
+    d3kble: VtolD3kbleApplication
+    drone: Drone
+    observations: MissionObservationStore
+    runtime: VtolApplicationRuntime
+    _closed: bool = False
+
+    @property
+    def nodes(self):
+        return self.d3kble.nodes
+
+    @property
+    def payload_peers(self):
+        return self.d3kble.payload_peers
+
+    async def run(self, stop_event) -> None:
+        await self.runtime.run(stop_event)
+
+    def close(self) -> None:
+        if self._closed:
+            return
+        self._closed = True
+        try:
+            self.drone.close()
+        finally:
+            self.d3kble.close()
+
+
+def build_vtol_application(
+    config: VtolApplicationConfiguration,
+    *,
+    node_factory=None,
+    drone_factory=None,
+) -> VtolApplication:
+    """Build the single VTOL application runtime from the combined Pi config."""
+    d3kble_application = build_vtol_d3kble_application(config.d3kble, node_factory=node_factory)
+    drone = None
+    try:
+        drone = (drone_factory or build_drone)(config.autolanding.drone_connection_config)
+        observations = MissionObservationStore()
+        flight_controller_runtime = FlightControllerObservationRuntime(drone, observations)
+        payload_runtime = VtolPayloadCommunicationRuntime(d3kble_application.payload_peers, observations)
+        mission_orchestrator = MissionOrchestrator(observations.snapshot)
+        runtime = VtolApplicationRuntime(
+            flight_controller=flight_controller_runtime,
+            payload_communication=payload_runtime,
+            mission_orchestrator=mission_orchestrator,
+        )
+        return VtolApplication(d3kble_application, drone, observations, runtime)
+    except BaseException:
+        if drone is not None:
+            drone.close()
+        d3kble_application.close()
+        raise

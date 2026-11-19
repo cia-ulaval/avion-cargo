@@ -22,6 +22,7 @@ dependencies = [
     "future (>=1.0.0,<2.0.0)",
     "opencv-contrib-python (>=4.13.0.92,<5.0.0.0)",
     "matplotlib (>=3.10.8,<4.0.0)",
+    "d3kble @ git+https://github.com/PladsElsker/dwm3000-esp32-interface.git@a0b42bae73b145f858dc67a2d56569cbb1c439ac#subdirectory=d3kble-api",
 ]
 
 [tool.poetry]
@@ -74,6 +75,8 @@ build-backend = "poetry.core.masonry.api"
 calibrate_camera = "vtol.ui.camera_calibration_cli:main"
 precision_landing = "vtol.ui.precision_landing_cli:main"
 generate_markers = "vtol.ui.marker_generation_cli:main"
+run_payload = "payload.main:main"
+run_vtol = "vtol.main:main"
 fmt = "script:run_code_formatting"
 fmt-check = "script:run_code_format_checking"
 clean = "script:clean_project"

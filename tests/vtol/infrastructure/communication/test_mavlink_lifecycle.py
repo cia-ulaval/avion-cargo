@@ -89,6 +89,8 @@ def test_connect_accepts_only_autopilot_and_initializes_status_from_first_heartb
         mavlink2.MAVLINK_MSG_ID_SYS_STATUS: 1_000_000,
         mavlink2.MAVLINK_MSG_ID_GPS_RAW_INT: 500_000,
         mavlink2.MAVLINK_MSG_ID_GLOBAL_POSITION_INT: 100_000,
+        mavlink2.MAVLINK_MSG_ID_MISSION_CURRENT: 1_000_000,
+        mavlink2.MAVLINK_MSG_ID_EXTENDED_SYS_STATE: 500_000,
     }
     assert all((message.target_system, message.target_component) == (7, 1) for message in requests)
 
@@ -147,11 +149,11 @@ def test_optional_link_discovers_late_autopilot_and_requests_streams_once(link):
     assert status.alt_m == 42
     assert (connection.target_system, connection.target_component) == (7, 1)
     requests = [message for message in connection.outgoing if message.get_type() == "COMMAND_LONG"]
-    assert len(requests) == 4
+    assert len(requests) == 6
     assert all((message.target_system, message.target_component) == (7, 1) for message in requests)
     connection.incoming.extend([heartbeat(system=8, mode=4), heartbeat(system=7)])
     assert drone.get_status().mode is DroneMode.LAND
-    assert len([message for message in connection.outgoing if message.get_type() == "COMMAND_LONG"]) == 4
+    assert len([message for message in connection.outgoing if message.get_type() == "COMMAND_LONG"]) == 6
 
 
 def test_optional_timeout_does_not_suppress_transport_errors(link, monkeypatch):
@@ -241,3 +243,58 @@ def test_measurements_do_not_issue_flight_commands_regardless_of_observed_mode(l
     assert {message.get_type() for message in connection.outgoing} == {"HEARTBEAT", "COMMAND_LONG", "LANDING_TARGET"}
     commands = [message.command for message in connection.outgoing if message.get_type() == "COMMAND_LONG"]
     assert commands and set(commands) == {mavlink2.MAV_CMD_SET_MESSAGE_INTERVAL}
+
+
+def test_mission_progress_and_landed_state_are_observed_separately(link):
+    from types import SimpleNamespace
+
+    from vtol.domain.drone import LandedState
+
+    drone, connection, _ = link
+    connection.incoming.append(heartbeat())
+    drone.connect()
+
+    drone._handle_message(SimpleNamespace(get_type=lambda: "MISSION_CURRENT", seq=12, mission_id=71))
+    status = drone.get_mission_execution_status()
+    assert status.current_item_seq == 12
+    assert status.last_reached_item_seq is None
+    assert status.mission_id == 71
+
+    drone._handle_message(SimpleNamespace(get_type=lambda: "MISSION_ITEM_REACHED", seq=11))
+    status = drone.get_mission_execution_status()
+    assert status.current_item_seq == 12
+    assert status.last_reached_item_seq == 11
+
+    drone._handle_message(SimpleNamespace(get_type=lambda: "MISSION_CURRENT", seq=0, mission_id=72))
+    status = drone.get_mission_execution_status()
+    assert status.current_item_seq == 0
+    assert status.last_reached_item_seq is None
+    assert status.mission_id == 72
+
+    drone._handle_message(SimpleNamespace(get_type=lambda: "EXTENDED_SYS_STATE", landed_state=1))
+    assert drone.status.landed_state is LandedState.ON_GROUND
+
+
+def test_mission_observations_are_invalidated_when_heartbeat_expires(link):
+    from types import SimpleNamespace
+
+    drone, connection, clock = link
+    connection.incoming.append(heartbeat())
+    drone.connect()
+    drone._handle_message(SimpleNamespace(get_type=lambda: "MISSION_CURRENT", seq=8, mission_id=5))
+    assert drone.get_mission_execution_status().current_item_seq == 8
+
+    clock.now += 4.0
+    assert not drone.get_status().connected
+    assert drone.get_mission_execution_status().current_item_seq is None
+
+
+def test_close_resets_mission_execution_status(link):
+    from types import SimpleNamespace
+
+    drone, connection, _ = link
+    connection.incoming.append(heartbeat())
+    drone.connect()
+    drone._handle_message(SimpleNamespace(get_type=lambda: "MISSION_CURRENT", seq=3, mission_id=4))
+    drone.close()
+    assert drone.get_mission_execution_status().current_item_seq is None

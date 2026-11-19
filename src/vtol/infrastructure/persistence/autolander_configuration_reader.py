@@ -30,7 +30,11 @@ class AutolanderConfigurationReader:
         Reads configuration from the configuration file (JSON only)
         :return: AutolanderConfiguration object
         """
-        raw = self._read_json(self.config_path)
+        document = self._read_json(self.config_path)
+        raw = document.get("autolanding", document)
+        
+        if not isinstance(raw, dict):
+            raise ValueError("'autolanding' configuration must be a JSON object")
 
         camera_cfg = self._parse_camera(raw)
         targeted_marker = self._parse_targeted_marker(raw)

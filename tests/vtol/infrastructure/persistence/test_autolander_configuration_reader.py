@@ -99,3 +99,14 @@ def test_reader_maps_faruco_configuration_to_automatic_tracking(
     assert config.targeted_marker == TargetedMarker(
         id=None, length=0.896, marker_type="faruco", fractal_type="FRACTAL_3L_6"
     )
+
+
+def test_reader_accepts_autolanding_section_inside_combined_vtol_configuration(tmp_path, valid_config_data):
+    combined = {
+        "autolanding": valid_config_data,
+        "d3kble": {"devices": []},
+    }
+    config = AutolanderConfigurationReader(write_config(tmp_path, combined)).read()
+
+    assert config.camera_config.id == valid_config_data["camera"]["id"]
+    assert config.drone_connection_config.address == valid_config_data["drone_connection"]["address"]

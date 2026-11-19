@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from enum import Enum
 
 from vtol.domain.models import Pose3D
+from vtol.domain.mission.execution_status import MissionExecutionStatus
 
 
 class DroneMode(str, Enum):
@@ -23,6 +24,14 @@ class DroneMode(str, Enum):
     SPORT = "SPORT"
     FLIP = "FLIP"
     PLND = "PLND"
+    QSTABILIZE = "QSTABILIZE"
+    QHOVER = "QHOVER"
+    QLOITER = "QLOITER"
+    QLAND = "QLAND"
+    QRTL = "QRTL"
+    QAUTOTUNE = "QAUTOTUNE"
+    QACRO = "QACRO"
+    QGUIDED = "QGUIDED"
 
     @classmethod
     def from_str(cls, s: str | None) -> "DroneMode":
@@ -35,6 +44,23 @@ class DroneMode(str, Enum):
         }
         s = aliases.get(s, s)
         return cls(s) if s in cls._value2member_map_ else cls.UNKNOWN
+
+
+class LandedState(str, Enum):
+    UNKNOWN = "UNKNOWN"
+    ON_GROUND = "ON_GROUND"
+    IN_AIR = "IN_AIR"
+    TAKEOFF = "TAKEOFF"
+    LANDING = "LANDING"
+
+    @classmethod
+    def from_mavlink(cls, value: int | None) -> "LandedState":
+        return {
+            1: cls.ON_GROUND,
+            2: cls.IN_AIR,
+            3: cls.TAKEOFF,
+            4: cls.LANDING,
+        }.get(value, cls.UNKNOWN)
 
 
 @dataclass(slots=True)
@@ -56,6 +82,8 @@ class DroneStatus:
     heading_deg: float | None
     last_heartbeat_monotonic_s: float | None = None
     heartbeat_timeout_s: float = 3.0
+    mode_name: str | None = None
+    landed_state: LandedState = LandedState.UNKNOWN
 
     @property
     def connected(self) -> bool:
@@ -85,6 +113,10 @@ class Drone(ABC):
     @abstractmethod
     def get_status(self) -> DroneStatus:
         raise NotImplementedError()
+
+    def get_mission_execution_status(self) -> MissionExecutionStatus:
+        """Return the latest mission observation without polling the transport."""
+        return MissionExecutionStatus()
 
     @abstractmethod
     def send_landing_target(self, position: Pose3D, target_size: tuple[float, float]):
