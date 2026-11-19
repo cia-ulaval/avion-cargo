@@ -38,7 +38,7 @@ _EVENTS_CLOSED = object()
 
 class D3kblePlanePeer(PlanePeer):
     """
-    Receive plane telemetry/commands and report payload telemetry/results.
+    Receive plane telemetry/commands and report payload telemetry/results using the d3kble api.
     """
 
     def __init__(
