@@ -7,7 +7,7 @@ import threading
 from dataclasses import dataclass
 from typing import Any
 
-from shared.infrastructure.d3kble.types import D3KNodeLike, IncomingRequestLike
+from d3kble import D3KNode, IncomingRequest
 
 logger = logging.getLogger(__name__)
 
@@ -39,7 +39,7 @@ class D3kbleMessageRouter:
     """
     Route incoming d3kble messages and requests by remote BLE peer ID.
     """
-    def __init__(self, node: D3KNodeLike):
+    def __init__(self, node: D3KNode):
         self._node = node
         self._routes: dict[int, _PeerRoute] = {}
         self._lock = threading.RLock()
@@ -118,7 +118,7 @@ class D3kbleMessageRouter:
         except Exception:
             logger.exception("d3kble message handler failed for peer %s", message.peer_id)
 
-    async def _route_request(self, request: IncomingRequestLike) -> Any:
+    async def _route_request(self, request: IncomingRequest) -> Any:
         with self._lock:
             route = self._routes.get(int(request.peer_id))
             handler = route.request_handler if route is not None else None

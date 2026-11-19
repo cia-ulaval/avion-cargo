@@ -30,7 +30,7 @@ from shared.infrastructure.d3kble.codec import (
 )
 from shared.infrastructure.d3kble.errors import D3kbleCommunicationError
 from shared.infrastructure.d3kble.router import D3kbleMessageRouter, D3kbleRouteRegistration
-from shared.infrastructure.d3kble.types import D3KNodeLike, IncomingRequestLike
+from d3kble import D3KNode, IncomingRequest
 
 logger = logging.getLogger(__name__)
 _EVENTS_CLOSED = object()
@@ -43,7 +43,7 @@ class D3kblePlanePeer(PlanePeer):
 
     def __init__(
         self,
-        node: D3KNodeLike,
+        node: D3KNode,
         router: D3kbleMessageRouter,
         *,
         plane_peer_id: int,
@@ -155,7 +155,7 @@ class D3kblePlanePeer(PlanePeer):
         await self.start()
         await self._send(encode_payload_event(event), "payload operation report")
 
-    async def _on_request(self, request: IncomingRequestLike) -> dict[str, Any]:
+    async def _on_request(self, request: IncomingRequest) -> dict[str, Any]:
         message_type, _data = decode_message(request.payload)
         if message_type == "payload.request_status":
             report = await self._await_status_response(request.message_id)

@@ -26,7 +26,7 @@ from shared.infrastructure.d3kble.codec import (
 )
 from shared.infrastructure.d3kble.errors import D3kbleCommunicationError
 from shared.infrastructure.d3kble.router import D3kbleMessageRouter, D3kbleRouteRegistration
-from shared.infrastructure.d3kble.types import D3KNodeLike
+from d3kble import D3KNode
 from vtol.domain.payload_peer import PayloadPeer
 
 logger = logging.getLogger(__name__)
@@ -40,7 +40,7 @@ class D3kblePayloadPeer(PayloadPeer):
 
     def __init__(
         self,
-        node: D3KNodeLike,
+        node: D3KNode,
         router: D3kbleMessageRouter,
         *,
         payload_id: str,

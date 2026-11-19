@@ -5,7 +5,7 @@ import pytest
 from pymavlink import mavutil
 from pymavlink.dialects.v20 import ardupilotmega as mavlink2
 
-from vtol.domain.drone import DroneMode
+from vtol.domain.drone import DroneMode, VtolState
 from vtol.infrastructure.communication.mavlink import DroneMavlinkUDPConnector, MavlinkConnectionParams
 
 
@@ -271,8 +271,9 @@ def test_mission_progress_and_landed_state_are_observed_separately(link):
     assert status.last_reached_item_seq is None
     assert status.mission_id == 72
 
-    drone._handle_message(SimpleNamespace(get_type=lambda: "EXTENDED_SYS_STATE", landed_state=1))
+    drone._handle_message(SimpleNamespace(get_type=lambda: "EXTENDED_SYS_STATE", vtol_state=3, landed_state=1))
     assert drone.status.landed_state is LandedState.ON_GROUND
+    assert drone.status.vtol_state is VtolState.MULTICOPTER
 
 
 def test_mission_observations_are_invalidated_when_heartbeat_expires(link):
@@ -282,11 +283,14 @@ def test_mission_observations_are_invalidated_when_heartbeat_expires(link):
     connection.incoming.append(heartbeat())
     drone.connect()
     drone._handle_message(SimpleNamespace(get_type=lambda: "MISSION_CURRENT", seq=8, mission_id=5))
+    drone._handle_message(SimpleNamespace(get_type=lambda: "EXTENDED_SYS_STATE", vtol_state=4, landed_state=2))
     assert drone.get_mission_execution_status().current_item_seq == 8
+    assert drone.status.vtol_state is VtolState.FIXED_WING
 
     clock.now += 4.0
     assert not drone.get_status().connected
     assert drone.get_mission_execution_status().current_item_seq is None
+    assert drone.status.vtol_state is VtolState.UNKNOWN
 
 
 def test_close_resets_mission_execution_status(link):
@@ -296,5 +300,7 @@ def test_close_resets_mission_execution_status(link):
     connection.incoming.append(heartbeat())
     drone.connect()
     drone._handle_message(SimpleNamespace(get_type=lambda: "MISSION_CURRENT", seq=3, mission_id=4))
+    drone._handle_message(SimpleNamespace(get_type=lambda: "EXTENDED_SYS_STATE", vtol_state=3, landed_state=1))
     drone.close()
     assert drone.get_mission_execution_status().current_item_seq is None
+    assert drone.status.vtol_state is VtolState.UNKNOWN

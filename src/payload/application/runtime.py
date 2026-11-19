@@ -69,7 +69,7 @@ class PayloadApplicationRuntime:
             accepted=False,
             rejection_reason=FailureReason(
                 code="not_implemented",
-                message="Docking and parking execution are not implemented in this application version.",
+                message="This operation is not implemented in this application version.",
             ),
         )
         await self.plane_peer.acknowledge_command(receipt)

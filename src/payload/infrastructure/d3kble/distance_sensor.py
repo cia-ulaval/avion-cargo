@@ -7,10 +7,12 @@ import threading
 from collections.abc import AsyncIterator, Mapping
 from typing import Any
 
+from d3kble import D3KNode
+
 from payload.domain.positioning.distance_sensor import DistanceSensor
 from payload.domain.positioning.events import DistanceEvent, DistanceFailure, DistanceSample
 from shared.contracts.messages import FailureReason
-from shared.infrastructure.d3kble.types import D3KNodeLike
+from d3kble import D3KNode
 
 logger = logging.getLogger(__name__)
 
@@ -22,7 +24,7 @@ class D3kbleDistanceSensor(DistanceSensor):
 
     def __init__(
         self,
-        node: D3KNodeLike,
+        node: D3KNode,
         anchor_id_by_target_id: Mapping[int, str],
         *,
         subscription_size: int = 256,

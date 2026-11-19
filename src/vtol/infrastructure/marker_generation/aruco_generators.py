@@ -78,7 +78,6 @@ class MarkerBoardGenerationParams:
     def __post_init__(self) -> None:
         validate_integer("num_columns", self.num_columns, 1)
         validate_integer("num_rows", self.num_rows, 1)
-        # GridBoard uses consecutive IDs starting at zero, like the calibrator.
         ArucoMarkerGenerationParams(
             marker_id=self.num_columns * self.num_rows - 1,
             marker_len_m=self.marker_len_m,

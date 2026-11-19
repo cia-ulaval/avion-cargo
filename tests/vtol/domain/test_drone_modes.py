@@ -1,4 +1,4 @@
-from vtol.domain.drone import DroneMode, LandedState
+from vtol.domain.drone import DroneMode, LandedState, VtolState
 from vtol.domain.mission.execution_status import MissionExecutionStatus
 
 
@@ -15,6 +15,16 @@ def test_landed_state_maps_mavlink_values():
     assert LandedState.from_mavlink(3) is LandedState.TAKEOFF
     assert LandedState.from_mavlink(4) is LandedState.LANDING
     assert LandedState.from_mavlink(0) is LandedState.UNKNOWN
+
+
+def test_vtol_state_maps_mavlink_values():
+    assert VtolState.from_mavlink(0) is VtolState.UNDEFINED
+    assert VtolState.from_mavlink(1) is VtolState.TRANSITION_TO_FIXED_WING
+    assert VtolState.from_mavlink(2) is VtolState.TRANSITION_TO_MULTICOPTER
+    assert VtolState.from_mavlink(3) is VtolState.MULTICOPTER
+    assert VtolState.from_mavlink(4) is VtolState.FIXED_WING
+    assert VtolState.from_mavlink(5) is VtolState.UNKNOWN
+    assert VtolState.from_mavlink(None) is VtolState.UNKNOWN
 
 
 def test_mission_execution_observation_exposes_freshness_without_conflating_sequences():

@@ -63,6 +63,27 @@ class LandedState(str, Enum):
         }.get(value, cls.UNKNOWN)
 
 
+class VtolState(str, Enum):
+    """VTOL configuration and transition state reported by MAVLink."""
+
+    UNKNOWN = "UNKNOWN"
+    UNDEFINED = "UNDEFINED"
+    TRANSITION_TO_FIXED_WING = "TRANSITION_TO_FIXED_WING"
+    TRANSITION_TO_MULTICOPTER = "TRANSITION_TO_MULTICOPTER"
+    MULTICOPTER = "MULTICOPTER"
+    FIXED_WING = "FIXED_WING"
+
+    @classmethod
+    def from_mavlink(cls, value: int | None) -> "VtolState":
+        return {
+            0: cls.UNDEFINED,
+            1: cls.TRANSITION_TO_FIXED_WING,
+            2: cls.TRANSITION_TO_MULTICOPTER,
+            3: cls.MULTICOPTER,
+            4: cls.FIXED_WING,
+        }.get(value, cls.UNKNOWN)
+
+
 @dataclass(slots=True)
 class DroneStatus:
     mode: DroneMode
@@ -84,6 +105,7 @@ class DroneStatus:
     heartbeat_timeout_s: float = 3.0
     mode_name: str | None = None
     landed_state: LandedState = LandedState.UNKNOWN
+    vtol_state: VtolState = VtolState.UNKNOWN
 
     @property
     def connected(self) -> bool:
