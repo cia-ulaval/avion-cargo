@@ -32,7 +32,6 @@ class PayloadApplicationRuntime:
         async with asyncio.TaskGroup() as group:
             plane_task = group.create_task(self._consume_plane_events(), name="payload-plane-events")
             distance_task = group.create_task(self._consume_distance_events(), name="payload-distance-events")
-            await asyncio.sleep(0)
             await stop_event.wait()
             plane_task.cancel()
             distance_task.cancel()
