@@ -154,5 +154,11 @@
         </collision>
       </link>
     </model>
+    <!-- Ground payload demo: outside the 1.0185 m landing marker, inside the 2.4384 m DLZ. -->
+    <include>
+      <uri>model://payload</uri>
+      <name>payload_demo</name>
+      <pose>0.80 0.80 0 0 0 0</pose>
+    </include>
   </world>
 </sdf>
