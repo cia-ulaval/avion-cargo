@@ -26,7 +26,11 @@ dependencies = [
 ]
 
 [tool.poetry]
-packages = [{include = "*", from = "src"}]
+packages = [
+    { include = "vtol", from = "src" },
+    { include = "payload", from = "src" },
+    { include = "shared", from = "src" },
+]
 
 [tool.poetry.group.dev]
 optional = true
@@ -77,6 +81,7 @@ precision_landing = "vtol.ui.precision_landing_cli:main"
 generate_markers = "vtol.ui.marker_generation_cli:main"
 run_payload = "payload.main:main"
 run_vtol = "vtol.main:main"
+run_d3k_diagnostics = "d3k_diagnostics.main:main"
 fmt = "script:run_code_formatting"
 fmt-check = "script:run_code_format_checking"
 clean = "script:clean_project"

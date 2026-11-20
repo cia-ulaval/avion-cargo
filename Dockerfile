@@ -224,9 +224,63 @@ set -euo pipefail
 exec socat TCP-LISTEN:8086,bind=0.0.0.0,reuseaddr,fork TCP:127.0.0.1:8085
 SCRIPT
 
+cat > /usr/local/bin/avion-vtol <<'SCRIPT'
+#!/usr/bin/env bash
+set -Eeuo pipefail
+cd /workspace/avion-cargo
+
+CONFIG="${AVION_VTOL_CONFIG:-}"
+if [[ -z "$CONFIG" ]]; then
+  echo "AVION_VTOL_CONFIG must be set by the active simulation Compose file." >&2
+  exit 2
+fi
+if [[ ! -f "$CONFIG" ]]; then
+  echo "VTOL configuration does not exist: $CONFIG" >&2
+  exit 2
+fi
+exec poetry run run_vtol --config "$CONFIG"
+SCRIPT
+
+cat > /usr/local/bin/avion-payload <<'SCRIPT'
+#!/usr/bin/env bash
+set -Eeuo pipefail
+cd /workspace/avion-cargo
+
+CONFIG="${AVION_PAYLOAD_CONFIG:-}"
+if [[ -z "$CONFIG" ]]; then
+  echo "AVION_PAYLOAD_CONFIG must be set by the active simulation Compose file." >&2
+  exit 2
+fi
+if [[ ! -f "$CONFIG" ]]; then
+  echo "Payload configuration does not exist: $CONFIG" >&2
+  exit 2
+fi
+exec poetry run run_payload --config "$CONFIG"
+SCRIPT
+
+cat > /usr/local/bin/avion-d3k-diagnostics <<'SCRIPT'
+#!/usr/bin/env bash
+set -Eeuo pipefail
+cd /workspace/avion-cargo
+
+CONFIG="${AVION_D3K_DIAGNOSTICS_CONFIG:-}"
+if [[ -z "$CONFIG" ]]; then
+  echo "AVION_D3K_DIAGNOSTICS_CONFIG must be set by the active simulation Compose file." >&2
+  exit 2
+fi
+if [[ ! -f "$CONFIG" ]]; then
+  echo "D3K diagnostics configuration does not exist: $CONFIG" >&2
+  exit 2
+fi
+export PYTHONPATH="/workspace/avion-cargo/src${PYTHONPATH:+:$PYTHONPATH}"
+exec poetry run run_d3k_diagnostics --config "$CONFIG"
+SCRIPT
+
 chmod 0755 /usr/local/bin/avion-sitl /usr/local/bin/avion-gazebo \
   /usr/local/bin/avion-image-bridge /usr/local/bin/avion-autolander \
-  /usr/local/bin/avion-entrypoint /usr/local/bin/avion-web-proxy
+  /usr/local/bin/avion-entrypoint /usr/local/bin/avion-web-proxy \
+  /usr/local/bin/avion-vtol /usr/local/bin/avion-payload \
+  /usr/local/bin/avion-d3k-diagnostics
 CREATE_LAUNCHERS
 
 USER dev

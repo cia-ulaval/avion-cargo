@@ -1,0 +1,15 @@
+{
+  "poll_interval_s": 1.0,
+  "devices": [
+    {
+      "name": "vtol",
+      "uart_device": "/tmp/d3k-vtol",
+      "peer_id": 18
+    },
+    {
+      "name": "payload",
+      "uart_device": "/tmp/d3k-payload",
+      "peer_id": 2
+    }
+  ]
+}

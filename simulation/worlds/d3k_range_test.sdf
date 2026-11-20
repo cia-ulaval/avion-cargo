@@ -8,10 +8,11 @@
 
     <plugin filename="gz-sim-physics-system"
             name="gz::sim::systems::Physics"/>
+    <plugin filename="gz-sim-user-commands-system"
+            name="gz::sim::systems::UserCommands"/>
     <plugin filename="gz-sim-scene-broadcaster-system"
             name="gz::sim::systems::SceneBroadcaster"/>
 
-    <!-- VTOL-side D3K antenna at (0, 0, 1). -->
     <model name="vtol_d3k_node">
       <static>true</static>
       <pose>0 0 1 0 0 0</pose>
@@ -36,16 +37,28 @@
         <reference_link>uwb_antenna</reference_link>
         <nvs>
           <uwb>
-            <device_id>1</device_id>
+            <device_id>2</device_id>
             <pan_id>57034</pan_id>
             <channel>5</channel>
-            <role>initiator</role>
-            <targets>2</targets>
-            <period_ms>100</period_ms>
+            <role>responder</role>
+            <targets>18, 19, 20, 21, 22</targets>
+            <period_ms>20</period_ms>
             <timeout_ms>120</timeout_ms>
-            <retries>1</retries>
+            <retries>0</retries>
             <auto_start>true</auto_start>
           </uwb>
+          <ble>
+            <mode>hub</mode>
+            <peer_ids>18, 19, 20, 21, 22</peer_ids>
+            <auto_start>true</auto_start>
+            <advertising_interval_ms>100</advertising_interval_ms>
+            <scan_interval_ms>100</scan_interval_ms>
+            <scan_window_ms>50</scan_window_ms>
+            <retry_interval_ms>1000</retry_interval_ms>
+            <connection_timeout_ms>5000</connection_timeout_ms>
+            <max_retries>2</max_retries>
+            <rx_message_timeout_ms>500</rx_message_timeout_ms>
+          </ble>
         </nvs>
         <range_model>
           <noise_stddev_m>0.015</noise_stddev_m>
@@ -57,7 +70,7 @@
     </model>
 
     <!-- Fixed reference D3K antenna at (3, 4, 1): exactly 5 m from the VTOL node. -->
-    <model name="reference_d3k_node">
+    <model name="payload_d3k_node">
       <static>true</static>
       <pose>3 4 1 0 0 0</pose>
       <link name="uwb_antenna">
@@ -75,22 +88,34 @@
       <plugin filename="libd3k_gazebo_system.so"
               name="d3k_sim::D3kNodeSystem">
         <uart>
-          <pty_path>/tmp/d3k-reference</pty_path>
+          <pty_path>/tmp/d3k-payload</pty_path>
           <baud_rate>460800</baud_rate>
         </uart>
         <reference_link>uwb_antenna</reference_link>
         <nvs>
           <uwb>
-            <device_id>2</device_id>
+            <device_id>18</device_id>
             <pan_id>57034</pan_id>
             <channel>5</channel>
-            <role>responder</role>
-            <targets>1</targets>
-            <period_ms>100</period_ms>
+            <role>initiator</role>
+            <targets>2, 3, 4, 5</targets>
+            <period_ms>20</period_ms>
             <timeout_ms>120</timeout_ms>
-            <retries>1</retries>
+            <retries>0</retries>
             <auto_start>true</auto_start>
           </uwb>
+          <ble>
+            <mode>peripheral</mode>
+            <peer_ids>2</peer_ids>
+            <auto_start>true</auto_start>
+            <advertising_interval_ms>100</advertising_interval_ms>
+            <scan_interval_ms>100</scan_interval_ms>
+            <scan_window_ms>50</scan_window_ms>
+            <retry_interval_ms>1000</retry_interval_ms>
+            <connection_timeout_ms>5000</connection_timeout_ms>
+            <max_retries>2</max_retries>
+            <rx_message_timeout_ms>500</rx_message_timeout_ms>
+          </ble>
         </nvs>
         <range_model>
           <noise_stddev_m>0.015</noise_stddev_m>
