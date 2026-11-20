@@ -3,15 +3,15 @@
   <model name="payload">
     <static>false</static>
     <self_collide>false</self_collide>
-    <!-- Provisional: triangle side=0.18 m; total model link mass=0.15 kg; wheel radius=0.027 m. -->
+    <!-- Provisional: triangle side=0.18 m; total model link mass=0.4 kg; wheel radius=0.027 m. -->
     <link name="chassis">
       <inertial>
         <pose>0 0 0.079 0 0 0</pose>
-        <mass>0.1095</mass>
+        <mass>0.292</mass>
         <inertia>
-          <ixx>6.11375e-05</ixx>
-          <iyy>6.11375e-05</iyy>
-          <izz>0.00011086875</izz>
+          <ixx>0.000163033333</ixx>
+          <iyy>0.000163033333</iyy>
+          <izz>0.00029565</izz>
           <ixy>0</ixy>
           <ixz>0</ixz>
           <iyz>0</iyz>
@@ -79,11 +79,11 @@
     <link name="wheel_0">
       <pose>0.0675499815 0.039 0.028 0 1.57079633 0.523598776</pose>
       <inertial>
-        <mass>0.0135</mass>
+        <mass>0.036</mass>
         <inertia>
-          <ixx>2.748375e-06</ixx>
-          <iyy>2.748375e-06</iyy>
-          <izz>4.92075e-06</izz>
+          <ixx>7.329e-06</ixx>
+          <iyy>7.329e-06</iyy>
+          <izz>1.3122e-05</izz>
           <ixy>0</ixy>
           <ixz>0</ixz>
           <iyz>0</iyz>
@@ -123,11 +123,11 @@
     <link name="wheel_1">
       <pose>-0.0675499815 0.039 0.028 0 1.57079633 2.61799388</pose>
       <inertial>
-        <mass>0.0135</mass>
+        <mass>0.036</mass>
         <inertia>
-          <ixx>2.748375e-06</ixx>
-          <iyy>2.748375e-06</iyy>
-          <izz>4.92075e-06</izz>
+          <ixx>7.329e-06</ixx>
+          <iyy>7.329e-06</iyy>
+          <izz>1.3122e-05</izz>
           <ixy>0</ixy>
           <ixz>0</ixz>
           <iyz>0</iyz>
@@ -167,11 +167,11 @@
     <link name="wheel_2">
       <pose>-1.43283676e-17 -0.078 0.028 0 1.57079633 4.71238898</pose>
       <inertial>
-        <mass>0.0135</mass>
+        <mass>0.036</mass>
         <inertia>
-          <ixx>2.748375e-06</ixx>
-          <iyy>2.748375e-06</iyy>
-          <izz>4.92075e-06</izz>
+          <ixx>7.329e-06</ixx>
+          <iyy>7.329e-06</iyy>
+          <izz>1.3122e-05</izz>
           <ixy>0</ixy>
           <ixz>0</ixz>
           <iyz>0</iyz>

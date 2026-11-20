@@ -58,7 +58,7 @@ def wheel_section(i, angle, r, radius, width, m):
     return link,joint,plugin
 
 
-def generate(side=.18, mass=.15, radius=.027, wheel_width=.016, wheel_offset=.078):
+def generate(side=.18, mass=.4, radius=.027, wheel_width=.016, wheel_offset=.078):
     if not (0.1<=side<=.3048 and 0.03<=mass<=1.0 and 0.012<=radius<=0.06 and 0.008<=wheel_width<=0.04 and .03<=wheel_offset<=.15):
         raise ValueError('Dimensions/mass outside prototype sanity bounds')
     wheel_mass = mass * .09
@@ -94,7 +94,7 @@ def generate(side=.18, mass=.15, radius=.027, wheel_width=.016, wheel_offset=.07
 if __name__ == '__main__':
     p=argparse.ArgumentParser()
     p.add_argument('--side',type=float,default=.18)
-    p.add_argument('--mass',type=float,default=.15)
+    p.add_argument('--mass',type=float,default=.4)
     p.add_argument('--wheel-radius',type=float,default=.027)
     p.add_argument('--wheel-width',type=float,default=.016)
     p.add_argument('--wheel-offset',type=float,default=.078)
