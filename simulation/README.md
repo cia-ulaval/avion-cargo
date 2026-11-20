@@ -12,7 +12,7 @@ Installez Autolander, ArduPilot SITL, ROS 2 Jazzy, Gazebo Harmonic et le plugin 
 sudo apt install ros-jazzy-ros-gz-image
 ```
 
-La commande `image_bridge` est décrite dans la [documentation de ros_gz_image](https://docs.ros.org/en/jazzy/p/ros_gz_image/). Les révisions présentes lors de la copie sont conservées dans [versions.txt](versions.txt). Utilisez ces révisions d'ArduPilot et du plugin pour retrouver la même base de simulation.
+La commande `image_bridge` est décrite dans la [documentation de ros_gz_image](https://docs.ros.org/en/jazzy/p/ros_gz_image/). Les révisions présentes lors de la copie sont conservées dans les fichiers `versions/*.version` et `versions/*.distribution`. Utilisez ces révisions d'ArduPilot et du plugin pour retrouver la même base de simulation.
 
 Les modèles standards `runway`, `iris_with_gimbal` et `iris_with_standoffs` restent fournis par le plugin ArduPilot. Le dossier `models/gimbal_small_3d` contient la caméra modifiée et doit être recherché avant les modèles standards.
 

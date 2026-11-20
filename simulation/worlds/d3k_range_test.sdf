@@ -1,0 +1,104 @@
+<?xml version="1.0"?>
+<sdf version="1.9">
+  <world name="d3k_range_test">
+    <physics name="1ms" type="ignore">
+      <max_step_size>0.001</max_step_size>
+      <real_time_factor>1.0</real_time_factor>
+    </physics>
+
+    <plugin filename="gz-sim-physics-system"
+            name="gz::sim::systems::Physics"/>
+    <plugin filename="gz-sim-scene-broadcaster-system"
+            name="gz::sim::systems::SceneBroadcaster"/>
+
+    <!-- VTOL-side D3K antenna at (0, 0, 1). -->
+    <model name="vtol_d3k_node">
+      <static>true</static>
+      <pose>0 0 1 0 0 0</pose>
+      <link name="uwb_antenna">
+        <gravity>false</gravity>
+        <visual name="antenna_marker">
+          <geometry>
+            <sphere><radius>0.04</radius></sphere>
+          </geometry>
+          <material>
+            <diffuse>0.1 0.3 0.9 1</diffuse>
+          </material>
+        </visual>
+      </link>
+
+      <plugin filename="libd3k_gazebo_system.so"
+              name="d3k_sim::D3kNodeSystem">
+        <uart>
+          <pty_path>/tmp/d3k-vtol</pty_path>
+          <baud_rate>460800</baud_rate>
+        </uart>
+        <reference_link>uwb_antenna</reference_link>
+        <nvs>
+          <uwb>
+            <device_id>1</device_id>
+            <pan_id>57034</pan_id>
+            <channel>5</channel>
+            <role>initiator</role>
+            <targets>2</targets>
+            <period_ms>100</period_ms>
+            <timeout_ms>120</timeout_ms>
+            <retries>1</retries>
+            <auto_start>true</auto_start>
+          </uwb>
+        </nvs>
+        <range_model>
+          <noise_stddev_m>0.015</noise_stddev_m>
+          <node_bias_limit_m>0.03</node_bias_limit_m>
+          <max_range_m>100.0</max_range_m>
+          <seed>0</seed>
+        </range_model>
+      </plugin>
+    </model>
+
+    <!-- Fixed reference D3K antenna at (3, 4, 1): exactly 5 m from the VTOL node. -->
+    <model name="reference_d3k_node">
+      <static>true</static>
+      <pose>3 4 1 0 0 0</pose>
+      <link name="uwb_antenna">
+        <gravity>false</gravity>
+        <visual name="antenna_marker">
+          <geometry>
+            <sphere><radius>0.04</radius></sphere>
+          </geometry>
+          <material>
+            <diffuse>0.1 0.8 0.2 1</diffuse>
+          </material>
+        </visual>
+      </link>
+
+      <plugin filename="libd3k_gazebo_system.so"
+              name="d3k_sim::D3kNodeSystem">
+        <uart>
+          <pty_path>/tmp/d3k-reference</pty_path>
+          <baud_rate>460800</baud_rate>
+        </uart>
+        <reference_link>uwb_antenna</reference_link>
+        <nvs>
+          <uwb>
+            <device_id>2</device_id>
+            <pan_id>57034</pan_id>
+            <channel>5</channel>
+            <role>responder</role>
+            <targets>1</targets>
+            <period_ms>100</period_ms>
+            <timeout_ms>120</timeout_ms>
+            <retries>1</retries>
+            <auto_start>true</auto_start>
+          </uwb>
+        </nvs>
+        <range_model>
+          <noise_stddev_m>0.015</noise_stddev_m>
+          <node_bias_limit_m>0.03</node_bias_limit_m>
+          <max_range_m>100.0</max_range_m>
+          <seed>0</seed>
+        </range_model>
+      </plugin>
+    </model>
+  </world>
+</sdf>
