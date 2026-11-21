@@ -299,4 +299,5 @@ echo "Starting avion-sitl interactively; press Ctrl+C to stop SITL and the suppo
 monitor_services &
 MONITOR_PID=$!
 
-docker compose exec -it dev /usr/local/bin/avion-sitl
+# Use the checkout's launcher even if the running image has an older avion-sitl.
+docker compose exec -it dev bash /workspace/avion-cargo/scripts/launch-sitl.sh

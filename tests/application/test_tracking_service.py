@@ -9,6 +9,7 @@ from application.tracking_service import TrackingService
 from domain.frame_annotator import FrameAnnotator
 from domain.marker_detection import MarkerDetection
 from domain.models import CalibrationData, Pose3D, TargetedMarker
+from domain.rigid_transform import RigidTransform
 from domain.tracking import TrackingStatus
 
 
@@ -48,7 +49,7 @@ class FakePoseEstimator:
         marker_length_m: float,
         calib: CalibrationData,
         center: bool,
-    ) -> tuple[Pose3D, np.ndarray, np.ndarray]:
+    ) -> tuple[RigidTransform, np.ndarray, np.ndarray]:
         self.calls.append(
             {
                 "corners": corners,
@@ -57,7 +58,8 @@ class FakePoseEstimator:
                 "center": center,
             }
         )
-        return self.pose, self.rotation_vectors, self.translation_vectors
+        transform = RigidTransform.from_vectors(self.rotation_vectors, [self.pose.x, self.pose.y, self.pose.z])
+        return transform, self.rotation_vectors, self.translation_vectors
 
 
 def calibration_data(size=8) -> CalibrationData:
@@ -134,6 +136,12 @@ def test_tracking_estimates_first_detection_draws_overlays_and_converts_pose_to_
     assert result.marker_id == 41
     assert result.pose == Pose3D(x=3.0, y=-2.0, z=10.0)
     assert result.uav_pose == Pose3D(x=2.0, y=3.0, z=10.0)
+    assert result.camera_from_marker.position == result.pose
+    assert result.body_from_marker.position == result.uav_pose
+    np.testing.assert_allclose(
+        result.body_from_marker.as_matrix(),
+        service.camera_mount.body_from_camera.as_matrix() @ result.camera_from_marker.as_matrix(),
+    )
 
     assert len(pose_estimator.calls) == 1
     assert pose_estimator.calls[0]["marker_length_m"] == pytest.approx(0.896)
