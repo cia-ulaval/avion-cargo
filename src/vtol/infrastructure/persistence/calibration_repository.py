@@ -1,0 +1,88 @@
+from datetime import datetime
+from pathlib import Path
+from typing import Optional
+
+import cv2
+import numpy as np
+
+from vtol.domain.calibration_report_store import CalibrationReportStore
+from vtol.domain.models import CalibrationData, CalibrationReport
+
+
+class CalibrationRepository(CalibrationReportStore):
+    def __init__(self):
+        self.calibration_filepath: Optional[Path] = None
+        self.default_calibration_filedir: Path = Path("calibration_results")
+        self.default_calibration_file_extension = ".npz"
+        self.calibration_filename = "calibration"
+        self.saving_datetime_format = "%Y-%m-%d_%H-%M-%S_%f"
+
+    def save_report(self, calib: CalibrationReport) -> Path:
+        self.default_calibration_filedir.mkdir(parents=True, exist_ok=True)
+        file_created_datetime = datetime.now().strftime(self.saving_datetime_format)
+        file_path = f"{self.calibration_filename}_{file_created_datetime}{self.default_calibration_file_extension}"
+        file_path = self.default_calibration_filedir / file_path
+
+        np.savez(
+            file_path,
+            calibration_date=calib.calibration_date.isoformat(),
+            avg_reprojection_error=calib.avg_reprojection_error,
+            aspect_ratio=np.nan if calib.aspect_ratio is None else calib.aspect_ratio,
+            width=calib.image_width,
+            height=calib.image_height,
+            camera_width=calib.image_width,
+            camera_height=calib.image_height,
+            camera_matrix=calib.camera_matrix,
+            dist_coeffs=calib.camera_distortion_matrix,
+            camera_distortion_matrix=calib.camera_distortion_matrix,
+        )
+        return file_path
+
+    def set_calibration_filepath(self, calibration_filepath: Path) -> "CalibrationRepository":
+        self.calibration_filepath = calibration_filepath
+        return self
+
+    def load_calibration_data(self) -> CalibrationData:
+        return (
+            self._load_calibration_data_from_npz_file(self.calibration_filepath)
+            if self._is_npz_file(self.calibration_filepath)
+            else self._load_calibration_data_from_yaml_file(self.calibration_filepath)
+        )
+
+    def _load_calibration_data_from_npz_file(self, file_path: Path) -> CalibrationData:
+        self._require_existing_calibration_file()
+        file_path = Path(file_path)
+        with np.load(file_path, allow_pickle=False) as data:
+            return CalibrationData(
+                camera_matrix=data["camera_matrix"],
+                dist_coeffs=(
+                    data["camera_distortion_matrix"]
+                    if "camera_distortion_matrix" in data.files
+                    else data["dist_coeffs"]
+                ),
+                camera_height=int(data["camera_height"] if "camera_height" in data.files else data["height"]),
+                camera_width=int(data["camera_width"] if "camera_width" in data.files else data["width"]),
+            )
+
+    def _load_calibration_data_from_yaml_file(self, file_path: Path) -> CalibrationData:
+        self._require_existing_calibration_file()
+        fs = cv2.FileStorage(file_path, cv2.FILE_STORAGE_READ)
+        try:
+            if not fs.isOpened():
+                raise ValueError(f"Cannot read OpenCV calibration: {file_path}")
+            return CalibrationData(
+                camera_matrix=fs.getNode("camera_matrix").mat(),
+                dist_coeffs=fs.getNode("dist_coeffs").mat(),
+                camera_height=int(fs.getNode("resolution_height").real()),
+                camera_width=int(fs.getNode("resolution_width").real()),
+            )
+        finally:
+            fs.release()
+
+    def _require_existing_calibration_file(self) -> None:
+        if self.calibration_filepath is None or not self.calibration_filepath.exists():
+            raise FileNotFoundError(f"File not found at {self.calibration_filepath}")
+
+    def _is_npz_file(self, file_path: Path) -> bool:
+        self._require_existing_calibration_file()
+        return file_path.suffix.lower() == self.default_calibration_file_extension

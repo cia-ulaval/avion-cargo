@@ -1,0 +1,341 @@
+import json
+import math
+import re
+from pathlib import Path
+from typing import Any, Optional
+
+from vtol.domain.camera_mount import CameraMount
+from vtol.domain.markers import (
+    FRACTAL_ROOT_ID,
+    SUPPORTED_ARUCO_DICTIONARY_IDS,
+    SUPPORTED_FRACTAL_TYPES,
+    FractalType,
+    MarkerType,
+    aruco_dictionary_capacity,
+)
+from vtol.utils.validators.validation_error import ValidationError
+
+
+class ConfigurationValidator:
+    """
+    Validate the existing autolanding section in either the legacy flat
+    configuration or the combined VTOL configuration:
+
+    {
+      "autolanding": {
+        "camera": { ... },
+        "vision": { ... },
+        "streaming": { ... },
+        "drone_connection": { ... }
+      },
+      "d3kble": { "devices": [ ... ] }
+    }
+
+    The detailed D3K device schema is validated by VtolRuntimeConfiguration.
+    The original flat camera/vision/streaming/drone_connection format remains
+    supported for existing autolanding and simulation configurations.
+
+    Autolanding section:
+    {
+      "camera": {
+        "id": int>=0,
+        "use_picamera": bool,
+        "fps": int in [1..240],
+        "calibration_filepath": str ("" allowed, else must exist),
+        "gz_simulation": {
+            "topic_name": str (not empty)
+        } (empty object allowed)
+      },
+      "vision": {
+        "targeted_marker": {
+          "length": float>0,
+          "id": int>=0,
+          "dictionary": int>=0
+        }
+      },
+      "streaming": {
+        "port": int in [1..65535],
+        "data": { "dps": int in [1..240] },
+        "video": { "fps": int in [1..240] }
+      },
+      "drone_connection": {
+        "use_serial": bool,
+        "address": str non-empty,
+        "port": int in [1..65535] OR null,
+        "baud_rate": int>0,
+        "timeout": float>0 (optional, default 10.0 seconds),
+        "fail_on_timeout": bool (optional, default true)
+      }
+    }
+    """
+
+    def __init__(self, config_path: Path) -> None:
+        self.config_path = config_path
+
+    def validate(self) -> None:
+        p = self.config_path
+
+        if not isinstance(p, Path):
+            raise ValidationError("config_path must be a pathlib.Path", "root")
+
+        if p.suffix.lower() != ".json":
+            raise ValidationError(f"Configuration must be a .json file, got '{p.name}'", "root")
+
+        if not p.exists():
+            raise ValidationError(f"Configuration file not found: {p}", "root")
+
+        if not p.is_file():
+            raise ValidationError(f"Configuration path is not a file: {p}", "root")
+
+        try:
+            raw = json.loads(p.read_text(encoding="utf-8"))
+        except json.JSONDecodeError as e:
+            raise ValidationError(f"Invalid JSON: {e.msg} (line {e.lineno}, col {e.colno})", "root") from e
+
+        if not isinstance(raw, dict):
+            raise ValidationError("Root JSON must be an object/dict", "root")
+
+        if "autolanding" in raw:
+            autolanding = self._req_obj(raw, "autolanding", "root")
+            self._req_obj(raw, "d3kble", "root")
+            self._no_extra_keys(raw, {"autolanding", "d3kble"}, "root")
+        else:
+            autolanding = raw
+
+        self._validate_camera(autolanding)
+        self._validate_vision(autolanding)
+        self._validate_streaming(autolanding)
+        self._validate_drone_connection(autolanding)
+
+        if "autolanding" not in raw:
+            self._no_extra_keys(raw, {"camera", "vision", "streaming", "drone_connection"}, "root")
+
+    def _validate_camera(self, root: dict[str, Any]) -> None:
+        camera = self._req_obj(root, "camera", "root")
+
+        cid = self._req_int(camera, "id", "camera", min_=0)
+        _ = cid
+
+        self._req_bool(camera, "use_picamera", "camera")
+        self._req_int(camera, "fps", "camera", min_=1, max_=240)
+
+        calib = self._req_str(camera, "calibration_filepath", "camera", allow_empty=False)
+        if calib != "":
+            calib_path = (self.config_path.parent / calib).resolve() if not Path(calib).is_absolute() else Path(calib)
+            if not calib_path.exists():
+                raise ValidationError(
+                    f"calibration_filepath does not exist: {calib_path}",
+                    "camera.calibration_filepath",
+                )
+            if not calib_path.is_file():
+                raise ValidationError(
+                    f"calibration_filepath is not a file: {calib_path}",
+                    "camera.calibration_filepath",
+                )
+
+        if "gz_simulation" in camera:
+            gz_simulation = self._req_obj(camera, "gz_simulation", "camera")
+            self._req_str(gz_simulation, "topic_name", "camera.gz_simulation", allow_empty=False)
+            self._no_extra_keys(gz_simulation, {"topic_name"}, "camera.gz_simulation")
+        if "mount" in camera:
+            mount = self._req_obj(camera, "mount", "camera")
+            self._no_extra_keys(mount, {"rotation", "translation_m"}, "camera.mount")
+            try:
+                CameraMount(**mount)
+            except (ValueError, TypeError) as error:
+                raise ValidationError(str(error), "camera.mount") from error
+        self._no_extra_keys(
+            camera, {"id", "use_picamera", "fps", "calibration_filepath", "gz_simulation", "mount"}, "camera"
+        )
+
+    def _validate_vision(self, root: dict[str, Any]) -> None:
+        vision = self._req_obj(root, "vision", "root")
+        tm = self._req_obj(vision, "targeted_marker", "vision")
+
+        self._req_number(tm, "length", "vision.targeted_marker", min_exclusive=0.0)
+        marker_type_value = tm.get("type", MarkerType.ARUCO.value)
+        if not isinstance(marker_type_value, str):
+            raise ValidationError("Expected a string", "vision.targeted_marker.type")
+        try:
+            marker_type = MarkerType(marker_type_value)
+        except ValueError as error:
+            raise ValidationError(
+                f"Must be one of {tuple(kind.value for kind in MarkerType)}", "vision.targeted_marker.type"
+            ) from error
+
+        if marker_type is MarkerType.ARUCO:
+            marker_id = self._req_int(tm, "id", "vision.targeted_marker", min_=0)
+            dictionary = self._req_int(
+                tm,
+                "aruco_dictionary",
+                "vision.targeted_marker",
+                min_=min(SUPPORTED_ARUCO_DICTIONARY_IDS),
+                max_=max(SUPPORTED_ARUCO_DICTIONARY_IDS),
+            )
+            capacity = aruco_dictionary_capacity(dictionary)
+            if marker_id >= capacity:
+                raise ValidationError(
+                    f"Marker ID must be < {capacity} for this dictionary", "vision.targeted_marker.id"
+                )
+            self._no_extra_keys(tm, {"type", "length", "id", "aruco_dictionary"}, "vision.targeted_marker")
+        else:
+            if "fractal_id" in tm:
+                self._req_int(tm, "fractal_id", "vision.targeted_marker", min_=FRACTAL_ROOT_ID, max_=FRACTAL_ROOT_ID)
+            fractal_type = self._req_str(tm, "fractal_type", "vision.targeted_marker", allow_empty=False)
+            try:
+                FractalType(fractal_type)
+            except ValueError as error:
+                raise ValidationError(
+                    f"Must be one of {SUPPORTED_FRACTAL_TYPES}", "vision.targeted_marker.fractal_type"
+                ) from error
+            self._no_extra_keys(tm, {"type", "length", "fractal_id", "fractal_type"}, "vision.targeted_marker")
+        self._no_extra_keys(vision, {"targeted_marker"}, "vision")
+
+    def _validate_streaming(self, root: dict[str, Any]) -> None:
+        streaming = self._req_obj(root, "streaming", "root")
+        self._req_int(streaming, "port", "streaming", min_=1, max_=65535)
+        if "host" in streaming:
+            self._validate_host_like(self._req_str(streaming, "host", "streaming", allow_empty=False), "streaming.host")
+
+        data = self._req_obj(streaming, "data", "streaming")
+        self._req_int(data, "dps", "streaming.data", min_=1, max_=240)
+
+        video = self._req_obj(streaming, "video", "streaming")
+        self._req_int(video, "fps", "streaming.video", min_=1, max_=240)
+
+        self._no_extra_keys(data, {"dps"}, "streaming.data")
+        self._no_extra_keys(video, {"fps"}, "streaming.video")
+        self._no_extra_keys(streaming, {"host", "port", "data", "video"}, "streaming")
+
+    def _validate_drone_connection(self, root: dict[str, Any]) -> None:
+        dc = self._req_obj(root, "drone_connection", "root")
+
+        use_serial = self._req_bool(dc, "use_serial", "drone_connection")
+        address = self._req_str(dc, "address", "drone_connection", allow_empty=False)
+        self._req_int(dc, "baud_rate", "drone_connection", min_=1)
+        if "timeout" in dc:
+            self._req_number(dc, "timeout", "drone_connection", min_exclusive=0.0)
+        if "fail_on_timeout" in dc:
+            self._req_bool(dc, "fail_on_timeout", "drone_connection")
+
+        port_val = self._req_key(dc, "port", "drone_connection")
+        if port_val is None:
+            port: Optional[int] = None
+        else:
+            if not isinstance(port_val, int) or isinstance(port_val, bool):
+                raise ValidationError("port must be an int or null", "drone_connection.port")
+            if not (1 <= port_val <= 65535):
+                raise ValidationError("port must be in [1..65535]", "drone_connection.port")
+            port = port_val
+
+        if use_serial:
+            if port is not None:
+                raise ValidationError("When use_serial=true, port must be null", "drone_connection.port")
+            if not address.startswith("/"):
+                raise ValidationError(
+                    "When use_serial=true, address should be a device path like '/dev/serial0'",
+                    "drone_connection.address",
+                )
+        else:
+            if port is None:
+                raise ValidationError("When use_serial=false, port is required (not null)", "drone_connection.port")
+            if address.startswith("/"):
+                raise ValidationError(
+                    "When use_serial=false, address should be an IP/hostname, not a device path",
+                    "drone_connection.address",
+                )
+            self._validate_host_like(address, "drone_connection.address")
+
+        self._no_extra_keys(
+            dc, {"use_serial", "address", "port", "baud_rate", "timeout", "fail_on_timeout"}, "drone_connection"
+        )
+
+    @staticmethod
+    def _req_key(d: dict[str, Any], key: str, parent_path: str) -> Any:
+        if key not in d:
+            raise ValidationError(f"Missing required key '{key}'", f"{parent_path}.{key}")
+        return d[key]
+
+    def _req_obj(self, d: dict[str, Any], key: str, parent_path: str) -> dict[str, Any]:
+        v = self._req_key(d, key, parent_path)
+        if not isinstance(v, dict):
+            raise ValidationError("Expected an object/dict", f"{parent_path}.{key}")
+        return v
+
+    def _req_bool(self, d: dict[str, Any], key: str, parent_path: str) -> bool:
+        v = self._req_key(d, key, parent_path)
+        if not isinstance(v, bool):
+            raise ValidationError("Expected a boolean", f"{parent_path}.{key}")
+        return v
+
+    def _req_int(
+        self,
+        d: dict[str, Any],
+        key: str,
+        parent_path: str,
+        *,
+        min_: Optional[int] = None,
+        max_: Optional[int] = None,
+    ) -> int:
+        v = self._req_key(d, key, parent_path)
+        if not isinstance(v, int) or isinstance(v, bool):
+            raise ValidationError("Expected an integer", f"{parent_path}.{key}")
+        if min_ is not None and v < min_:
+            raise ValidationError(f"Must be >= {min_}", f"{parent_path}.{key}")
+        if max_ is not None and v > max_:
+            raise ValidationError(f"Must be <= {max_}", f"{parent_path}.{key}")
+        return v
+
+    def _req_number(
+        self,
+        d: dict[str, Any],
+        key: str,
+        parent_path: str,
+        *,
+        min_inclusive: Optional[float] = None,
+        min_exclusive: Optional[float] = None,
+        max_inclusive: Optional[float] = None,
+    ) -> float:
+        v = self._req_key(d, key, parent_path)
+        if not isinstance(v, (int, float)) or isinstance(v, bool):
+            raise ValidationError("Expected a number", f"{parent_path}.{key}")
+        fv = float(v)
+        if not math.isfinite(fv):
+            raise ValidationError("Must be finite", f"{parent_path}.{key}")
+        if min_inclusive is not None and fv < min_inclusive:
+            raise ValidationError(f"Must be >= {min_inclusive}", f"{parent_path}.{key}")
+        if min_exclusive is not None and fv <= min_exclusive:
+            raise ValidationError(f"Must be > {min_exclusive}", f"{parent_path}.{key}")
+        if max_inclusive is not None and fv > max_inclusive:
+            raise ValidationError(f"Must be <= {max_inclusive}", f"{parent_path}.{key}")
+        return fv
+
+    def _req_str(self, d: dict[str, Any], key: str, parent_path: str, *, allow_empty: bool) -> str:
+        v = self._req_key(d, key, parent_path)
+        if not isinstance(v, str):
+            raise ValidationError("Expected a string", f"{parent_path}.{key}")
+        if not allow_empty and v.strip() == "":
+            raise ValidationError("Must be a non-empty string", f"{parent_path}.{key}")
+        return v
+
+    @staticmethod
+    def _no_extra_keys(obj: dict[str, Any], allowed: set[str], path: str) -> None:
+        extra = set(obj.keys()) - allowed
+        if extra:
+            raise ValidationError(f"Unknown keys: {sorted(extra)}", path)
+
+    @staticmethod
+    def _validate_host_like(host: str, path: str) -> None:
+        ipv4 = re.compile(r"^\d{1,3}(\.\d{1,3}){3}$")
+        hostname = re.compile(r"^(?=.{1,253}$)([a-zA-Z0-9-]{1,63}\.)*[a-zA-Z0-9-]{1,63}$")
+
+        if ipv4.match(host):
+            parts = host.split(".")
+            if any(int(p) > 255 for p in parts):
+                raise ValidationError("Invalid IPv4 address", path)
+            return
+
+        if hostname.match(host):
+            return
+
+        raise ValidationError("Invalid host/hostname format", path)

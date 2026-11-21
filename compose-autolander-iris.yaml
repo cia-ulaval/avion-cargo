@@ -1,0 +1,12 @@
+services:
+  dev:
+    environment:
+      AVION_SIM_SERVICES: "avion-gazebo avion-image-bridge avion-autolander"
+      AVION_SIM_FOREGROUND_SERVICE: avion-sitl
+      AVION_SIM_STARTUP_DELAY: "2"
+      AVION_WORLD: /workspace/avion-cargo/simulation/worlds/iris_runway_aruco.sdf
+      AVION_SITL_VEHICLE: ArduCopter
+      AVION_SITL_FRAME: JSON
+      AVION_SITL_PARAM_FILE: /workspace/avion-cargo/simulation/config/gazebo_iris_gimbal.parm
+      AVION_IMAGE_TOPIC: /world/iris_runway/model/iris_with_gimbal/model/gimbal/link/pitch_link/sensor/camera/image
+      AVION_AUTOLANDER_CONFIG: /workspace/avion-cargo/simulation/config/autolanding_iris_config.json

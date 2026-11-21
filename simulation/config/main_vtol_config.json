@@ -1,0 +1,74 @@
+{
+  "autolanding": {
+    "camera": {
+      "id": 0,
+      "use_picamera": false,
+      "fps": 25,
+      "calibration_filepath": "../calibration/pi_camera_calibration.yaml",
+      "gz_simulation": {
+        "topic_name": "/world/iris_runway/model/vtol/link/main_frame/sensor/downward_camera/image"
+      }
+    },
+    "vision": {
+      "targeted_marker": {
+        "length": 0.896,
+        "id": 29,
+        "aruco_dictionary": 16,
+        "type": "aruco"
+      }
+    },
+    "streaming": {
+      "port": 8085,
+      "data": { "dps": 5 },
+      "video": { "fps": 15 }
+    },
+    "drone_connection": {
+      "use_serial": false,
+      "address": "127.0.0.1",
+      "port": 14550,
+      "baud_rate": 921600,
+      "timeout": 30.0,
+      "fail_on_timeout": false
+    }
+  },
+  "d3kble": {
+    "devices": [
+      {
+        "device_id": "plane-anchor-front-left",
+        "uart_device": "/tmp/d3k-plane-front-left",
+        "ble": {
+          "payloads": [
+            {
+              "payload_id": "payload-1",
+              "peer_id": 18
+            },
+            {
+              "payload_id": "payload-2",
+              "peer_id": 19
+            },
+            {
+              "payload_id": "payload-3",
+              "peer_id": 20
+            },
+            {
+              "payload_id": "payload-4",
+              "peer_id": 21
+            },
+            {
+              "payload_id": "payload-5",
+              "peer_id": 22
+            }
+          ]
+        }
+      },
+      {
+        "device_id": "plane-anchor-front-right",
+        "uart_device": "/tmp/d3k-plane-front-right"
+      },
+      {
+        "device_id": "plane-anchor-back",
+        "uart_device": "/tmp/d3k-plane-back"
+      }
+    ]
+  }
+}

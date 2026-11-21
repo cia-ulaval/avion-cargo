@@ -1,0 +1,35 @@
+{
+  "camera": {
+    "id": 0,
+    "use_picamera": false,
+    "fps": 25,
+    "calibration_filepath": "../calibration/pi_camera_calibration.yaml",
+    "gz_simulation": {
+      "topic_name": "/world/iris_runway/model/iris_with_gimbal/model/gimbal/link/pitch_link/sensor/camera/image"
+    }
+  },
+  "vision": {
+    "targeted_marker": {
+      "length": 1.792,
+      "fractal_type": "FRACTAL_5L_6",
+      "type": "faruco"
+    }
+  },
+  "streaming": {
+    "port": 8085,
+    "data": {
+      "dps": 5
+    },
+    "video": {
+      "fps": 15
+    }
+  },
+  "drone_connection": {
+    "use_serial": false,
+    "address": "127.0.0.1",
+    "port": 14550,
+    "baud_rate": 921600,
+    "timeout": 30.0,
+    "fail_on_timeout": true
+  }
+}

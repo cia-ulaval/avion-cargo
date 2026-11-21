@@ -1,4 +1,4 @@
-"""Keep technical adapters and presentation outside the application core."""
+"""Keep domain and application packages independent from technical adapters."""
 
 import ast
 import importlib.util
@@ -9,11 +9,12 @@ from pathlib import Path
 import pytest
 
 SOURCE_ROOT = Path(__file__).resolve().parents[1] / "src"
-OUTER_MODULES = {
-    "infrastructure",
-    "ui",
-    "composition",
-    "simulation",
+TECHNICAL_MODULES = {
+    "vtol.infrastructure",
+    "vtol.ui",
+    "vtol.composition",
+    "vtol.simulation",
+    "vtol.utils",
     "cv2",
     "picamera2",
     "pymavlink",
@@ -28,11 +29,45 @@ OUTER_MODULES = {
 }
 
 
-@pytest.mark.parametrize("layer", ["domain", "application"])
-def test_core_imports_follow_layer_boundaries(layer: str) -> None:
-    forbidden = OUTER_MODULES | ({"application"} if layer == "domain" else set())
+LAYER_RULES = (
+    (
+        "vtol/domain",
+        {
+            "vtol.application",
+            "vtol.infrastructure",
+            "vtol.ui",
+            "vtol.composition",
+            "vtol.simulation",
+        },
+    ),
+    (
+        "vtol/application",
+        {"vtol.infrastructure", "vtol.ui", "vtol.composition", "vtol.simulation"},
+    ),
+    (
+        "payload/domain",
+        {"payload.application", "payload.infrastructure", "payload.composition"},
+    ),
+    (
+        "payload/application",
+        {"payload.infrastructure", "payload.composition"},
+    ),
+    (
+        "shared",
+        {"vtol", "payload"},
+    ),
+)
+
+
+def _is_forbidden(module: str, forbidden: set[str]) -> bool:
+    return any(module == prefix or module.startswith(f"{prefix}.") for prefix in forbidden)
+
+
+@pytest.mark.parametrize(("relative_root", "forbidden"), LAYER_RULES)
+def test_core_imports_follow_layer_boundaries(relative_root: str, forbidden: set[str]) -> None:
     violations = []
-    for path in sorted((SOURCE_ROOT / layer).rglob("*.py")):
+    layer_root = SOURCE_ROOT / relative_root
+    for path in sorted(layer_root.rglob("*.py")):
         package = ".".join(path.parent.relative_to(SOURCE_ROOT).parts)
         for node in ast.walk(ast.parse(path.read_text(), filename=str(path))):
             if isinstance(node, ast.Import):
@@ -43,7 +78,7 @@ def test_core_imports_follow_layer_boundaries(layer: str) -> None:
             else:
                 continue
             for module in imports:
-                if module.split(".")[0] in forbidden:
+                if _is_forbidden(module, forbidden):
                     violations.append(f"{path.relative_to(SOURCE_ROOT)}:{node.lineno}: {module}")
     assert not violations, "Forbidden core imports:\n" + "\n".join(violations)
 
@@ -57,13 +92,13 @@ import sys
 sys.path.insert(0, sys.argv[1])
 for name in sys.argv[2:]:
     sys.modules[name] = None
-for name in ('domain', 'application'):
+for name in ('vtol.domain', 'vtol.application', 'payload.domain', 'payload.application', 'shared.contracts'):
     package = importlib.import_module(name)
     for module in pkgutil.walk_packages(package.__path__, package.__name__ + '.'):
         importlib.import_module(module.name)
 """
     result = subprocess.run(
-        [sys.executable, "-c", script, str(SOURCE_ROOT), *sorted(OUTER_MODULES)],
+        [sys.executable, "-c", script, str(SOURCE_ROOT), *sorted(TECHNICAL_MODULES)],
         capture_output=True,
         text=True,
         timeout=15,

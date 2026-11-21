@@ -1,0 +1,88 @@
+import click
+from loguru import logger
+
+from vtol.composition import CameraCalibrationParameters, build_camera, build_camera_calibration_service
+from vtol.domain.markers import DEFAULT_ARUCO_DICTIONARY, SUPPORTED_ARUCO_DICTIONARY_IDS
+from vtol.domain.models import TargetedMarker
+from vtol.infrastructure.persistence.configuration_models import CameraConfiguration
+from vtol.infrastructure.vision.opencv_gridboard_calibration_engine import GridBoardCalibrationConfig, GridBoardSpec
+from vtol.ui.calibration_report_presenter import show_calibration_report
+
+
+@click.command(context_settings={"help_option_names": ["-h", "--help"]})
+@click.option("-w", "markers_x", required=True, type=int, help="Markers X")
+@click.option("-hm", "markers_y", required=True, type=int, help="Markers Y")
+@click.option("-l", "marker_length", required=True, type=float, help="Marker length (in meters)")
+@click.option("-s", "marker_separation", required=True, type=float, help="Marker separation (in meters)")
+@click.option(
+    "-d",
+    "dictionary_id",
+    default=DEFAULT_ARUCO_DICTIONARY,
+    show_default=True,
+    type=click.IntRange(min(SUPPORTED_ARUCO_DICTIONARY_IDS), max(SUPPORTED_ARUCO_DICTIONARY_IDS)),
+    help="OpenCV dictionary id (0..16; 16 = DICT_ARUCO_ORIGINAL)",
+)
+@click.option("--rs", is_flag=True, help="Refine strategy (during calibration)")
+@click.option("--zt", is_flag=True, help="Zero tangential distortion")
+@click.option("--pc", is_flag=True, help="Fix principal point")
+@click.option("-a", "aspect_ratio", default=None, type=float, help="Fix aspect ratio fx/fy")
+@click.option("--picam", is_flag=True, help="Use PiCamera2 (Raspberry Pi)")
+@click.option("--cam-id", default=0, show_default=True, type=int, help="Webcam id")
+@click.option("--width", default=640, show_default=True, type=int)
+@click.option("--height", default=480, show_default=True, type=int)
+@click.option("--fps", default=30, show_default=True, type=int)
+@logger.catch(reraise=True)
+def main(
+    markers_x,
+    markers_y,
+    marker_length,
+    marker_separation,
+    dictionary_id,
+    rs,
+    zt,
+    pc,
+    aspect_ratio,
+    picam,
+    cam_id,
+    width,
+    height,
+    fps,
+):
+    camera_config = CameraConfiguration(
+        use_picamera=picam,
+        fps=fps,
+        id=cam_id,
+        height=height,
+        width=width,
+    )
+    camera = build_camera(camera_config)
+
+    camera_calibration_params = CameraCalibrationParameters(
+        board_specifications=GridBoardSpec(
+            markers_x=markers_x,
+            markers_y=markers_y,
+            marker_length_m=marker_length,
+            marker_separation_m=marker_separation,
+            dictionary_id=dictionary_id,
+        ),
+        board_calibration_config=GridBoardCalibrationConfig(
+            refine_strategy=rs,
+            fix_aspect_ratio=aspect_ratio,
+            zero_tangent_dist=zt,
+            fix_principal_point=pc,
+        ),
+        target=TargetedMarker(id=None, length=marker_length, dictionary=dictionary_id),
+        dictionary_id=dictionary_id,
+    )
+
+    camera_calibrator = build_camera_calibration_service(camera, camera_calibration_params)
+
+    logger.info("Starting calibration...")
+    calibration_report, calibration_filepath = camera_calibrator.calibrate()
+
+    logger.success(f"Calibration finished: calibration report saved to {calibration_filepath}")
+    show_calibration_report(calibration_report)
+
+
+if __name__ == "__main__":
+    main()

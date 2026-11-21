@@ -8,8 +8,8 @@ from typing import Any
 import numpy as np
 import pytest
 
-from domain.drone import DroneMode, DroneStatus
-from domain.models import CalibrationReport
+from vtol.domain.drone import DroneMode, DroneStatus
+from vtol.domain.models import CalibrationReport
 
 
 @pytest.fixture
