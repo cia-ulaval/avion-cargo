@@ -45,5 +45,9 @@ fi
 if [[ -n "$PARAM_FILE" ]]; then
   args+=("--add-param-file=$PARAM_FILE")
 fi
+if [[ -n "${AVION_SITL_GCS_OUT:-}" ]]; then
+  # Add a GCS connection while preserving sim_vehicle's UDP output to Autolander.
+  args+=(--out "$AVION_SITL_GCS_OUT")
+fi
 
 exec ./Tools/autotest/sim_vehicle.py "${args[@]}"

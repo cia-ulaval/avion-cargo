@@ -98,6 +98,47 @@ chargés par SITL, notamment `SCR_ENABLE` et `PLND_ENABLED`, ainsi que les erreu
 Redémarrez SITL après la restauration du script; un processus déjà lancé ne constitue
 pas une validation de son chargement au démarrage.
 
+### QGroundControl sur l'hôte avec Docker
+
+Le service `dev` publie une sortie MAVLink TCP de MAVProxy sur
+`127.0.0.1:5761` de l'hôte. Le lanceur lit `AVION_SITL_GCS_OUT`, défini par Compose
+à `tcpin:0.0.0.0:5761`, et ajoute cette sortie au démarrage. La liaison TCP `5760`
+reste utilisée par MAVProxy pour communiquer avec ArduPlane ; la sortie UDP
+`127.0.0.1:14550` reste destinée à Autolander dans le conteneur.
+
+Après cette mise à jour, arrêtez la simulation avec `Ctrl+C`, puis appliquez les
+ports et l'environnement au conteneur depuis la racine du dépôt sur l'hôte :
+
+```bash
+export COMPOSE_FILE=compose.yaml:compose-full-sim.yaml
+docker compose up -d dev
+bash scripts/launch-simulation.sh
+```
+
+Conservez vos fichiers Compose X11/NVIDIA éventuels dans `COMPOSE_FILE` ; pour Iris,
+omettez `compose-full-sim.yaml`. Une reconstruction de l'image n'est pas nécessaire,
+car le lanceur est lu depuis le dépôt monté. `restart` seul n'applique pas les nouveaux
+ports ni les nouvelles variables d'environnement.
+
+Dans QGroundControl sur le même hôte, ouvrez **Settings → Comm Links → Add New Link** :
+
+- Nom : `SITL Docker`.
+- Type : **TCP**.
+- Adresse du serveur : `127.0.0.1`.
+- Port : `5761`.
+
+Enregistrez, puis sélectionnez la liaison et cliquez sur **Connect**. Le journal
+de lancement de MAVProxy doit contenir `--out tcpin:0.0.0.0:5761`, en plus de sa sortie
+UDP habituelle. Dans la console MAVProxy, `output` permet de vérifier les sorties.
+Depuis l'hôte, `docker compose port dev 5761` doit afficher `127.0.0.1:5761`.
+
+L'adresse `0.0.0.0` fait écouter MAVProxy sur les interfaces du conteneur, ce qui
+permet la publication Docker. Côté hôte, le port est limité à la boucle locale.
+La sortie est ajoutée automatiquement à chaque lancement ; il n'est pas nécessaire
+de saisir `output add` à la main. Pour une exécution native, cette sortie reste
+optionnelle et n'est ajoutée que si `AVION_SITL_GCS_OUT` est défini et non vide.
+Voir la [gestion des liaisons QGroundControl](https://docs.qgroundcontrol.com/master/en/qgc-user-guide/settings_view/comm_links.html).
+
 ## Démarrer avec quatre terminaux
 
 Ouvrez chaque terminal à la racine du dépôt Autolander, là où se trouve `pyproject.toml`. Les exemples supposent qu'ArduPilot est installé dans `~/ardupilot` et son environnement Python dans `~/venv-ardupilot` ; adaptez ces chemins à votre installation.
