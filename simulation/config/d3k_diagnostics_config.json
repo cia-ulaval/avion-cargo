@@ -2,12 +2,12 @@
   "poll_interval_s": 1.0,
   "devices": [
     {
-      "name": "vtol",
+      "name": "a",
       "uart_device": "/tmp/d3k-a",
       "peer_id": 18
     },
     {
-      "name": "payload",
+      "name": "b",
       "uart_device": "/tmp/d3k-b",
       "peer_id": 2
     }

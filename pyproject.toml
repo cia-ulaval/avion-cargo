@@ -22,7 +22,7 @@ dependencies = [
     "future (>=1.0.0,<2.0.0)",
     "opencv-contrib-python (>=4.13.0.92,<5.0.0.0)",
     "matplotlib (>=3.10.8,<4.0.0)",
-    "d3kble @ git+https://github.com/PladsElsker/dwm3000-esp32-interface.git@a0b42bae73b145f858dc67a2d56569cbb1c439ac#subdirectory=d3kble-api",
+    "d3kble @ git+https://github.com/PladsElsker/dwm3000-esp32-interface.git@0c8f3fd6474a520e85fd2f53adfa49068d8cb11c#subdirectory=d3kble-api",
 ]
 
 [tool.poetry]

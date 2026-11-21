@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import json
 import math
 import queue
@@ -12,6 +13,8 @@ from typing import Any
 
 import click
 from loguru import logger
+
+from shared.infrastructure.d3kble.codec import decode_message, encode_message
 
 
 @dataclass(frozen=True, slots=True)
@@ -283,6 +286,363 @@ def _attach_event_logging(node: Any, device_name: str) -> None:
         node.on(event_name, report)
 
 
+class _BlePingPong:
+    """Run one stop-and-wait BLE PING/PONG exchange between two D3K nodes."""
+
+    _PING_TYPE = "diagnostics.ping"
+    _PONG_TYPE = "diagnostics.pong"
+
+    def __init__(
+        self,
+        initiator_node: Any,
+        initiator_peer_id: int,
+        responder_node: Any,
+        responder_peer_id: int,
+        *,
+        initiator_name: str,
+        interval_s: float = 1.0,
+        timeout_s: float = 1.0,
+    ) -> None:
+        if interval_s <= 0 or timeout_s <= 0:
+            raise ValueError("BLE ping interval and timeout must be positive")
+
+        self._initiator_node = initiator_node
+        self._initiator_peer_id = initiator_peer_id
+        self._responder_node = responder_node
+        self._responder_peer_id = responder_peer_id
+        self._initiator_name = initiator_name
+        self._interval_s = interval_s
+        self._timeout_s = timeout_s
+
+        self._thread: threading.Thread | None = None
+        self._loop: asyncio.AbstractEventLoop | None = None
+        self._stop_async: asyncio.Event | None = None
+        self._pongs: asyncio.Queue[tuple[int, int]] | None = None
+        self._ready = threading.Event()
+        self._startup_error: BaseException | None = None
+        self._ping_task: asyncio.Task | None = None
+        self._reply_tasks: set[asyncio.Task] = set()
+        self._routers: list[Any] = []
+        self._registrations: list[Any] = []
+
+    def start(self) -> None:
+        if self._thread is not None:
+            raise RuntimeError("BLE ping/pong has already been started")
+
+        self._thread = threading.Thread(
+            target=self._run_loop,
+            name="d3k-ble-ping-pong",
+            daemon=True,
+        )
+        self._thread.start()
+
+        if not self._ready.wait(timeout=5.0):
+            self.stop()
+            raise TimeoutError("BLE ping/pong event loop did not start")
+        if self._startup_error is not None:
+            raise RuntimeError("could not start BLE ping/pong") from self._startup_error
+
+        logger.info(
+            "D3K [{}] starting BLE ping/pong with peer {} every {:.1f}s (stop-and-wait)",
+            self._initiator_name,
+            self._initiator_peer_id,
+            self._interval_s,
+        )
+
+    def _run_loop(self) -> None:
+        try:
+            asyncio.run(self._serve())
+        except BaseException as exc:
+            if not self._ready.is_set():
+                self._startup_error = exc
+            logger.exception("D3K BLE ping/pong event loop stopped unexpectedly")
+        finally:
+            self._ready.set()
+
+    async def _serve(self) -> None:
+        from shared.infrastructure.d3kble.router import D3kbleMessageRouter
+
+        self._loop = asyncio.get_running_loop()
+        self._stop_async = asyncio.Event()
+        self._pongs = asyncio.Queue()
+        self._routers = [
+            D3kbleMessageRouter(self._initiator_node),
+            D3kbleMessageRouter(self._responder_node),
+        ]
+
+        try:
+            for router in self._routers:
+                await router.start()
+
+            self._registrations = [
+                self._routers[0].register_peer(
+                    self._initiator_peer_id,
+                    message_handler=self._on_initiator_message,
+                ),
+                self._routers[1].register_peer(
+                    self._responder_peer_id,
+                    message_handler=self._on_responder_message,
+                ),
+            ]
+
+            self._ping_task = asyncio.create_task(self._run_ping_loop())
+            self._ready.set()
+            await self._stop_async.wait()
+        finally:
+            if self._ping_task is not None:
+                self._ping_task.cancel()
+                await asyncio.gather(self._ping_task, return_exceptions=True)
+
+            pending_replies = tuple(self._reply_tasks)
+            for task in pending_replies:
+                task.cancel()
+            if pending_replies:
+                await asyncio.gather(*pending_replies, return_exceptions=True)
+
+            for registration in self._registrations:
+                registration.close()
+            for router in self._routers:
+                router.close()
+
+    def _on_initiator_message(self, message: Any) -> None:
+        loop = self._loop
+        if loop is None or not loop.is_running():
+            return
+        try:
+            loop.call_soon_threadsafe(self._receive_pong, message)
+        except RuntimeError:
+            logger.debug("BLE PONG arrived after the diagnostics event loop closed")
+
+    def _receive_pong(self, message: Any) -> None:
+        try:
+            message_type, data = decode_message(message.payload)
+            if message_type != self._PONG_TYPE:
+                return
+            sequence = data.get("sequence")
+            sent_at_ns = data.get("sent_at_ns")
+            if (
+                isinstance(sequence, bool)
+                or not isinstance(sequence, int)
+                or sequence < 1
+                or isinstance(sent_at_ns, bool)
+                or not isinstance(sent_at_ns, int)
+                or sent_at_ns <= 0
+            ):
+                raise ValueError("PONG sequence or timestamp is invalid")
+            assert self._pongs is not None
+            self._pongs.put_nowait((sequence, sent_at_ns))
+        except Exception as exc:
+            logger.warning("D3K [{}] ignoring invalid BLE PONG: {}", self._initiator_name, exc)
+
+    def _on_responder_message(self, message: Any) -> None:
+        loop = self._loop
+        if loop is None or not loop.is_running():
+            return
+        try:
+            loop.call_soon_threadsafe(self._receive_ping, message)
+        except RuntimeError:
+            logger.debug("BLE PING arrived after the diagnostics event loop closed")
+
+    def _receive_ping(self, message: Any) -> None:
+        try:
+            message_type, data = decode_message(message.payload)
+            if message_type != self._PING_TYPE:
+                return
+            sequence = data.get("sequence")
+            sent_at_ns = data.get("sent_at_ns")
+            if (
+                isinstance(sequence, bool)
+                or not isinstance(sequence, int)
+                or sequence < 1
+                or isinstance(sent_at_ns, bool)
+                or not isinstance(sent_at_ns, int)
+                or sent_at_ns <= 0
+            ):
+                raise ValueError("PING sequence or timestamp is invalid")
+        except Exception as exc:
+            logger.warning("D3K ignoring invalid BLE PING from peer {}: {}", self._responder_peer_id, exc)
+            return
+
+        task = asyncio.create_task(self._send_pong(sequence, sent_at_ns))
+        self._reply_tasks.add(task)
+        task.add_done_callback(self._reply_tasks.discard)
+
+    async def _send_pong(self, sequence: int, sent_at_ns: int) -> None:
+        try:
+            payload = encode_message(
+                self._PONG_TYPE,
+                {"sequence": sequence, "sent_at_ns": sent_at_ns},
+            )
+            ticket = self._responder_node.comms.send(self._responder_peer_id, payload)
+            await asyncio.to_thread(ticket.wait_ack, self._timeout_s)
+            logger.debug("D3K BLE PONG acknowledged: peer={}, sequence={}", self._responder_peer_id, sequence)
+        except Exception as exc:
+            logger.warning(
+                "D3K BLE PONG delivery failed: peer={}, sequence={}, error={}",
+                self._responder_peer_id,
+                sequence,
+                exc,
+            )
+
+    async def _wait_for_pong(self, sequence: int, sent_at_ns: int) -> None:
+        assert self._pongs is not None
+        loop = asyncio.get_running_loop()
+        deadline = loop.time() + self._timeout_s
+
+        while True:
+            remaining = deadline - loop.time()
+            if remaining <= 0:
+                raise TimeoutError(f"no matching PONG received for sequence {sequence}")
+            received_sequence, received_sent_at_ns = await asyncio.wait_for(
+                self._pongs.get(), timeout=remaining
+            )
+            if received_sequence == sequence and received_sent_at_ns == sent_at_ns:
+                return
+            logger.debug(
+                "D3K [{}] ignoring stale BLE PONG: received sequence={}, expected={}",
+                self._initiator_name,
+                received_sequence,
+                sequence,
+            )
+
+    async def _run_ping_loop(self) -> None:
+        loop = asyncio.get_running_loop()
+        assert self._stop_async is not None
+        sequence = 0
+        next_send_at = loop.time()
+
+        while not self._stop_async.is_set():
+            delay = next_send_at - loop.time()
+            if delay > 0:
+                try:
+                    await asyncio.wait_for(self._stop_async.wait(), timeout=delay)
+                except asyncio.TimeoutError:
+                    pass
+                if self._stop_async.is_set():
+                    return
+
+            sequence += 1
+            sent_at_ns = time.monotonic_ns()
+            try:
+                payload = encode_message(
+                    self._PING_TYPE,
+                    {"sequence": sequence, "sent_at_ns": sent_at_ns},
+                )
+                ticket = self._initiator_node.comms.send(self._initiator_peer_id, payload)
+            except Exception as exc:
+                logger.warning(
+                    "D3K [{}] could not queue BLE PING sequence {}: {}",
+                    self._initiator_name,
+                    sequence,
+                    exc,
+                )
+                return
+            else:
+                ack_task = asyncio.create_task(asyncio.to_thread(ticket.wait_ack, self._timeout_s))
+                pong_task = asyncio.create_task(self._wait_for_pong(sequence, sent_at_ns))
+                ack_result, pong_result = await asyncio.gather(
+                    ack_task,
+                    pong_task,
+                    return_exceptions=True,
+                )
+
+                if isinstance(pong_result, BaseException):
+                    logger.warning(
+                        "D3K [{}] BLE PING sequence {} did not receive a matching PONG: {} (application ACK: {})",
+                        self._initiator_name,
+                        sequence,
+                        pong_result,
+                        "ok" if not isinstance(ack_result, BaseException) else ack_result,
+                    )
+                    logger.warning("D3K [{}] stopping BLE ping/pong after the failed exchange", self._initiator_name)
+                    return
+                elif isinstance(ack_result, BaseException):
+                    logger.warning(
+                        "D3K [{}] BLE PING sequence {} received PONG but its application ACK failed: {}",
+                        self._initiator_name,
+                        sequence,
+                        ack_result,
+                    )
+                    logger.warning("D3K [{}] stopping BLE ping/pong after the failed exchange", self._initiator_name)
+                    return
+                else:
+                    rtt_ms = (time.monotonic_ns() - sent_at_ns) / 1_000_000
+                    logger.info(
+                        "D3K [{}] BLE ping/pong peer {} sequence {} RTT={:.1f}ms",
+                        self._initiator_name,
+                        self._initiator_peer_id,
+                        sequence,
+                        rtt_ms,
+                    )
+
+            next_send_at = max(next_send_at + self._interval_s, loop.time())
+
+    def stop(self) -> None:
+        loop = self._loop
+        stop_event = self._stop_async
+        if loop is not None and loop.is_running() and stop_event is not None:
+            try:
+                loop.call_soon_threadsafe(stop_event.set)
+            except RuntimeError:
+                pass
+
+        thread = self._thread
+        if thread is not None and thread is not threading.current_thread():
+            thread.join(timeout=5.0)
+
+
+def _start_ble_ping_pong(
+    sessions: list[tuple[DeviceConfiguration, Any, Any | None]],
+) -> _BlePingPong | None:
+    if len(sessions) != 2:
+        logger.warning("BLE ping/pong requires exactly two configured D3K devices; skipping")
+        return None
+
+    (initiator_device, initiator_node, _), (responder_device, responder_node, _) = sessions
+    if initiator_device.peer_id is None or responder_device.peer_id is None:
+        logger.warning("BLE ping/pong requires peer_id on both D3K devices; skipping")
+        return None
+
+    try:
+        initiator_id = initiator_node.get_state(refresh=True).runtime.values.get("device_id")
+        responder_id = responder_node.get_state(refresh=True).runtime.values.get("device_id")
+    except Exception:
+        logger.exception("Could not read D3K device IDs; skipping BLE ping/pong")
+        return None
+
+    if initiator_device.peer_id != responder_id or responder_device.peer_id != initiator_id:
+        logger.warning(
+            "BLE ping/pong peer configuration is not reciprocal: {} (ID {}, peer {}) / "
+            "{} (ID {}, peer {}); skipping",
+            initiator_device.name,
+            initiator_id,
+            initiator_device.peer_id,
+            responder_device.name,
+            responder_id,
+            responder_device.peer_id,
+        )
+        return None
+
+    ping_pong = _BlePingPong(
+        initiator_node,
+        initiator_device.peer_id,
+        responder_node,
+        responder_device.peer_id,
+        initiator_name=initiator_device.name,
+    )
+    try:
+        ping_pong.start()
+    except Exception:
+        ping_pong.stop()
+        logger.exception(
+            "Could not start BLE ping/pong between {} and {}",
+            initiator_device.name,
+            responder_device.name,
+        )
+        return None
+    return ping_pong
+
+
 def _poll_device(node: Any, device: DeviceConfiguration) -> None:
     state = node.get_state(refresh=True)
     logger.info("D3K [{}] readiness: connected={}, ready={}", device.name, node.is_connected, node.is_ready)
@@ -307,6 +667,7 @@ def run_diagnostics(config: DiagnosticsConfiguration, stop_event: threading.Even
     dropped_counts: dict[str, int] = {}
     ranging_statistics: dict[str, _RangingStatistics] = {}
     range_failure_handlers: dict[str, Any] = {}
+    ping_pong: _BlePingPong | None = None
     try:
         for device in config.devices:
             logger.info("Connecting D3K [{}] through {}", device.name, device.uart_device)
@@ -322,6 +683,8 @@ def run_diagnostics(config: DiagnosticsConfiguration, stop_event: threading.Even
             node.start()
             node.wait_until_ready(timeout=device.ready_timeout_s)
             logger.info("D3K [{}] ready; initial state: {}", device.name, node.get_state(refresh=True))
+
+        ping_pong = _start_ble_ping_pong(sessions)
 
         next_poll = 0.0
         next_ranging_summary = time.monotonic() + config.poll_interval_s
@@ -358,6 +721,9 @@ def run_diagnostics(config: DiagnosticsConfiguration, stop_event: threading.Even
                 next_poll = now + config.poll_interval_s
             stop_event.wait(0.1)
     finally:
+        if ping_pong is not None:
+            ping_pong.stop()
+
         for device, node, subscription in reversed(sessions):
             handler = range_failure_handlers.get(device.name)
             if handler is not None:
