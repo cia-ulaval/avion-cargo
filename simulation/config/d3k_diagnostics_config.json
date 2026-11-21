@@ -4,12 +4,17 @@
     {
       "name": "a",
       "uart_device": "/tmp/d3k-a",
-      "peer_id": 18
+      "peer_ids": [18, 19]
     },
     {
       "name": "b",
       "uart_device": "/tmp/d3k-b",
-      "peer_id": 2
+      "peer_ids": [2]
+    },
+    {
+      "name": "c",
+      "uart_device": "/tmp/d3k-c",
+      "peer_ids": [2]
     }
   ]
 }
