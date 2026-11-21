@@ -2,7 +2,7 @@ import csv
 import math
 from dataclasses import replace
 from pathlib import Path
-from unittest.mock import Mock
+from unittest.mock import Mock, call
 
 import pytest
 
@@ -122,6 +122,133 @@ def test_stops_at_captured_position_and_altitude_before_yaw_then_lands_only_afte
     step(102.3, error=2, mode=DroneMode.QLAND)
     assert supervisor.state is AlignmentState.COOLDOWN
     assert supervisor.to_dict()["hold_position"]["relative_altitude_m"] == target.relative_altitude_m
+
+
+def test_start_prepares_and_requests_guided_in_one_tick_but_waits_for_a_new_heartbeat(scenario):
+    supervisor, drone, step, _ = scenario
+    status, _ = step(mode=DroneMode.QLAND)
+    target = HoldPosition(status.latitude, status.longitude, status.relative_altitude)
+    assert drone.mock_calls == [
+        call.prepare_yaw_control(),
+        call.request_mode(DroneMode.GUIDED, expected_modes=(DroneMode.QLAND,)),
+    ]
+    assert supervisor.to_dict() == {
+        "enabled": True,
+        "state": "WAIT_GUIDED",
+        "reason": None,
+        "error_deg": pytest.approx(30),
+        "hold_position": {
+            "latitude_deg": target.latitude_deg,
+            "longitude_deg": target.longitude_deg,
+            "relative_altitude_m": target.relative_altitude_m,
+        },
+        "attempts": 1,
+        "max_attempts": 3,
+        "total_attempts": 1,
+        "retry_below_altitude_m": None,
+    }
+    drone.reset_mock()
+    step(100.1, last_heartbeat_monotonic_s=100)
+    assert supervisor.state is AlignmentState.WAIT_GUIDED
+    assert drone.mock_calls == []
+    step(100.2)
+    assert supervisor.state is AlignmentState.HOLDING
+    assert drone.mock_calls == [call.request_position_hold(target), call.send_yaw_input(0.0)]
+
+
+def test_cooldown_completion_waits_until_next_tick_before_preparing(scenario):
+    supervisor, drone, step, align = scenario
+    align()
+    step(116)
+    step(116.1, mode=DroneMode.QLAND)
+    assert supervisor.state is AlignmentState.COOLDOWN
+    drone.reset_mock()
+    previous_error = supervisor.error_deg
+    step(117.2, mode=DroneMode.QLAND, error=45)
+    assert supervisor.state is AlignmentState.MONITORING
+    assert supervisor.error_deg == previous_error
+    assert drone.mock_calls == []
+    step(117.3, mode=DroneMode.QLAND, error=45)
+    assert supervisor.state is AlignmentState.WAIT_GUIDED
+    assert drone.mock_calls == [
+        call.prepare_yaw_control(),
+        call.request_mode(DroneMode.GUIDED, expected_modes=(DroneMode.QLAND,)),
+    ]
+
+
+def test_refused_guided_request_does_not_count_an_attempt(scenario):
+    supervisor, drone, step, _ = scenario
+    drone.request_mode.return_value = False
+    step(mode=DroneMode.QLAND)
+    assert supervisor.state is AlignmentState.SUSPENDED
+    assert supervisor.reason == "external_mode_change"
+    assert supervisor.to_dict()["attempts"] == supervisor.to_dict()["total_attempts"] == 0
+    assert drone.mock_calls == [
+        call.prepare_yaw_control(),
+        call.request_mode(DroneMode.GUIDED, expected_modes=(DroneMode.QLAND,)),
+    ]
+
+
+@pytest.mark.parametrize("armed", [True, False])
+def test_disconnect_keeps_attempt_budget_until_disarm_is_observed_while_connected(scenario, armed):
+    supervisor, drone, step, align = scenario
+    align()
+    drone.reset_mock()
+    step(101, connected=False, armed=armed, mode=DroneMode.QRTL)
+    assert supervisor.state is AlignmentState.ALIGNING
+    assert supervisor.reason == "autopilot_disconnected"
+    assert supervisor.to_dict()["attempts"] == supervisor.to_dict()["total_attempts"] == 1
+    assert drone.mock_calls == [call.release_yaw_control()]
+    drone.reset_mock()
+    step(101.1, armed=False, mode=DroneMode.QRTL)
+    assert supervisor.state is AlignmentState.MONITORING
+    assert supervisor.reason == "disarmed"
+    assert supervisor.to_dict()["attempts"] == supervisor.to_dict()["total_attempts"] == 0
+    assert drone.mock_calls == [call.release_yaw_control()]
+
+
+@pytest.mark.parametrize(
+    "mode,reason,commands",
+    [
+        (DroneMode.QRTL, "external_mode_change", [call.release_yaw_control()]),
+        (
+            DroneMode.GUIDED,
+            "below_min_height",
+            [
+                call.release_yaw_control(),
+                call.request_mode(DroneMode.QLAND, expected_modes=(DroneMode.GUIDED, DroneMode.QLAND)),
+            ],
+        ),
+    ],
+)
+def test_external_intervention_then_minimum_height_take_priority_over_attempt_deadline(
+    scenario, mode, reason, commands
+):
+    supervisor, drone, step, align = scenario
+    align()
+    drone.reset_mock()
+    step(130, mode=mode, marker_position=(0, 0, 2))
+    assert supervisor.reason == reason
+    assert drone.mock_calls == commands
+
+
+def test_return_releases_yaw_before_requesting_mode_and_requires_a_new_heartbeat(scenario):
+    supervisor, drone, step, align = scenario
+    align()
+    drone.reset_mock()
+    step(130)
+    assert supervisor.state is AlignmentState.WAIT_RETURN
+    assert drone.mock_calls == [
+        call.release_yaw_control(),
+        call.request_mode(DroneMode.QLAND, expected_modes=(DroneMode.GUIDED, DroneMode.QLAND)),
+    ]
+    drone.reset_mock()
+    step(130.1, mode=DroneMode.QLAND, last_heartbeat_monotonic_s=130)
+    assert supervisor.state is AlignmentState.WAIT_RETURN
+    assert drone.mock_calls == []
+    step(130.2, mode=DroneMode.QLAND)
+    assert supervisor.state is AlignmentState.COOLDOWN
+    assert drone.mock_calls == [call.release_yaw_control()]
 
 
 @pytest.mark.parametrize("ack,reason", [(None, "hold_ack_timeout"), (False, "hold_command_rejected")])

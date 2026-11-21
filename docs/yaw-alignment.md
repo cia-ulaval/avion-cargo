@@ -6,6 +6,26 @@ sans opérateur, avec un nombre limité de tentatives. La vision et la publicati
 de `LANDING_TARGET` continuent dans leurs boucles respectives. Il intervient une fois
 que le drone est armé en `QLAND`; il ne déclenche ni l’armement ni le décollage.
 
+## Organisation du superviseur
+
+`YawAlignmentSupervisor.step()` orchestre les contrôles prioritaires, puis délègue
+aux méthodes de préparation, de confirmation de mode, de maintien et d'alignement.
+La perte de connexion, le désarmement et les changements de mode externes sont
+traités avant les limites d'une tentative. Les états `HOLDING`, `WAIT_TARGET` et
+`ALIGNING` partagent les contrôles d'acquittement et de stabilité du maintien.
+
+L'ordre au sein d'un appel fait partie du comportement : une reprise après descente
+ou un passage de `MONITORING` à `PREPARING` peut demander `GUIDED` immédiatement.
+La fin de `COOLDOWN` et la confirmation de `GUIDED` terminent en revanche l'appel,
+avant de traiter leur nouvel état au prochain passage.
+
+`DetectionContinuity` conserve les horodatages et l'identité de la cible pour
+évaluer la continuité de visibilité, indépendamment des limites géométriques.
+Le superviseur lui transmet les seuils de sa configuration courante et protège
+ses accès avec le même verrou que les transitions et la télémétrie. Les commandes
+de vol restent dans le superviseur ; les observations caméra ne font qu'alimenter
+la continuité de détection.
+
 ## Pose et conventions
 
 Les mesures ArUco et FArUco fournissent une transformation rigide homogène 4×4,
