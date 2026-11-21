@@ -81,10 +81,10 @@ RUN curl -fL --retry 4 --retry-delay 2 \
 
 USER dev
 
-COPY simulation/versions/ardupilot-gazebo-plugin.version /tmp/versions/ardupilot-gazebo-plugin.version
+COPY simulation/versions/ardupilot_gazebo_plugin.version /tmp/versions/ardupilot_gazebo_plugin.version
 
 RUN set -eux; \
-    ARDUPILOT_GAZEBO_REF="$(cat /tmp/versions/ardupilot-gazebo-plugin.version)"; \
+    ARDUPILOT_GAZEBO_REF="$(cat /tmp/versions/ardupilot_gazebo_plugin.version)"; \
     test -n "${ARDUPILOT_GAZEBO_REF}"; \
     git clone --filter=blob:none --no-checkout https://github.com/ArduPilot/ardupilot_gazebo.git /home/dev/ardupilot_gazebo; \
     git -C /home/dev/ardupilot_gazebo checkout --detach "${ARDUPILOT_GAZEBO_REF}"; \
@@ -94,12 +94,12 @@ RUN set -eux; \
     cmake -S . -B build -DCMAKE_BUILD_TYPE=RelWithDebInfo; \
     cmake --build build -j2
 
-COPY simulation/versions/d3kble-gazebo-plugin.version /tmp/versions/d3kble-gazebo-plugin.version
+COPY simulation/versions/d3kble_gazebo_plugin.version /tmp/versions/d3kble_gazebo_plugin.version
 
 # Build the D3K Gazebo system plugin against the Gazebo Harmonic libraries
 # already installed in this image. The source revision is pinned separately.
 RUN set -eux; \
-    D3K_SIMULATOR_REF="$(cat /tmp/versions/d3kble-gazebo-plugin.version)"; \
+    D3K_SIMULATOR_REF="$(cat /tmp/versions/d3kble_gazebo_plugin.version)"; \
     test -n "${D3K_SIMULATOR_REF}"; \
     mkdir -p /home/dev/dwm3000-esp32-interface; \
     curl -fL --retry 4 --retry-delay 2 \
