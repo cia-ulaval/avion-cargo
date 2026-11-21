@@ -5,7 +5,7 @@
     "fps": 25,
     "calibration_filepath": "../calibration/pi_camera_calibration.yaml",
     "gz_simulation": {
-      "topic_name": "/world/iris_runway/model/tricopter_vtol/link/main_frame/sensor/downward_camera/image"
+      "topic_name": "/world/iris_runway/model/vtol/link/main_frame/sensor/downward_camera/image"
     }
   },
   "vision": {
@@ -28,6 +28,7 @@
     "use_serial": false,
     "address": "127.0.0.1",
     "port": 14550,
-    "baud_rate": 921600
+    "baud_rate": 921600,
+    "timeout": 30.0
   }
 }

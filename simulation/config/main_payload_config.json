@@ -1,0 +1,12 @@
+{
+  "payload_id": "payload-1",
+  "uart_device": "/tmp/payload-anchor",
+  "plane_peer_id": 2,
+  "uwb": {
+    "anchor_id_by_target_id": {
+      "2": "plane-anchor-front-left",
+      "3": "plane-anchor-front-right",
+      "4": "plane-anchor-back"
+    }
+  }
+}

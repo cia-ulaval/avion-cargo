@@ -1,4 +1,4 @@
-# Supplemental parameters for the tricopter_vtol Gazebo model.
+# Supplemental parameters for the vtol Gazebo model.
 # sim_vehicle's -f quadplane-tilttrivec loads the upstream frame defaults.
 Q_ENABLE             1
 Q_FRAME_CLASS        7

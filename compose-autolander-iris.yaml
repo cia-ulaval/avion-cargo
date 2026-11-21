@@ -7,6 +7,6 @@ services:
       AVION_WORLD: /workspace/avion-cargo/simulation/worlds/iris_runway_aruco.sdf
       AVION_SITL_VEHICLE: ArduCopter
       AVION_SITL_FRAME: JSON
-      AVION_SITL_PARAM_FILE: /workspace/avion-cargo/simulation/config/gazebo-iris-gimbal.parm
+      AVION_SITL_PARAM_FILE: /workspace/avion-cargo/simulation/config/gazebo_iris_gimbal.parm
       AVION_IMAGE_TOPIC: /world/iris_runway/model/iris_with_gimbal/model/gimbal/link/pitch_link/sensor/camera/image
-      AVION_AUTOLANDER_CONFIG: /workspace/avion-cargo/simulation/config/autolanding_config.json
+      AVION_AUTOLANDER_CONFIG: /workspace/avion-cargo/simulation/config/autolanding_iris_config.json

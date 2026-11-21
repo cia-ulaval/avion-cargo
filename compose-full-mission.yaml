@@ -1,0 +1,14 @@
+services:
+  dev:
+    environment:
+      AVION_SIM_SERVICES: "avion-gazebo avion-image-bridge avion-vtol"
+      AVION_SIM_FOREGROUND_SERVICE: avion-sitl
+      AVION_SIM_STARTUP_DELAY: "2"
+      AVION_WORLD: /workspace/avion-cargo/simulation/worlds/vtol_payload_runway.sdf
+      AVION_SITL_VEHICLE: ArduPlane
+      AVION_SITL_FRAME: quadplane-tilttrivec
+      AVION_SITL_MODEL: JSON
+      AVION_SITL_PARAM_FILE: /workspace/avion-cargo/simulation/config/gazebo_vtol.parm
+      AVION_IMAGE_TOPIC: /world/iris_runway/model/vtol/link/main_frame/sensor/downward_camera/image
+      AVION_VTOL_CONFIG: /workspace/avion-cargo/simulation/config/main_vtol_config.json
+      AVION_PAYLOAD_CONFIG: /workspace/avion-cargo/simulation/config/main_payload_config.json

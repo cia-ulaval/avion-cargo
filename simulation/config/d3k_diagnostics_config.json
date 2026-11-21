@@ -3,12 +3,12 @@
   "devices": [
     {
       "name": "vtol",
-      "uart_device": "/tmp/d3k-vtol",
+      "uart_device": "/tmp/d3k-a",
       "peer_id": 18
     },
     {
       "name": "payload",
-      "uart_device": "/tmp/d3k-payload",
+      "uart_device": "/tmp/d3k-b",
       "peer_id": 2
     }
   ]

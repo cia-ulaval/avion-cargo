@@ -6,14 +6,15 @@
       "fps": 25,
       "calibration_filepath": "../calibration/pi_camera_calibration.yaml",
       "gz_simulation": {
-        "topic_name": "/world/iris_runway/model/tricopter_vtol/link/main_frame/sensor/downward_camera/image"
+        "topic_name": "/world/iris_runway/model/vtol/link/main_frame/sensor/downward_camera/image"
       }
     },
     "vision": {
       "targeted_marker": {
         "length": 0.896,
         "id": 29,
-        "aruco_dictionary": 16
+        "aruco_dictionary": 16,
+        "type": "aruco"
       }
     },
     "streaming": {
@@ -26,7 +27,7 @@
       "address": "127.0.0.1",
       "port": 14550,
       "baud_rate": 921600,
-      "timeout": 10.0,
+      "timeout": 30.0,
       "fail_on_timeout": false
     }
   },

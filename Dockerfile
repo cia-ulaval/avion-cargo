@@ -147,7 +147,7 @@ cd /home/dev/ardupilot
 VEHICLE="${AVION_SITL_VEHICLE:-ArduCopter}"
 FRAME="${AVION_SITL_FRAME:-JSON}"
 MODEL="${AVION_SITL_MODEL:-}"
-PARAM_FILE="${AVION_SITL_PARAM_FILE-/workspace/avion-cargo/simulation/config/gazebo-iris-gimbal.parm}"
+PARAM_FILE="${AVION_SITL_PARAM_FILE-/workspace/avion-cargo/simulation/config/gazebo_iris_gimbal.parm}"
 
 args=(-D -v "$VEHICLE" -f "$FRAME")
 if [[ -n "$MODEL" ]]; then

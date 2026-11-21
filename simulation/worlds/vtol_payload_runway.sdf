@@ -116,8 +116,8 @@
     </include>
 
     <include>
-      <uri>model://tricopter_vtol</uri>
-      <name>tricopter_vtol</name>
+      <uri>model://vtol</uri>
+      <name>vtol</name>
       <pose>0 0 0.15 0 0 1.57079632679</pose>
     </include>
 

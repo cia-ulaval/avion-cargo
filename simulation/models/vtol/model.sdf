@@ -1,6 +1,6 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <sdf version="1.9">
-    <model name="tricopter_vtol">
+    <model name="vtol">
         <static>false</static>
         <self_collide>false</self_collide>
         <link name="main_frame">
@@ -21,7 +21,7 @@
                 <pose>0 0 0 0 0 0</pose>
                 <geometry>
                     <mesh>
-                        <uri>meshes/main-frame.obj</uri>
+                        <uri>meshes/main_frame.obj</uri>
                         <scale>0.1 0.1 0.1</scale>
                     </mesh>
                 </geometry>
@@ -30,7 +30,7 @@
                 <pose>0 0 0 0 0 0</pose>
                 <geometry>
                     <mesh>
-                        <uri>meshes/main-frame.obj</uri>
+                        <uri>meshes/main_frame.obj</uri>
                         <scale>0.1 0.1 0.1</scale>
                     </mesh>
                 </geometry>
@@ -46,7 +46,7 @@
                 <always_on>true</always_on>
                 <update_rate>20</update_rate>
                 <visualize>false</visualize>
-                <topic>/model/tricopter_vtol/sonar/scan</topic>
+                <topic>/model/vtol/sonar/scan</topic>
                 <lidar>
                     <scan>
                         <horizontal>
@@ -134,7 +134,7 @@
                 <pose>-0.0685426 -0.1409 -0.0511394 0 0 0</pose>
                 <geometry>
                     <mesh>
-                        <uri>meshes/left-tilt-mount.obj</uri>
+                        <uri>meshes/left_tilt_mount.obj</uri>
                         <scale>0.1 0.1 0.1</scale>
                     </mesh>
                 </geometry>
@@ -143,7 +143,7 @@
                 <pose>-0.0685426 -0.1409 -0.0511394 0 0 0</pose>
                 <geometry>
                     <mesh>
-                        <uri>meshes/left-tilt-mount.obj</uri>
+                        <uri>meshes/left_tilt_mount.obj</uri>
                         <scale>0.1 0.1 0.1</scale>
                     </mesh>
                 </geometry>
@@ -167,7 +167,7 @@
                 <pose>-0.0685426 0.1409 -0.0511394 0 0 0</pose>
                 <geometry>
                     <mesh>
-                        <uri>meshes/right-tilt-mount.obj</uri>
+                        <uri>meshes/right_tilt_mount.obj</uri>
                         <scale>0.1 0.1 0.1</scale>
                     </mesh>
                 </geometry>
@@ -176,7 +176,7 @@
                 <pose>-0.0685426 0.1409 -0.0511394 0 0 0</pose>
                 <geometry>
                     <mesh>
-                        <uri>meshes/right-tilt-mount.obj</uri>
+                        <uri>meshes/right_tilt_mount.obj</uri>
                         <scale>0.1 0.1 0.1</scale>
                     </mesh>
                 </geometry>
@@ -200,7 +200,7 @@
                 <pose>-0.105481 -0.140898 -0.0516861 0 0 0</pose>
                 <geometry>
                     <mesh>
-                        <uri>meshes/left-propeller.obj</uri>
+                        <uri>meshes/left_propeller.obj</uri>
                         <scale>0.1 0.1 0.1</scale>
                     </mesh>
                 </geometry>
@@ -209,7 +209,7 @@
                 <pose>-0.105481 -0.140898 -0.0516861 0 0 0</pose>
                 <geometry>
                     <mesh>
-                        <uri>meshes/left-propeller.obj</uri>
+                        <uri>meshes/left_propeller.obj</uri>
                         <scale>0.1 0.1 0.1</scale>
                     </mesh>
                 </geometry>
@@ -233,7 +233,7 @@
                 <pose>-0.105481 0.140897 -0.0516861 0 0 0</pose>
                 <geometry>
                     <mesh>
-                        <uri>meshes/right-propeller.obj</uri>
+                        <uri>meshes/right_propeller.obj</uri>
                         <scale>0.1 0.1 0.1</scale>
                     </mesh>
                 </geometry>
@@ -242,7 +242,7 @@
                 <pose>-0.105481 0.140897 -0.0516861 0 0 0</pose>
                 <geometry>
                     <mesh>
-                        <uri>meshes/right-propeller.obj</uri>
+                        <uri>meshes/right_propeller.obj</uri>
                         <scale>0.1 0.1 0.1</scale>
                     </mesh>
                 </geometry>
@@ -266,7 +266,7 @@
                 <pose>0.19343 0 -0.0632816 0 0 0</pose>
                 <geometry>
                     <mesh>
-                        <uri>meshes/back-propeller.obj</uri>
+                        <uri>meshes/back_propeller.obj</uri>
                         <scale>0.1 0.1 0.1</scale>
                     </mesh>
                 </geometry>
@@ -275,7 +275,7 @@
                 <pose>0.19343 0 -0.0632816 0 0 0</pose>
                 <geometry>
                     <mesh>
-                        <uri>meshes/back-propeller.obj</uri>
+                        <uri>meshes/back_propeller.obj</uri>
                         <scale>0.1 0.1 0.1</scale>
                     </mesh>
                 </geometry>
@@ -299,7 +299,7 @@
                 <pose>0.0918776 -0.2095 -0.0320133 0 0 0</pose>
                 <geometry>
                     <mesh>
-                        <uri>meshes/left-flap.obj</uri>
+                        <uri>meshes/left_flap.obj</uri>
                         <scale>0.1 0.1 0.1</scale>
                     </mesh>
                 </geometry>
@@ -308,7 +308,7 @@
                 <pose>0.0918776 -0.2095 -0.0320133 0 0 0</pose>
                 <geometry>
                     <mesh>
-                        <uri>meshes/left-flap.obj</uri>
+                        <uri>meshes/left_flap.obj</uri>
                         <scale>0.1 0.1 0.1</scale>
                     </mesh>
                 </geometry>
@@ -332,7 +332,7 @@
                 <pose>0.0918776 0.2095 -0.0320133 0 0 0</pose>
                 <geometry>
                     <mesh>
-                        <uri>meshes/right-flap.obj</uri>
+                        <uri>meshes/right_flap.obj</uri>
                         <scale>0.1 0.1 0.1</scale>
                     </mesh>
                 </geometry>
@@ -341,7 +341,7 @@
                 <pose>0.0918776 0.2095 -0.0320133 0 0 0</pose>
                 <geometry>
                     <mesh>
-                        <uri>meshes/right-flap.obj</uri>
+                        <uri>meshes/right_flap.obj</uri>
                         <scale>0.1 0.1 0.1</scale>
                     </mesh>
                 </geometry>
@@ -365,7 +365,7 @@
                 <pose>0.361445 0 -0.0477911 0 0 0</pose>
                 <geometry>
                     <mesh>
-                        <uri>meshes/back-flap.obj</uri>
+                        <uri>meshes/back_flap.obj</uri>
                         <scale>0.1 0.1 0.1</scale>
                     </mesh>
                 </geometry>
@@ -374,7 +374,7 @@
                 <pose>0.361445 0 -0.0477911 0 0 0</pose>
                 <geometry>
                     <mesh>
-                        <uri>meshes/back-flap.obj</uri>
+                        <uri>meshes/back_flap.obj</uri>
                         <scale>0.1 0.1 0.1</scale>
                     </mesh>
                 </geometry>
@@ -398,7 +398,7 @@
                 <pose>-0.155522 0 0.0718702 0 0 0</pose>
                 <geometry>
                     <mesh>
-                        <uri>meshes/steer-frame.obj</uri>
+                        <uri>meshes/steer_frame.obj</uri>
                         <scale>0.1 0.1 0.1</scale>
                     </mesh>
                 </geometry>
@@ -407,7 +407,7 @@
                 <pose>-0.155522 0 0.0718702 0 0 0</pose>
                 <geometry>
                     <mesh>
-                        <uri>meshes/steer-frame.obj</uri>
+                        <uri>meshes/steer_frame.obj</uri>
                         <scale>0.1 0.1 0.1</scale>
                     </mesh>
                 </geometry>
@@ -434,7 +434,7 @@
             <visual name="front_left_wheel_visual">
                 <pose>-0.1555225 -0.0555 0.1038702 0 0 0</pose>
                 <geometry>
-                    <mesh><uri>meshes/front-left-wheel.obj</uri><scale>0.1 0.1 0.1</scale></mesh>
+                    <mesh><uri>meshes/front_left_wheel.obj</uri><scale>0.1 0.1 0.1</scale></mesh>
                 </geometry>
             </visual>
         </link>
@@ -459,7 +459,7 @@
             <visual name="front_right_wheel_visual">
                 <pose>-0.1555225 0.0554999 0.1038702 0 0 0</pose>
                 <geometry>
-                    <mesh><uri>meshes/front-right-wheel.obj</uri><scale>0.1 0.1 0.1</scale></mesh>
+                    <mesh><uri>meshes/front_right_wheel.obj</uri><scale>0.1 0.1 0.1</scale></mesh>
                 </geometry>
             </visual>
         </link>
@@ -484,7 +484,7 @@
             <visual name="back_left_wheel_visual">
                 <pose>0.1369271 -0.1348937 0.1012611 0 0 0</pose>
                 <geometry>
-                    <mesh><uri>meshes/back-left-wheel.obj</uri><scale>0.1 0.1 0.1</scale></mesh>
+                    <mesh><uri>meshes/back_left_wheel.obj</uri><scale>0.1 0.1 0.1</scale></mesh>
                 </geometry>
             </visual>
         </link>
@@ -509,7 +509,7 @@
             <visual name="back_right_wheel_visual">
                 <pose>0.1369271 0.135106 0.1012611 0 0 0</pose>
                 <geometry>
-                    <mesh><uri>meshes/back-right-wheel.obj</uri><scale>0.1 0.1 0.1</scale></mesh>
+                    <mesh><uri>meshes/back_right_wheel.obj</uri><scale>0.1 0.1 0.1</scale></mesh>
                 </geometry>
             </visual>
         </link>
@@ -971,7 +971,7 @@
             <cp>-0.015 0 0</cp>
         </plugin>
         <plugin filename="gz-sim-thruster-system" name="gz::sim::systems::Thruster">
-            <namespace>tricopter_vtol</namespace>
+            <namespace>vtol</namespace>
             <joint_name>left_propeller_joint</joint_name>
             <use_angvel_cmd>1</use_angvel_cmd>
             <velocity_control>true</velocity_control>
@@ -982,7 +982,7 @@
             <min_thrust_cmd>-800</min_thrust_cmd>
         </plugin>
         <plugin filename="gz-sim-thruster-system" name="gz::sim::systems::Thruster">
-            <namespace>tricopter_vtol</namespace>
+            <namespace>vtol</namespace>
             <joint_name>right_propeller_joint</joint_name>
             <use_angvel_cmd>1</use_angvel_cmd>
             <velocity_control>true</velocity_control>
@@ -993,7 +993,7 @@
             <min_thrust_cmd>-800</min_thrust_cmd>
         </plugin>
         <plugin filename="gz-sim-thruster-system" name="gz::sim::systems::Thruster">
-            <namespace>tricopter_vtol</namespace>
+            <namespace>vtol</namespace>
             <joint_name>back_propeller_joint</joint_name>
             <use_angvel_cmd>1</use_angvel_cmd>
             <velocity_control>true</velocity_control>
@@ -1016,7 +1016,7 @@
             <sensor>
                 <type>range</type>
                 <index>1</index>
-                <topic>/model/tricopter_vtol/sonar/scan</topic>
+                <topic>/model/vtol/sonar/scan</topic>
             </sensor>
 
             <control channel="0">
@@ -1026,7 +1026,7 @@
                 <servo_min>1000</servo_min>
                 <servo_max>2000</servo_max>
                 <type>COMMAND</type>
-                <cmd_topic>/model/tricopter_vtol/joint/left_flap_joint/0/cmd_pos</cmd_topic>
+                <cmd_topic>/model/vtol/joint/left_flap_joint/0/cmd_pos</cmd_topic>
             </control>
             <control channel="1">
                 <jointName>back_flap_joint</jointName>
@@ -1035,7 +1035,7 @@
                 <servo_min>1000</servo_min>
                 <servo_max>2000</servo_max>
                 <type>COMMAND</type>
-                <cmd_topic>/model/tricopter_vtol/joint/back_flap_joint/0/cmd_pos</cmd_topic>
+                <cmd_topic>/model/vtol/joint/back_flap_joint/0/cmd_pos</cmd_topic>
             </control>
             <control channel="3">
                 <jointName>right_flap_joint</jointName>
@@ -1044,7 +1044,7 @@
                 <servo_min>1000</servo_min>
                 <servo_max>2000</servo_max>
                 <type>COMMAND</type>
-                <cmd_topic>/model/tricopter_vtol/joint/right_flap_joint/0/cmd_pos</cmd_topic>
+                <cmd_topic>/model/vtol/joint/right_flap_joint/0/cmd_pos</cmd_topic>
             </control>
             <control channel="4">
                 <jointName>right_propeller_joint</jointName>
@@ -1053,7 +1053,7 @@
                 <servo_min>1000</servo_min>
                 <servo_max>2000</servo_max>
                 <type>COMMAND</type>
-                <cmd_topic>/model/tricopter_vtol/joint/right_propeller_joint/cmd_vel</cmd_topic>
+                <cmd_topic>/model/vtol/joint/right_propeller_joint/cmd_vel</cmd_topic>
             </control>
             <control channel="5">
                 <jointName>left_propeller_joint</jointName>
@@ -1062,7 +1062,7 @@
                 <servo_min>1000</servo_min>
                 <servo_max>2000</servo_max>
                 <type>COMMAND</type>
-                <cmd_topic>/model/tricopter_vtol/joint/left_propeller_joint/cmd_vel</cmd_topic>
+                <cmd_topic>/model/vtol/joint/left_propeller_joint/cmd_vel</cmd_topic>
             </control>
             <control channel="7">
                 <jointName>back_propeller_joint</jointName>
@@ -1071,7 +1071,7 @@
                 <servo_min>1000</servo_min>
                 <servo_max>2000</servo_max>
                 <type>COMMAND</type>
-                <cmd_topic>/model/tricopter_vtol/joint/back_propeller_joint/cmd_vel</cmd_topic>
+                <cmd_topic>/model/vtol/joint/back_propeller_joint/cmd_vel</cmd_topic>
             </control>
             <control channel="6">
                 <jointName>front_steering_joint</jointName>
@@ -1080,7 +1080,7 @@
                 <servo_min>1000</servo_min>
                 <servo_max>2000</servo_max>
                 <type>COMMAND</type>
-                <cmd_topic>/model/tricopter_vtol/joint/front_steering_joint/0/cmd_pos</cmd_topic>
+                <cmd_topic>/model/vtol/joint/front_steering_joint/0/cmd_pos</cmd_topic>
             </control>
             <control channel="11">
                 <jointName>left_tilt_joint</jointName>
@@ -1089,7 +1089,7 @@
                 <servo_min>1000</servo_min>
                 <servo_max>2000</servo_max>
                 <type>COMMAND</type>
-                <cmd_topic>/model/tricopter_vtol/joint/left_tilt_joint/0/cmd_pos</cmd_topic>
+                <cmd_topic>/model/vtol/joint/left_tilt_joint/0/cmd_pos</cmd_topic>
             </control>
             <control channel="12">
                 <jointName>right_tilt_joint</jointName>
@@ -1098,7 +1098,7 @@
                 <servo_min>1000</servo_min>
                 <servo_max>2000</servo_max>
                 <type>COMMAND</type>
-                <cmd_topic>/model/tricopter_vtol/joint/right_tilt_joint/0/cmd_pos</cmd_topic>
+                <cmd_topic>/model/vtol/joint/right_tilt_joint/0/cmd_pos</cmd_topic>
             </control>
         </plugin>
 

@@ -23,7 +23,7 @@ Les modèles standards `runway`, `iris_with_gimbal` et `iris_with_standoffs` res
 | [worlds/iris_runway_aruco.sdf](worlds/iris_runway_aruco.sdf) | Monde Iris avec une cible au sol ; son nom interne reste `iris_runway`. |
 | [worlds/markers/aruco.png](worlds/markers/aruco.png) | Texture de la cible, référencée par un chemin relatif. |
 | [models/gimbal_small_3d/model.sdf](models/gimbal_small_3d/model.sdf) | Caméra de 640 × 480 pixels, cadence demandée de 30 Hz et réglages optiques de l'essai. |
-| [config/gazebo-iris-gimbal.parm](config/gazebo-iris-gimbal.parm) | Paramètres du véhicule et de la nacelle pour SITL. |
+| [config/gazebo_iris_gimbal.parm](config/gazebo_iris_gimbal.parm) | Paramètres du véhicule et de la nacelle pour SITL. |
 | [config/autolanding_config.json](config/autolanding_config.json) | Configuration d'Autolander : topic caméra, cible ID 29 du dictionnaire 16, côté de 0,896 m et port MAVLink 14550. |
 | [calibration/pi_camera_calibration.yaml](calibration/pi_camera_calibration.yaml) | Calibration référencée lors de l'essai, conservée avec ses valeurs d'origine. |
 
@@ -40,7 +40,7 @@ AUTOLANDER_ROOT="$PWD"
 source "$HOME/venv-ardupilot/bin/activate"
 cd "$HOME/ardupilot"
 sim_vehicle.py -D -v ArduCopter -f JSON \
-  --add-param-file="$AUTOLANDER_ROOT/simulation/config/gazebo-iris-gimbal.parm"
+  --add-param-file="$AUTOLANDER_ROOT/simulation/config/gazebo_iris_gimbal.parm"
 ```
 
 Cette commande reprend celle de l'essai. Le message `no config for frame (JSON)` peut apparaître avec cette révision ; le fichier de paramètres est fourni explicitement. SITL attend les échanges avec Gazebo. Attendez le heartbeat dans MAVProxy et laissez ce terminal ouvert. MAVProxy transmet sa sortie à `127.0.0.1:14550`, comme attendu dans le JSON. Réservez ce port à Autolander si vous ajoutez une station sol.

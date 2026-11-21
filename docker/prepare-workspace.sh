@@ -31,4 +31,5 @@ PY
 
 poetry run precision_landing --help >/dev/null
 poetry run calibrate_camera --help >/dev/null
+poetry install --with faruco
 echo "Workspace ready at $ROOT (Python $(poetry run python --version 2>&1))."
