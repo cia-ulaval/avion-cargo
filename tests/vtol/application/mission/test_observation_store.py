@@ -37,7 +37,7 @@ def test_snapshot_contains_latest_flight_status_and_payload_events_without_alias
     )
     store.record_payload_event("payload-1", event)
 
-    snapshot = store.snapshot()
+    snapshot = store.capture_mission_snapshot()
     assert snapshot.drone_status.alt_m == 5.0
     assert snapshot.mission_execution_status == mission_status
     assert snapshot.payload_observations[0].payload_id == "payload-1"

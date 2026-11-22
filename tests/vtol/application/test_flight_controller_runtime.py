@@ -59,7 +59,7 @@ def test_runtime_owns_one_connection_and_publishes_mission_observations():
         assert drone.connected
         assert drone.closed
         assert drone.poll_count >= 1
-        snapshot = observations.snapshot()
+        snapshot = observations.capture_mission_snapshot()
         assert snapshot.drone_status == drone.status
         assert snapshot.drone_status is not drone.status
         assert snapshot.mission_execution_status == drone.mission_status

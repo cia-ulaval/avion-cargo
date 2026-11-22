@@ -228,7 +228,7 @@ def build_vtol_application(
         observations = MissionObservationStore()
         flight_controller_runtime = FlightControllerObservationRuntime(drone, observations)
         payload_runtime = VtolPayloadCommunicationRuntime(d3kble_application.payload_peers, observations)
-        mission_orchestrator = MissionOrchestrator(observations.snapshot)
+        mission_orchestrator = MissionOrchestrator(observations.capture_mission_snapshot)
         runtime = VtolApplicationRuntime(
             flight_controller=flight_controller_runtime,
             payload_communication=payload_runtime,

@@ -18,7 +18,7 @@ from vtol.domain.mission.flight_section import FlightSection
 def test_orchestrator_starts_idle_and_keeps_transition_logic_deferred():
     async def scenario():
         observations = MissionObservationStore()
-        orchestrator = MissionOrchestrator(observations.snapshot)
+        orchestrator = MissionOrchestrator(observations.capture_mission_snapshot)
 
         assert orchestrator.current_state_name == "idle"
         progress = await orchestrator.step()
@@ -26,13 +26,13 @@ def test_orchestrator_starts_idle_and_keeps_transition_logic_deferred():
         assert progress.section is None
 
         # Changes in incoming observations do not cause transitions in this scaffold PR.
-        observations.set_flight_observation(None, observations.snapshot().mission_execution_status)
+        observations.set_flight_observation(None, observations.capture_mission_snapshot().mission_execution_status)
         for _ in range(3):
             progress = await orchestrator.step()
             assert progress.status is MissionProgressStatus.IDLE
             assert orchestrator.current_state_name == "idle"
 
-        await orchestrator._machine.close(observations.snapshot())
+        await orchestrator._machine.close(observations.capture_mission_snapshot())
 
     asyncio.run(scenario())
 
@@ -63,7 +63,7 @@ def test_flight_phase_state_skeletons_report_their_phase_and_do_not_transition()
 
 def test_run_refreshes_context_provider_until_stopped():
     observations = MissionObservationStore()
-    orchestrator = MissionOrchestrator(observations.snapshot)
+    orchestrator = MissionOrchestrator(observations.capture_mission_snapshot)
 
     async def scenario():
         stop_event = asyncio.Event()

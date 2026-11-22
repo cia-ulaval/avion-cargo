@@ -39,7 +39,7 @@ class MissionObservationStore:
         with self._lock:
             self._payload_observations.append(PayloadObservation(payload_id, event, time.monotonic()))
 
-    def snapshot(self) -> MissionContext:
+    def capture_mission_snapshot(self) -> MissionContext:
         with self._lock:
             return MissionContext(
                 drone_status=None if self._drone_status is None else replace(self._drone_status),
