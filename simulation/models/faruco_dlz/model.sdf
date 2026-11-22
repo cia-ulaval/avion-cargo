@@ -1,10 +1,10 @@
 <?xml version="1.0" ?>
 <sdf version="1.9">
-  <model name="dlz">
+  <model name="faruco_dlz">
     <static>true</static>
 
-    <link name="dlz_link">
-      <visual name="dlz">
+    <link name="faruco_dlz_link">
+      <visual name="faruco_dlz">
         <geometry>
           <mesh>
             <uri>meshes/dlz.obj</uri>

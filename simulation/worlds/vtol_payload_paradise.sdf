@@ -84,8 +84,8 @@
         </include>
 
         <include>
-            <uri>model://dlz</uri>
-            <name>dlz</name>
+            <uri>model://faruco_dlz</uri>
+            <name>faruco_dlz</name>
             <pose>-45 60 0 0 0 0</pose>
         </include>
 
