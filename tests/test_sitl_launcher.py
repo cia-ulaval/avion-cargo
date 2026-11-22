@@ -1,5 +1,4 @@
 import os
-import shutil
 import subprocess
 from pathlib import Path
 from types import SimpleNamespace
@@ -7,11 +6,11 @@ from types import SimpleNamespace
 import pytest
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
-LAUNCHER = REPO_ROOT / "scripts" / "launch-sitl.sh"
+DOCKERFILE = REPO_ROOT / "Dockerfile"
 
 
-@pytest.fixture(params=["checkout", "docker"])
-def sitl(tmp_path, request):
+@pytest.fixture
+def sitl(tmp_path):
     root = tmp_path / "ardupilot checkout"
     source = root / "libraries/AP_Scripting/applets/plane_precland.lua"
     source.parent.mkdir(parents=True)
@@ -24,17 +23,13 @@ def sitl(tmp_path, request):
     simulator.chmod(0o755)
 
     env = {key: value for key, value in os.environ.items() if not key.startswith("AVION_")}
-    launcher = LAUNCHER
-    repo_root = REPO_ROOT
-    if request.param == "docker":
-        launcher = tmp_path / "image/usr/local/bin/avion-sitl"
-        launcher.parent.mkdir(parents=True)
-        shutil.copy2(LAUNCHER, launcher)
-        repo_root = tmp_path / "mounted checkout"
-        checkout_launcher = repo_root / "scripts/launch-sitl.sh"
-        checkout_launcher.parent.mkdir(parents=True)
-        checkout_launcher.write_text("#!/bin/bash\nexit 99\n")
-        env["AVION_REPO_ROOT"] = str(repo_root)
+    _, start, remainder = DOCKERFILE.read_text().partition("cat > /usr/local/bin/avion-sitl <<'SCRIPT'\n")
+    script, end, _ = remainder.partition("\nSCRIPT\n")
+    assert start and end, "Dockerfile must define the avion-sitl launcher"
+    launcher = tmp_path / "image/usr/local/bin/avion-sitl"
+    launcher.parent.mkdir(parents=True)
+    launcher.write_text(script + "\n")
+    launcher.chmod(0o755)
 
     env.update(
         AVION_ARDUPILOT_ROOT=str(root),
@@ -49,9 +44,7 @@ def sitl(tmp_path, request):
         environment = {key: value for key, value in {**env, **overrides}.items() if value is not None}
         return subprocess.run([str(launcher)], cwd=tmp_path, env=environment, capture_output=True, text=True)
 
-    return SimpleNamespace(
-        root=root, repo_root=repo_root, source=source, target=target, invocation=invocation, env=env, run=run
-    )
+    return SimpleNamespace(root=root, source=source, target=target, invocation=invocation, env=env, run=run)
 
 
 @pytest.mark.parametrize("broken_link", [False, True])
@@ -139,12 +132,12 @@ def test_launcher_propagates_simulator_failure(sitl):
     assert sitl.run(SITL_EXIT_CODE="23").returncode == 23
 
 
-def test_default_parameters_resolve_from_the_workspace_even_when_launcher_is_installed_elsewhere(sitl):
+def test_default_parameters_resolve_from_the_workspace(sitl):
     result = sitl.run(AVION_SITL_PARAM_FILE=None)
 
     assert result.returncode == 0, result.stderr
     assert sitl.invocation.read_text().splitlines()[-1] == (
-        f"--add-param-file={sitl.repo_root}/simulation/config/gazebo-iris-gimbal.parm"
+        "--add-param-file=/workspace/avion-cargo/simulation/config/gazebo-iris-gimbal.parm"
     )
 
 

@@ -54,11 +54,11 @@ La préparation Docker installe le groupe optionnel `faruco`. Pour un conteneur 
 dont les dépendances ont déjà été préparées, exécutez `docker compose exec dev poetry install --with dev,faruco`.
 Après un changement de cible ou de dimensions, relancez Gazebo et Autolander pour charger
 à la fois le monde et les paramètres de détection.
-Le Dockerfile copie [scripts/launch-sitl.sh](../scripts/launch-sitl.sh) dans l'image
-sous `/usr/local/bin/avion-sitl`. Le lancement complet et le raccourci `avion-sitl`
-exécutent cette même copie, figée lors de la construction de l'image.
-`AVION_REPO_ROOT=/workspace/avion-cargo`, défini dans l'image, permet au lanceur
-installé de retrouver les paramètres de simulation dans le dépôt monté.
+Le [Dockerfile](../Dockerfile) définit directement le script `/usr/local/bin/avion-sitl`
+dans son bloc `CREATE_LAUNCHERS`, comme les autres lanceurs du conteneur.
+Le lancement complet et le raccourci `avion-sitl` exécutent cette même version,
+figée lors de la construction de l'image. Les paramètres de simulation sont lus
+dans le dépôt monté sous `/workspace/avion-cargo`.
 
 Après une modification du lanceur ou du Dockerfile, arrêtez la simulation puis
 reconstruisez et recréez le conteneur avec la commande ci-dessus. Si seules les
@@ -72,7 +72,6 @@ Avant chaque démarrage d'ArduPlane, le lanceur vérifie et installe
 de SITL. Il utilise l'applet fournie par la révision locale d'ArduPilot, répare un lien
 absent ou cassé et refuse de démarrer si la source manque. Un script personnalisé déjà
 présent est préservé et signalé pour inspection s'il diffère de l'applet fournie.
-Pour une installation native, définissez `AVION_ARDUPILOT_ROOT` avec le chemin d'ArduPilot.
 
 Pour démarrer uniquement SITL dans le conteneur configuré pour le scénario tricopter :
 
@@ -137,8 +136,8 @@ Depuis l'hôte, `docker compose port dev 5761` doit afficher `127.0.0.1:5761`.
 L'adresse `0.0.0.0` fait écouter MAVProxy sur les interfaces du conteneur, ce qui
 permet la publication Docker. Côté hôte, le port est limité à la boucle locale.
 La sortie est ajoutée automatiquement à chaque lancement ; il n'est pas nécessaire
-de saisir `output add` à la main. Pour une exécution native, cette sortie reste
-optionnelle et n'est ajoutée que si `AVION_SITL_GCS_OUT` est défini et non vide.
+de saisir `output add` à la main. Cette sortie reste optionnelle : le lanceur ne
+l'ajoute que si `AVION_SITL_GCS_OUT` est défini et non vide dans le conteneur.
 Voir la [gestion des liaisons QGroundControl](https://docs.qgroundcontrol.com/master/en/qgc-user-guide/settings_view/comm_links.html).
 
 ## Démarrer avec quatre terminaux

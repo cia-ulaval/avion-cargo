@@ -105,8 +105,6 @@ RUN printf '%s\n' \
 COPY --chown=root:root docker/prepare-workspace.sh /usr/local/bin/prepare-workspace.sh
 COPY --chown=root:root docker/container-start.sh /usr/local/bin/container-start.sh
 COPY --chown=root:root docker/fix-volume-permissions.sh /usr/local/bin/fix-volume-permissions.sh
-COPY --chown=root:root --chmod=0755 scripts/launch-sitl.sh /usr/local/bin/avion-sitl
-ENV AVION_REPO_ROOT=/workspace/avion-cargo
 RUN sudo chmod 0755 /usr/local/bin/prepare-workspace.sh /usr/local/bin/container-start.sh /usr/local/bin/fix-volume-permissions.sh
 
 RUN pipx install --force 'poetry==2.4.3' \
@@ -120,6 +118,58 @@ RUN apt-get update \
 
 RUN <<'CREATE_LAUNCHERS'
 set -eu
+cat > /usr/local/bin/avion-sitl <<'SCRIPT'
+#!/usr/bin/env bash
+set -Eeuo pipefail
+
+ARDUPILOT_ROOT="${AVION_ARDUPILOT_ROOT:-/home/dev/ardupilot}"
+cd "$ARDUPILOT_ROOT"
+
+VEHICLE="${AVION_SITL_VEHICLE:-ArduCopter}"
+FRAME="${AVION_SITL_FRAME:-JSON}"
+MODEL="${AVION_SITL_MODEL:-}"
+PARAM_FILE="${AVION_SITL_PARAM_FILE-/workspace/avion-cargo/simulation/config/gazebo-iris-gimbal.parm}"
+
+if [[ "$VEHICLE" == ArduPlane ]]; then
+  source_script="$PWD/libraries/AP_Scripting/applets/plane_precland.lua"
+  target_script="$PWD/scripts/plane_precland.lua"
+  if [[ ! -f "$source_script" || ! -r "$source_script" || ! -s "$source_script" ]]; then
+    echo "Cannot start ArduPlane: precision landing applet missing or unreadable: $source_script" >&2
+    echo "Restore the ArduPilot revision in simulation/versions.txt or rebuild the Docker image." >&2
+    exit 1
+  fi
+
+  mkdir -p scripts
+  if [[ -e "$target_script" ]]; then
+    if ! cmp -s -- "$source_script" "$target_script"; then
+      echo "Cannot start ArduPlane: $target_script differs from the bundled precision landing applet." >&2
+      echo "Inspect and move the custom script before retrying; it has not been overwritten." >&2
+      exit 1
+    fi
+  else
+    ln -sfn -- ../libraries/AP_Scripting/applets/plane_precland.lua "$target_script"
+  fi
+  if ! cmp -s -- "$source_script" "$target_script"; then
+    echo "Cannot start ArduPlane: precision landing applet installation failed: $target_script" >&2
+    exit 1
+  fi
+  echo "QuadPlane precision landing script ready: $target_script"
+fi
+
+args=(-D -v "$VEHICLE" -f "$FRAME")
+if [[ -n "$MODEL" ]]; then
+  args+=(--model "$MODEL")
+fi
+if [[ -n "$PARAM_FILE" ]]; then
+  args+=("--add-param-file=$PARAM_FILE")
+fi
+if [[ -n "${AVION_SITL_GCS_OUT:-}" ]]; then
+  args+=(--out "$AVION_SITL_GCS_OUT")
+fi
+
+exec ./Tools/autotest/sim_vehicle.py "${args[@]}"
+SCRIPT
+
 cat > /usr/local/bin/avion-gazebo <<'SCRIPT'
 #!/usr/bin/env bash
 set -eo pipefail
