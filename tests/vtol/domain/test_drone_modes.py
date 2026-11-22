@@ -10,6 +10,27 @@ def test_quadplane_modes_are_recognized_and_other_modes_remain_unknown():
     assert DroneMode.from_str("unmapped-flight-mode") is DroneMode.UNKNOWN
 
 
+def test_ardupilot_plane_mode_names_are_recognized():
+    expected_modes = (
+        ("MANUAL", DroneMode.MANUAL),
+        ("TRAINING", DroneMode.TRAINING),
+        ("FBWA", DroneMode.FBWA),
+        ("FBWB", DroneMode.FBWB),
+        ("CRUISE", DroneMode.CRUISE),
+        ("AUTOTUNE", DroneMode.AUTOTUNE),
+        ("TAKEOFF", DroneMode.TAKEOFF),
+        ("AVOID_ADSB", DroneMode.AVOID_ADSB),
+        ("GUIDED", DroneMode.GUIDED),
+        ("INITIALISING", DroneMode.INITIALISING),
+        ("THERMAL", DroneMode.THERMAL),
+        ("AUTOLAND", DroneMode.AUTOLAND),
+        ("LOITERALTQLAND", DroneMode.LOITER_ALT_QLAND),
+        ("qhover", DroneMode.QHOVER),
+    )
+    for mode_name, expected in expected_modes:
+        assert DroneMode.from_str(mode_name) is expected
+
+
 def test_landed_state_maps_mavlink_values():
     assert LandedState.from_mavlink(1) is LandedState.ON_GROUND
     assert LandedState.from_mavlink(2) is LandedState.IN_AIR

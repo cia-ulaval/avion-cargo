@@ -9,21 +9,33 @@ from vtol.domain.mission.execution_status import MissionExecutionStatus
 
 class DroneMode(str, Enum):
     UNKNOWN = "UNKNOWN"
+    MANUAL = "MANUAL"
     STABILIZE = "STABILIZE"
+    TRAINING = "TRAINING"
     ACRO = "ACRO"
+    FBWA = "FBWA"
+    FBWB = "FBWB"
+    CRUISE = "CRUISE"
+    AUTOTUNE = "AUTOTUNE"
     ALT_HOLD = "ALT_HOLD"
     POSHOLD = "POSHOLD"
     LOITER = "LOITER"
     GUIDED = "GUIDED"
     AUTO = "AUTO"
     RTL = "RTL"
+    TAKEOFF = "TAKEOFF"
     LAND = "LAND"
     BRAKE = "BRAKE"
     CIRCLE = "CIRCLE"
+    AVOID_ADSB = "AVOID_ADSB"
     DRIFT = "DRIFT"
     SPORT = "SPORT"
     FLIP = "FLIP"
     PLND = "PLND"
+    INITIALISING = "INITIALISING"
+    THERMAL = "THERMAL"
+    AUTOLAND = "AUTOLAND"
+    LOITER_ALT_QLAND = "LOITER_ALT_QLAND"
     QSTABILIZE = "QSTABILIZE"
     QHOVER = "QHOVER"
     QLOITER = "QLOITER"
@@ -41,6 +53,8 @@ class DroneMode(str, Enum):
         aliases = {
             "ALTHOLD": "ALT_HOLD",
             "POS_HOLD": "POSHOLD",
+            # pymavlink 2.4.49 reports this QuadPlane mode without separators.
+            "LOITERALTQLAND": "LOITER_ALT_QLAND",
         }
         s = aliases.get(s, s)
         return cls(s) if s in cls._value2member_map_ else cls.UNKNOWN

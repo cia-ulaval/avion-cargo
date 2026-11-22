@@ -47,10 +47,16 @@ def sourced(message, system=1, component=1):
     return message
 
 
-def heartbeat(mode=9, system=1, component=1, autopilot=mavlink2.MAV_AUTOPILOT_ARDUPILOTMEGA):
+def heartbeat(
+    mode=9,
+    system=1,
+    component=1,
+    autopilot=mavlink2.MAV_AUTOPILOT_ARDUPILOTMEGA,
+    vehicle_type=mavlink2.MAV_TYPE_QUADROTOR,
+):
     return sourced(
         mavlink2.MAVLink_heartbeat_message(
-            mavlink2.MAV_TYPE_QUADROTOR,
+            vehicle_type,
             autopilot,
             mavlink2.MAV_MODE_FLAG_CUSTOM_MODE_ENABLED,
             mode,
@@ -93,6 +99,18 @@ def test_connect_accepts_only_autopilot_and_initializes_status_from_first_heartb
         mavlink2.MAVLINK_MSG_ID_EXTENDED_SYS_STATE: 500_000,
     }
     assert all((message.target_system, message.target_component) == (7, 1) for message in requests)
+
+
+def test_fixed_wing_heartbeat_maps_manual_mode_from_pymavlink(link):
+    drone, connection, _ = link
+    connection.incoming.append(
+        heartbeat(mode=0, vehicle_type=mavlink2.MAV_TYPE_FIXED_WING)
+    )
+
+    drone.connect()
+
+    assert drone.status.mode_name == "MANUAL"
+    assert drone.status.mode is DroneMode.MANUAL
 
 
 def test_missing_heartbeat_times_out_and_closes_transport(link):
