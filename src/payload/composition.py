@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any, Callable
 
+from d3kble import D3KNode
 from loguru import logger
 
 from payload.application.runtime import PayloadApplicationRuntime
@@ -17,7 +18,7 @@ class PayloadApplication:
     Own the payload's local D3KNode and all adapters built on top of it.
     """
 
-    node: Any
+    node: D3KNode
     router: D3kbleMessageRouter
     plane_peer: D3kblePlanePeer
     distance_sensor: D3kbleDistanceSensor
