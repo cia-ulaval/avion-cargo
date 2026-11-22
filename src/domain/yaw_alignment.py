@@ -1,5 +1,3 @@
-"""Configuration and geometry for autonomous marker heading alignment."""
-
 import math
 from dataclasses import dataclass, fields
 

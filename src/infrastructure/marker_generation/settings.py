@@ -1,5 +1,3 @@
-"""Shared defaults and limits for marker generation APIs and their CLI."""
-
 DEFAULT_WHITE_MARGIN_M = 0.01
 DEFAULT_PRINT_DPI = 300
 MIN_PRINT_DPI = 150

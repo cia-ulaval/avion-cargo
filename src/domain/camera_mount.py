@@ -1,5 +1,3 @@
-"""Rigid transform from optical camera coordinates to vehicle BODY_FRD."""
-
 from dataclasses import dataclass
 
 import numpy as np

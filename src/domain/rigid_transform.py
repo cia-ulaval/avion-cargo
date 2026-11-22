@@ -1,5 +1,3 @@
-"""Homogeneous rigid transforms: p_destination = T_destination_source @ p_source."""
-
 import math
 from dataclasses import dataclass
 

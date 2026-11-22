@@ -1,5 +1,3 @@
-"""Assemble application services with their concrete adapters."""
-
 import os
 from dataclasses import dataclass
 from typing import Optional

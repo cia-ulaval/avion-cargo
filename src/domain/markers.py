@@ -1,5 +1,3 @@
-"""Marker identities, built-in layouts and dictionary limits shared by all adapters."""
-
 from enum import StrEnum
 
 

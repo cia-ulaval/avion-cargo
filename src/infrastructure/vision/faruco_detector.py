@@ -1,5 +1,3 @@
-"""Use FArUco Bridge directly for detection, pose estimation and annotation."""
-
 from typing import Any, List, Optional
 
 import numpy as np

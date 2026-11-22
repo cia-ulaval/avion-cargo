@@ -1,5 +1,3 @@
-"""Keep technical adapters and presentation outside the application core."""
-
 import ast
 import importlib.util
 import subprocess
