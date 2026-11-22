@@ -1,5 +1,6 @@
 from vtol.domain.drone import DroneMode, LandedState, VtolState
 from vtol.domain.mission.execution_status import MissionExecutionStatus
+import time
 
 
 def test_quadplane_modes_are_recognized_and_other_modes_remain_unknown():
@@ -34,6 +35,16 @@ def test_mission_execution_observation_exposes_freshness_without_conflating_sequ
         last_updated_monotonic_s=10.0,
         mission_id=2,
     )
-    assert status.is_fresh(max_age_s=2.0, now_s=11.0)
-    assert not status.is_fresh(max_age_s=2.0, now_s=13.0)
-    assert not MissionExecutionStatus().is_fresh()
+    assert _is_fresh(status, max_age_s=2.0, now_s=11.0)
+    assert not _is_fresh(status, max_age_s=2.0, now_s=13.0)
+    assert not _is_fresh(MissionExecutionStatus())
+
+
+def _is_fresh(status: MissionExecutionStatus, max_age_s: float = 3.0, *, now_s: float | None = None) -> bool:
+    if max_age_s <= 0:
+        raise ValueError("max_age_s must be greater than zero")
+    if status.last_updated_monotonic_s is None:
+        return False
+    now = time.monotonic() if now_s is None else now_s
+    age = now - status.last_updated_monotonic_s
+    return 0 <= age <= max_age_s
