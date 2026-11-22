@@ -28,11 +28,8 @@ class PayloadRuntimeConfiguration:
 
     @property
     def uwb_overrides(self) -> dict[str, Any]:
-        """Return only explicit runtime overrides in d3kble ConfigManager form.
-
-        The D3K's NVS/runtime configuration remains authoritative for every
-        omitted field. The d3kble reconciliation layer merges partial values
-        with the board's observed configuration and does not write NVS.
+        """
+        Return only explicit runtime overrides in d3kble ConfigManager form.
         """
         desired: dict[str, Any] = {}
         if self.uwb_role is not None:
