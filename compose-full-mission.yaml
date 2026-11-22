@@ -1,7 +1,7 @@
 services:
   dev:
     environment:
-      AVION_SIM_SERVICES: "avion-gazebo avion-image-bridge avion-vtol"
+      AVION_SIM_SERVICES: "avion-gazebo avion-image-bridge avion-vtol avion-payload"
       AVION_SIM_FOREGROUND_SERVICE: avion-sitl
       AVION_SIM_STARTUP_DELAY: "2"
       AVION_WORLD: /workspace/avion-cargo/simulation/worlds/vtol_payload_runway.sdf
