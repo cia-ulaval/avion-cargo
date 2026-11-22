@@ -6,6 +6,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from shared.infrastructure.configuration import integer, non_empty_string, positive_number
+
 
 @dataclass(frozen=True, slots=True)
 class PayloadRuntimeConfiguration:
@@ -91,11 +93,11 @@ class PayloadRuntimeConfiguration:
         return config
 
     def validate(self) -> None:
-        _non_empty_string(self.payload_id, "payload_id")
-        _non_empty_string(self.uart_device, "uart_device")
-        _integer(self.plane_peer_id, "plane_peer_id", minimum=1, maximum=65534)
-        _integer(self.baudrate, "baudrate", minimum=1)
-        _positive_number(self.ready_timeout_s, "ready_timeout_s")
+        non_empty_string(self.payload_id, "payload_id")
+        non_empty_string(self.uart_device, "uart_device")
+        integer(self.plane_peer_id, "plane_peer_id", minimum=1, maximum=65534)
+        integer(self.baudrate, "baudrate", minimum=1)
+        positive_number(self.ready_timeout_s, "ready_timeout_s")
 
         if self.uwb_role is not None and (
             not isinstance(self.uwb_role, str)
@@ -109,16 +111,16 @@ class PayloadRuntimeConfiguration:
             if len(self.uwb_target_ids_override) > 16:
                 raise ValueError("uwb.target_ids supports at most 16 target IDs")
             for target_id in self.uwb_target_ids_override:
-                _integer(target_id, "UWB target ID", minimum=1, maximum=65534)
+                integer(target_id, "UWB target ID", minimum=1, maximum=65534)
             if len(set(self.uwb_target_ids_override)) != len(self.uwb_target_ids_override):
                 raise ValueError("uwb.target_ids must be unique")
 
         if self.uwb_period_ms is not None:
-            _integer(self.uwb_period_ms, "uwb.period_ms", minimum=20, maximum=60000)
+            integer(self.uwb_period_ms, "uwb.period_ms", minimum=20, maximum=60000)
         if self.uwb_timeout_ms is not None:
-            _integer(self.uwb_timeout_ms, "uwb.timeout_ms", minimum=50, maximum=5000)
+            integer(self.uwb_timeout_ms, "uwb.timeout_ms", minimum=50, maximum=5000)
         if self.uwb_retries is not None:
-            _integer(self.uwb_retries, "uwb.retries", minimum=0, maximum=5)
+            integer(self.uwb_retries, "uwb.retries", minimum=0, maximum=5)
 
         if not self.anchor_id_by_target_id:
             raise ValueError("at least one UWB target-to-anchor mapping is required")
@@ -127,28 +129,9 @@ class PayloadRuntimeConfiguration:
             raise ValueError("at most 16 UWB targets can be configured")
         
         for target_id, anchor_id in self.anchor_id_by_target_id.items():
-            _integer(target_id, "UWB target ID", minimum=1, maximum=65534)
-            _non_empty_string(anchor_id, "UWB anchor ID")
+            integer(target_id, "UWB target ID", minimum=1, maximum=65534)
+            non_empty_string(anchor_id, "UWB anchor ID")
 
         anchor_ids = tuple(self.anchor_id_by_target_id.values())
         if len(set(anchor_ids)) != len(anchor_ids):
             raise ValueError("application anchor IDs must be unique")
-
-
-def _non_empty_string(value: Any, name: str) -> None:
-    if not isinstance(value, str) or not value.strip():
-        raise ValueError(f"{name} must be a non-empty string")
-
-
-def _integer(value: Any, name: str, *, minimum: int, maximum: int | None = None) -> None:
-    if isinstance(value, bool) or not isinstance(value, int):
-        raise ValueError(f"{name} must be an integer")
-    
-    if value < minimum or (maximum is not None and value > maximum):
-        bounds = f"{minimum}..{maximum}" if maximum is not None else f">= {minimum}"
-        raise ValueError(f"{name} must be in {bounds}")
-
-
-def _positive_number(value: Any, name: str) -> None:
-    if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(value) or value <= 0:
-        raise ValueError(f"{name} must be a finite positive number")
