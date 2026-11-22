@@ -6,6 +6,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from shared.infrastructure.configuration import integer, non_empty_string, positive_number
+
 
 @dataclass(frozen=True, slots=True)
 class PayloadPeerConfiguration:
@@ -138,10 +140,10 @@ class VtolRuntimeConfiguration:
         for device in self.devices:
             if not isinstance(device, D3KDeviceConfiguration):
                 raise ValueError("devices must contain D3KDeviceConfiguration values")
-            _non_empty_string(device.device_id, "device_id")
-            _non_empty_string(device.uart_device, f"{device.device_id}.uart_device")
-            _integer(device.baudrate, f"{device.device_id}.baudrate", minimum=1)
-            _positive_number(device.ready_timeout_s, f"{device.device_id}.ready_timeout_s")
+            non_empty_string(device.device_id, "device_id")
+            non_empty_string(device.uart_device, f"{device.device_id}.uart_device")
+            integer(device.baudrate, f"{device.device_id}.baudrate", minimum=1)
+            positive_number(device.ready_timeout_s, f"{device.device_id}.ready_timeout_s")
             _validate_uwb(device.uwb, device.device_id)
             if device.ble_enabled is not None and not isinstance(device.ble_enabled, bool):
                 raise ValueError(f"{device.device_id}.ble.enabled must be a boolean or null")
@@ -169,8 +171,8 @@ class VtolRuntimeConfiguration:
         for peer in payloads:
             if not isinstance(peer, PayloadPeerConfiguration):
                 raise ValueError("ble.payloads must contain payload peer configurations")
-            _non_empty_string(peer.payload_id, "payload_id")
-            _integer(peer.peer_id, "BLE peer_id", minimum=1, maximum=65534)
+            non_empty_string(peer.payload_id, "payload_id")
+            integer(peer.peer_id, "BLE peer_id", minimum=1, maximum=65534)
 
         payload_ids = [peer.payload_id for peer in payloads]
         peer_ids = [peer.peer_id for peer in payloads]
@@ -299,53 +301,30 @@ def _validate_uwb(config: UwbDeviceConfiguration, device_id: str) -> None:
         if len(config.target_ids) > 16:
             raise ValueError(f"{prefix}.target_ids supports at most 16 target IDs")
         for target_id in config.target_ids:
-            _integer(target_id, f"{prefix}.target_ids entry", minimum=1, maximum=65534)
+            integer(target_id, f"{prefix}.target_ids entry", minimum=1, maximum=65534)
         if len(config.target_ids) != len(set(config.target_ids)):
             raise ValueError(f"{prefix}.target_ids must be unique")
         if config.enabled is True and config.role == "initiator" and not config.target_ids:
             raise ValueError(f"{prefix}.target_ids must not be empty for an enabled initiator")
 
     if config.device_id is not None:
-        _integer(config.device_id, f"{prefix}.device_id", minimum=1, maximum=65534)
+        integer(config.device_id, f"{prefix}.device_id", minimum=1, maximum=65534)
     if config.pan_id is not None:
-        _integer(config.pan_id, f"{prefix}.pan_id", minimum=0, maximum=65535)
+        integer(config.pan_id, f"{prefix}.pan_id", minimum=0, maximum=65535)
     if config.channel is not None:
-        _integer(config.channel, f"{prefix}.channel", minimum=5, maximum=9)
+        integer(config.channel, f"{prefix}.channel", minimum=5, maximum=9)
         if config.channel not in (5, 9):
             raise ValueError(f"{prefix}.channel must be 5 or 9")
     if config.tx_antenna_delay is not None:
-        _integer(config.tx_antenna_delay, f"{prefix}.tx_antenna_delay", minimum=0, maximum=65535)
+        integer(config.tx_antenna_delay, f"{prefix}.tx_antenna_delay", minimum=0, maximum=65535)
     if config.rx_antenna_delay is not None:
-        _integer(config.rx_antenna_delay, f"{prefix}.rx_antenna_delay", minimum=0, maximum=65535)
+        integer(config.rx_antenna_delay, f"{prefix}.rx_antenna_delay", minimum=0, maximum=65535)
     if config.period_ms is not None:
-        _integer(config.period_ms, f"{prefix}.period_ms", minimum=20, maximum=60000)
+        integer(config.period_ms, f"{prefix}.period_ms", minimum=20, maximum=60000)
     if config.timeout_ms is not None:
-        _integer(config.timeout_ms, f"{prefix}.timeout_ms", minimum=50, maximum=5000)
+        integer(config.timeout_ms, f"{prefix}.timeout_ms", minimum=50, maximum=5000)
     if config.retries is not None:
-        _integer(config.retries, f"{prefix}.retries", minimum=0, maximum=5)
-
-
-def _non_empty_string(value: Any, name: str) -> None:
-    if not isinstance(value, str) or not value.strip():
-        raise ValueError(f"{name} must be a non-empty string")
-
-
-def _integer(value: Any, name: str, *, minimum: int, maximum: int | None = None) -> None:
-    if isinstance(value, bool) or not isinstance(value, int):
-        raise ValueError(f"{name} must be an integer")
-    if value < minimum or (maximum is not None and value > maximum):
-        bounds = f"{minimum}..{maximum}" if maximum is not None else f">= {minimum}"
-        raise ValueError(f"{name} must be in {bounds}")
-
-
-def _positive_number(value: Any, name: str) -> None:
-    if (
-        isinstance(value, bool)
-        or not isinstance(value, (int, float))
-        or not math.isfinite(value)
-        or value <= 0
-    ):
-        raise ValueError(f"{name} must be a finite positive number")
+        integer(config.retries, f"{prefix}.retries", minimum=0, maximum=5)
 
 
 def _no_extra_keys(value: dict[str, Any], allowed: set[str], path: str) -> None:
