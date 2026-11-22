@@ -8,8 +8,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from d3kble import D3KNode, IncomingRequest
-
-logger = logging.getLogger(__name__)
+from loguru import logger
 
 
 @dataclass

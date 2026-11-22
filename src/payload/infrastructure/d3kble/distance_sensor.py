@@ -13,8 +13,7 @@ from payload.domain.positioning.distance_sensor import DistanceSensor
 from payload.domain.positioning.events import DistanceEvent, DistanceFailure, DistanceSample
 from shared.contracts.messages import FailureReason
 from d3kble import D3KNode
-
-logger = logging.getLogger(__name__)
+from loguru import logger
 
 
 class D3kbleDistanceSensor(DistanceSensor):

@@ -31,8 +31,8 @@ from shared.infrastructure.d3kble.codec import (
 from shared.infrastructure.d3kble.errors import D3kbleCommunicationError
 from shared.infrastructure.d3kble.router import D3kbleMessageRouter, D3kbleRouteRegistration
 from d3kble import D3KNode, IncomingRequest
+from loguru import logger
 
-logger = logging.getLogger(__name__)
 _EVENTS_CLOSED = object()
 
 
