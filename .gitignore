@@ -131,3 +131,5 @@ temp/
 *.tlog
 *.tlog.*
 *.raw
+# Local-only scripts
+*.local.py
