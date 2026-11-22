@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
-REPO_ROOT="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
+REPO_ROOT="${AVION_REPO_ROOT:-$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)}"
 ARDUPILOT_ROOT="${AVION_ARDUPILOT_ROOT:-/home/dev/ardupilot}"
 cd "$ARDUPILOT_ROOT"
 
@@ -12,7 +12,7 @@ PARAM_FILE="${AVION_SITL_PARAM_FILE-$REPO_ROOT/simulation/config/gazebo-iris-gim
 
 if [[ "$VEHICLE" == ArduPlane ]]; then
   # QuadPlane needs this Lua applet to turn LANDING_TARGET measurements into
-  # QLOITER/QLAND position corrections. Repair old images at every launch.
+  # QLOITER/QLAND position corrections.
   source_script="$PWD/libraries/AP_Scripting/applets/plane_precland.lua"
   target_script="$PWD/scripts/plane_precland.lua"
   if [[ ! -f "$source_script" || ! -r "$source_script" || ! -s "$source_script" ]]; then

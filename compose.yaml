@@ -42,13 +42,6 @@ services:
       - autolander_venv:/workspace/avion-cargo/.venv
       - poetry_cache:/home/dev/.cache/pypoetry
       - /tmp/.X11-unix:/tmp/.X11-unix:rw
-      # Keep the shorthand launcher current even with an older Docker image.
-      - type: bind
-        source: ./docker/avion-sitl.sh
-        target: /usr/local/bin/avion-sitl
-        read_only: true
-        bind:
-          create_host_path: false
     stop_grace_period: 20s
 
 volumes:

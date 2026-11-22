@@ -45,7 +45,7 @@ L'ancien monde `iris_runway_aruco.sdf` reste disponible pour des essais ArUco av
 Depuis la racine du dépôt, activez le scénario tricopter puis lancez la simulation :
 
 ```bash
-docker compose -f compose.yaml -f compose-full-sim.yaml up -d dev
+docker compose -f compose.yaml -f compose-full-sim.yaml up --build --force-recreate -d dev
 COMPOSE_FILE=compose.yaml:compose-full-sim.yaml bash scripts/launch-simulation.sh
 ```
 
@@ -54,14 +54,18 @@ La préparation Docker installe le groupe optionnel `faruco`. Pour un conteneur 
 dont les dépendances ont déjà été préparées, exécutez `docker compose exec dev poetry install --with dev,faruco`.
 Après un changement de cible ou de dimensions, relancez Gazebo et Autolander pour charger
 à la fois le monde et les paramètres de détection.
-Le lancement complet appelle directement [scripts/launch-sitl.sh](../scripts/launch-sitl.sh)
-depuis le dépôt monté dans le conteneur, y compris lorsque l'image Docker est ancienne.
-Compose monte également [docker/avion-sitl.sh](../docker/avion-sitl.sh) sur
-`/usr/local/bin/avion-sitl` : le raccourci `docker compose exec dev avion-sitl` utilise
-ainsi le lanceur du dépôt même avec une ancienne image. Ce montage est appliqué lors
-de la création du conteneur. Après une mise à jour du dépôt, arrêtez la simulation puis
-relancez la commande `docker compose ... up -d dev` ci-dessus avec vos fichiers Compose
-habituels pour recréer le conteneur si sa configuration a changé.
+Le Dockerfile copie [scripts/launch-sitl.sh](../scripts/launch-sitl.sh) dans l'image
+sous `/usr/local/bin/avion-sitl`. Le lancement complet et le raccourci `avion-sitl`
+exécutent cette même copie, figée lors de la construction de l'image.
+`AVION_REPO_ROOT=/workspace/avion-cargo`, défini dans l'image, permet au lanceur
+installé de retrouver les paramètres de simulation dans le dépôt monté.
+
+Après une modification du lanceur ou du Dockerfile, arrêtez la simulation puis
+reconstruisez et recréez le conteneur avec la commande ci-dessus. Si seules les
+variables d'environnement ou les publications de ports de Compose ont changé,
+utilisez `docker compose -f compose.yaml -f compose-full-sim.yaml up --force-recreate -d dev`,
+avec les mêmes fichiers Compose X11/NVIDIA éventuels. Un simple `restart` n'applique
+pas ces changements. Voir les [options de `docker compose up`](https://docs.docker.com/reference/cli/docker/compose/up/).
 
 Avant chaque démarrage d'ArduPlane, le lanceur vérifie et installe
 `scripts/plane_precland.lua` dans le dossier ArduPilot utilisé comme répertoire de travail
@@ -70,19 +74,17 @@ absent ou cassé et refuse de démarrer si la source manque. Un script personnal
 présent est préservé et signalé pour inspection s'il diffère de l'applet fournie.
 Pour une installation native, définissez `AVION_ARDUPILOT_ROOT` avec le chemin d'ArduPilot.
 
-Pour démarrer uniquement SITL dans un conteneur existant avec le scénario tricopter,
-utilisez le lanceur du dépôt afin de bénéficier du correctif même sans reconstruire
-l'image ni recréer le conteneur :
+Pour démarrer uniquement SITL dans le conteneur configuré pour le scénario tricopter :
 
 ```bash
-docker compose exec dev bash /workspace/avion-cargo/scripts/launch-sitl.sh
+docker compose exec dev /usr/local/bin/avion-sitl
 ```
 
 Si `avion-sitl` affiche directement `SIM_VEHICLE: Start` sans le message
 `QuadPlane precision landing script ready`, l'ancien lanceur est encore installé dans
-le conteneur. Utilisez la commande explicite ci-dessus, ou recréez le conteneur pour
-appliquer le montage. Une modification du Dockerfile seule ne met pas à jour les fichiers
-d'un conteneur déjà créé.
+le conteneur. Reconstruisez l'image et recréez le conteneur avec `up --build --force-recreate -d dev`,
+en conservant vos fichiers Compose. Une recréation seule conserve le lanceur de
+l'image existante ; une modification du dépôt n'actualise pas cette copie.
 
 Le terminal doit afficher `QuadPlane precision landing script ready`, puis MAVProxy
 doit recevoir `PLND: Loaded`. Le fichier [tricopter-vtol.parm](config/tricopter-vtol.parm)
@@ -111,14 +113,14 @@ ports et l'environnement au conteneur depuis la racine du dépôt sur l'hôte :
 
 ```bash
 export COMPOSE_FILE=compose.yaml:compose-full-sim.yaml
-docker compose up -d dev
+docker compose up --force-recreate -d dev
 bash scripts/launch-simulation.sh
 ```
 
 Conservez vos fichiers Compose X11/NVIDIA éventuels dans `COMPOSE_FILE` ; pour Iris,
-omettez `compose-full-sim.yaml`. Une reconstruction de l'image n'est pas nécessaire,
-car le lanceur est lu depuis le dépôt monté. `restart` seul n'applique pas les nouveaux
-ports ni les nouvelles variables d'environnement.
+omettez `compose-full-sim.yaml`. Si le lanceur embarqué dans l'image a aussi changé,
+ajoutez `--build`. `restart` seul n'applique pas les nouveaux ports ni les nouvelles
+variables d'environnement.
 
 Dans QGroundControl sur le même hôte, ouvrez **Settings → Comm Links → Add New Link** :
 

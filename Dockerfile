@@ -105,7 +105,8 @@ RUN printf '%s\n' \
 COPY --chown=root:root docker/prepare-workspace.sh /usr/local/bin/prepare-workspace.sh
 COPY --chown=root:root docker/container-start.sh /usr/local/bin/container-start.sh
 COPY --chown=root:root docker/fix-volume-permissions.sh /usr/local/bin/fix-volume-permissions.sh
-COPY --chown=root:root docker/avion-sitl.sh /usr/local/bin/avion-sitl
+COPY --chown=root:root --chmod=0755 scripts/launch-sitl.sh /usr/local/bin/avion-sitl
+ENV AVION_REPO_ROOT=/workspace/avion-cargo
 RUN sudo chmod 0755 /usr/local/bin/prepare-workspace.sh /usr/local/bin/container-start.sh /usr/local/bin/fix-volume-permissions.sh
 
 RUN pipx install --force 'poetry==2.4.3' \

@@ -1,5 +1,5 @@
 import os
-import shlex
+import shutil
 import subprocess
 from pathlib import Path
 from types import SimpleNamespace
@@ -23,17 +23,19 @@ def sitl(tmp_path, request):
     simulator.write_text('#!/bin/bash\nprintf "%s\\n" "$PWD" "$@" > "$SITL_INVOCATION"\nexit "${SITL_EXIT_CODE:-0}"\n')
     simulator.chmod(0o755)
 
+    env = {key: value for key, value in os.environ.items() if not key.startswith("AVION_")}
     launcher = LAUNCHER
+    repo_root = REPO_ROOT
     if request.param == "docker":
-        # Execute the wrapper shipped and mounted by Docker, relocating only the
-        # path so this integration test also works outside Docker.
-        wrapper = (REPO_ROOT / "docker" / "avion-sitl.sh").read_text()
-        launcher = tmp_path / "avion-sitl"
-        launcher.write_text(
-            wrapper.replace("/workspace/avion-cargo/scripts/launch-sitl.sh", shlex.quote(str(LAUNCHER)))
-        )
+        launcher = tmp_path / "image/usr/local/bin/avion-sitl"
+        launcher.parent.mkdir(parents=True)
+        shutil.copy2(LAUNCHER, launcher)
+        repo_root = tmp_path / "mounted checkout"
+        checkout_launcher = repo_root / "scripts/launch-sitl.sh"
+        checkout_launcher.parent.mkdir(parents=True)
+        checkout_launcher.write_text("#!/bin/bash\nexit 99\n")
+        env["AVION_REPO_ROOT"] = str(repo_root)
 
-    env = {key: value for key, value in os.environ.items() if not key.startswith("AVION_SITL_")}
     env.update(
         AVION_ARDUPILOT_ROOT=str(root),
         AVION_SITL_VEHICLE="ArduPlane",
@@ -44,11 +46,12 @@ def sitl(tmp_path, request):
     )
 
     def run(**overrides):
-        return subprocess.run(
-            ["bash", str(launcher)], cwd=tmp_path, env={**env, **overrides}, capture_output=True, text=True
-        )
+        environment = {key: value for key, value in {**env, **overrides}.items() if value is not None}
+        return subprocess.run([str(launcher)], cwd=tmp_path, env=environment, capture_output=True, text=True)
 
-    return SimpleNamespace(root=root, source=source, target=target, invocation=invocation, env=env, run=run)
+    return SimpleNamespace(
+        root=root, repo_root=repo_root, source=source, target=target, invocation=invocation, env=env, run=run
+    )
 
 
 @pytest.mark.parametrize("broken_link", [False, True])
@@ -134,3 +137,24 @@ def test_copter_does_not_require_plane_applet(sitl):
 
 def test_launcher_propagates_simulator_failure(sitl):
     assert sitl.run(SITL_EXIT_CODE="23").returncode == 23
+
+
+def test_default_parameters_resolve_from_the_workspace_even_when_launcher_is_installed_elsewhere(sitl):
+    result = sitl.run(AVION_SITL_PARAM_FILE=None)
+
+    assert result.returncode == 0, result.stderr
+    assert sitl.invocation.read_text().splitlines()[-1] == (
+        f"--add-param-file={sitl.repo_root}/simulation/config/gazebo-iris-gimbal.parm"
+    )
+
+
+@pytest.mark.parametrize("output", [None, "", "tcpin:0.0.0.0:5761"])
+def test_launcher_reads_optional_gcs_output_from_its_environment(sitl, output):
+    result = sitl.run(AVION_SITL_GCS_OUT=output)
+
+    assert result.returncode == 0, result.stderr
+    arguments = sitl.invocation.read_text().splitlines()
+    if output:
+        assert arguments[-2:] == ["--out", output]
+    else:
+        assert "--out" not in arguments
