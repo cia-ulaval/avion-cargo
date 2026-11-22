@@ -76,7 +76,7 @@
             </visual>
         </link>
         <link name="d3k_center_antenna">
-            <pose relative_to="chassis">0 0 0.079 0 0 0</pose>
+            <pose relative_to="chassis">0 0 0.09 0 0 0</pose>
             <gravity>false</gravity>
             <inertial>
                 <mass>0.001</mass>
@@ -274,7 +274,7 @@
             </axis>
         </joint>
         <joint name="d3k_center_fixed_joint" type="fixed">
-            <pose relative_to="chassis">0 0 0.079 0 0 0</pose>
+            <pose relative_to="chassis">0 0 0.09 0 0 0</pose>
             <parent>chassis</parent>
             <child>d3k_center_antenna</child>
         </joint>
