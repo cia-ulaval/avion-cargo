@@ -57,7 +57,7 @@ RUN set -eux; \
     Tools/environment_install/install-prereqs-ubuntu.sh -y; \
     ./waf configure --board sitl --debug; \
     ./waf copter -j2; \
-    ./waf plane -j2 \
+    ./waf plane -j2; \
     mkdir -p /home/dev/ardupilot/scripts; \
     ln -sfn \
       ../libraries/AP_Scripting/applets/plane_precland.lua \
