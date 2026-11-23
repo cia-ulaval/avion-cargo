@@ -94,12 +94,11 @@ si un failsafe se déclenche ou si le pilote reprend les commandes. Une perte
 de mesures n'interrompt pas l'atterrissage. Après une exception Lua, la consigne
 est libérée ; l'expiration native couvre aussi un arrêt complet du moteur Lua.
 
-Les anciens réglages JSON `yaw_alignment` sont encore lisibles pour faciliter
-la migration, mais ne commandent plus le vol. Si `enabled=true` subsiste,
-Autolander émet un avertissement. L'ancien superviseur Python reste dans le
-dépôt, déconnecté du service. Reporter les réglages utiles dans `QYAW_*` puis
-retirer le bloc JSON. Aucun processus ne doit lancer séparément l'ancien
-superviseur ou un autre contrôleur de lacet.
+L'alignement du cap est configuré exclusivement avec les paramètres `QYAW_*`
+sur le FC. L'ancien superviseur Python et ses commandes de vol ont été supprimés.
+Retirer le bloc `yaw_alignment` des anciens fichiers JSON : il est désormais
+rejeté par la validation de configuration. Autolander publie les mesures de
+position et d'orientation dans `LANDING_TARGET`.
 
 ## Descente de 20 m avec un objectif de 45 secondes
 

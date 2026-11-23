@@ -13,7 +13,6 @@ from domain.content_streamer import ContentStreamer
 from domain.models import Pose3D, TargetedMarker
 from domain.rigid_transform import RigidTransform
 from domain.tracking import TrackingResult
-from domain.yaw_alignment import YawAlignmentConfig
 
 
 @dataclass
@@ -383,7 +382,7 @@ def test_each_capture_is_published_once_with_its_orientation(monkeypatch, sample
     assert drone.measurements == [{"body_from_marker": transform, "captured_at_s": 100}]
 
 
-def test_legacy_configuration_cannot_start_a_companion_yaw_controller(sample_drone_status):
+def test_tracking_starts_only_measurement_and_telemetry_workers(sample_drone_status):
     from domain.drone import Drone
 
     service = build_service(FakeDrone(sample_drone_status()))
@@ -394,12 +393,9 @@ def test_legacy_configuration_cannot_start_a_companion_yaw_controller(sample_dro
         frame_buffer=service.frame_buffer,
         pose_buffer=service.pose_buffer,
         drone_status_buffer=service.drone_status_buffer,
-        yaw_alignment=YawAlignmentConfig(enabled=True),
     )
     service._start_worker = Mock()
     service.track_target()
     assert [call.args[0] for call in service._start_worker.call_args_list] == ["tracking", "telemetry"]
     service.stop()
-    service.drone.request_mode.assert_not_called()
-    service.drone.prepare_yaw_control.assert_not_called()
-    service.drone.send_yaw_input.assert_not_called()
+    service.drone.close.assert_called_once_with()

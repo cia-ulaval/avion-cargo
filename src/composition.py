@@ -172,5 +172,4 @@ def build_landing_service(config: AutolanderConfiguration, use_simulated_cam: bo
         pose_buffer=PoseBuffer(),
         drone_status_buffer=DroneStatusBuffer(),
         telemetry_dps=config.streaming_config.data.dps,
-        yaw_alignment=config.yaw_alignment,
     )

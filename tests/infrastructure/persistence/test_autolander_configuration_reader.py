@@ -11,6 +11,7 @@ from infrastructure.persistence.configuration_models import (
     StreamingVideoConfiguration,
 )
 from tests.conftest import write_config
+from utils.validators.validation_error import ValidationError
 
 
 def test_reader_maps_a_valid_json_file_to_runtime_configuration_objects(
@@ -50,32 +51,10 @@ def test_reader_preserves_optional_fc_timeout_settings(tmp_path, valid_config_da
     assert config.drone_connection_config.fail_on_timeout is False
 
 
-def test_alignment_requires_explicit_configuration_and_preserves_marker_direction(tmp_path, valid_config_data):
-    path = write_config(tmp_path, valid_config_data)
-    assert not AutolanderConfigurationReader(path).read().yaw_alignment.enabled
-    valid_config_data["yaw_alignment"] = {
-        "enabled": True,
-        "marker_forward_deg": 90,
-        "trigger_deg": 15,
-        "detection_stable_time_s": 2,
-        "detection_loss_timeout_s": 3,
-        "attempt_timeout_s": 40,
-        "max_attempts": 5,
-        "retry_descent_m": 2.5,
-        "min_height_m": 4,
-        "cooldown_s": 0.5,
-    }
-    config = AutolanderConfigurationReader(write_config(tmp_path, valid_config_data)).read()
-    assert config.yaw_alignment.enabled
-    assert config.yaw_alignment.marker_forward_deg == 90
-    assert config.yaw_alignment.trigger_deg == 15
-    assert config.yaw_alignment.detection_stable_time_s == 2
-    assert config.yaw_alignment.detection_loss_timeout_s == 3
-    assert config.yaw_alignment.attempt_timeout_s == 40
-    assert config.yaw_alignment.max_attempts == 5
-    assert config.yaw_alignment.retry_descent_m == 2.5
-    assert config.yaw_alignment.min_height_m == 4
-    assert config.yaw_alignment.cooldown_s == 0.5
+def test_reader_rejects_removed_companion_yaw_configuration(tmp_path, valid_config_data):
+    valid_config_data["yaw_alignment"] = {"enabled": True}
+    with pytest.raises(ValidationError, match="Unknown root keys.*yaw_alignment"):
+        AutolanderConfigurationReader(write_config(tmp_path, valid_config_data))
 
 
 def test_reader_resolves_relative_calibration_paths_from_the_config_file_directory(

@@ -26,7 +26,7 @@ Il diffuse également la vidéo et la télémétrie dans un navigateur.
 
 Le [contrôleur Lua d’alignement QuadPlane](ardupilot/README.md) corrige le lacet sur le FC
 pendant la descente en `QLAND`. Il nécessite le correctif ArduPilot fourni dans ce dépôt,
-intégré à la construction Docker. Autolander ne démarre plus son superviseur de lacet.
+intégré à la construction Docker. Le superviseur de lacet Python a été supprimé.
 
 ## Documentation
 

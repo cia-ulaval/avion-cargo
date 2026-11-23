@@ -4,7 +4,6 @@ from typing import Optional
 
 from domain.camera_mount import CameraMount
 from domain.models import TargetedMarker
-from domain.yaw_alignment import YawAlignmentConfig
 
 
 @dataclass(frozen=True, slots=True)
@@ -53,4 +52,3 @@ class AutolanderConfiguration:
     camera_config: CameraConfiguration
     streaming_config: StreamingConfiguration
     drone_connection_config: DroneConnectionConfiguration
-    yaw_alignment: YawAlignmentConfig = YawAlignmentConfig()

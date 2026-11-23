@@ -11,7 +11,6 @@ from domain.buffer import DroneStatusBufferPort, FrameBufferPort, PoseBufferPort
 from domain.content_streamer import ContentStreamer
 from domain.drone import Drone
 from domain.tracking import TrackingStatus
-from domain.yaw_alignment import YawAlignmentConfig
 
 
 class DroneAutolandingService:
@@ -26,7 +25,6 @@ class DroneAutolandingService:
         drone_status_buffer: DroneStatusBufferPort,
         telemetry_dps: float = 5,
         shutdown_timeout_s: float = 5,
-        yaw_alignment: YawAlignmentConfig = YawAlignmentConfig(),
     ):
         if not isfinite(telemetry_dps) or telemetry_dps <= 0:
             raise ValueError("telemetry_dps must be finite and positive")
@@ -40,8 +38,6 @@ class DroneAutolandingService:
         self.content_streamer = content_streamer
         self.telemetry_dps = telemetry_dps
         self.shutdown_timeout_s = shutdown_timeout_s
-        if yaw_alignment.enabled:
-            logger.warning("Legacy yaw_alignment settings are ignored; configure QYAW_* on the flight controller")
         self._threads: dict[str, Thread] = dict()
         self._tracking_started: bool = False
         self._stop_event = Event()
