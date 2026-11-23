@@ -24,6 +24,9 @@
 Le logiciel détecte la cible, estime sa position et la transmet au contrôleur de vol via MAVLink.
 Il diffuse également la vidéo et la télémétrie dans un navigateur.
 
+Le [superviseur d’alignement QuadPlane](https://github.com/cia-ulaval/avion-cargo/wiki/Alignement-autonome-du-lacet-QuadPlane) peut interrompre une descente en `QLAND`,
+aligner le lacet sur le marqueur en `GUIDED` VTOL, puis demander le retour en `QLAND`.
+
 ## Documentation
 
 Consultez le **[wiki du projet](https://github.com/cia-ulaval/avion-cargo/wiki)** pour l’installation,
@@ -32,6 +35,8 @@ la calibration de la caméra, les essais en simulation, l’utilisation sur Rasp
 Les commandes d’installation, d’exécution, de gestion des dépendances, de formatage et de tests sont regroupées dans
 **[Commandes pour développeurs](https://github.com/cia-ulaval/avion-cargo/wiki/Commandes-pour-developpeurs)**.
 
+Le [guide de simulation QuadPlane](simulation/README.md#tricopter-quadplane-avec-docker) décrit le lancement Docker
+et l'installation automatique du script nécessaire au centrage sur le marqueur en `QLOITER` et `QLAND`.
 
 ## Type de marqueur
 

@@ -101,6 +101,7 @@ recordings/
 *.npy
 *.npz
 *.csv
+!tests/fixtures/quadplane_hold_settling.csv
 
 # -------------------------------------------------
 # Secrets

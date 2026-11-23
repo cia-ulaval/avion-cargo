@@ -6,7 +6,7 @@ from dataclasses import dataclass
 class MavlinkConnectionParams:
     address: str
     port: int = 0
-    timeout: float = 10.0
+    timeout: float = 30.0
     baud_rate: int = 921600
     fail_on_timeout: bool = True
 

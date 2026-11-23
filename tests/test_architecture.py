@@ -1,5 +1,3 @@
-"""Keep domain and application packages independent from technical adapters."""
-
 import ast
 import importlib.util
 import subprocess

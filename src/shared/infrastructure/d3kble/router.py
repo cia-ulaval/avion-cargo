@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import asyncio
 import inspect
-import logging
 import threading
 from dataclasses import dataclass
 from typing import Any
