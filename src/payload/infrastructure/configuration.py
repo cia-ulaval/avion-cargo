@@ -2,11 +2,20 @@ from __future__ import annotations
 
 import json
 import math
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
 from shared.infrastructure.configuration import integer, non_empty_string, positive_number
+
+
+@dataclass(frozen=True, slots=True)
+class WheelTransform2D:
+    """Position and orientation of a wheel in the payload's 2D frame."""
+
+    x: float
+    y: float
+    yaw: float
 
 
 @dataclass(frozen=True, slots=True)
@@ -15,6 +24,7 @@ class PayloadRuntimeConfiguration:
     uart_device: str
     plane_peer_id: int
     anchor_id_by_target_id: dict[int, str]
+    wheel_transforms: dict[str, WheelTransform2D] = field(default_factory=dict)
     uwb_role: str | None = None
     uwb_target_ids_override: tuple[int, ...] | None = None
     uwb_period_ms: int | None = None
@@ -52,6 +62,34 @@ class PayloadRuntimeConfiguration:
         if not isinstance(raw, dict):
             raise ValueError("payload configuration must be a JSON object")
 
+        raw_wheels = raw.get("wheels", {})
+        if not isinstance(raw_wheels, dict):
+            raise ValueError("wheels must be an object mapping wheel names to transforms")
+
+        wheel_transforms: dict[str, WheelTransform2D] = {}
+        for wheel_name, raw_transform in raw_wheels.items():
+            non_empty_string(wheel_name, "wheel name")
+            if not isinstance(raw_transform, dict):
+                raise ValueError(f"wheels.{wheel_name} must be an object")
+
+            missing = {"x", "y", "yaw"} - raw_transform.keys()
+            if missing:
+                missing_fields = ", ".join(sorted(missing))
+                raise ValueError(f"wheels.{wheel_name} is missing required field(s): {missing_fields}")
+
+            values: dict[str, float] = {}
+            for axis in ("x", "y", "yaw"):
+                value = raw_transform[axis]
+                if (
+                    isinstance(value, bool)
+                    or not isinstance(value, (int, float))
+                    or not math.isfinite(value)
+                ):
+                    raise ValueError(f"wheels.{wheel_name}.{axis} must be a finite number")
+                values[axis] = float(value)
+
+            wheel_transforms[wheel_name] = WheelTransform2D(**values)
+
         uwb = raw.get("uwb")
 
         if not isinstance(uwb, dict):
@@ -81,6 +119,7 @@ class PayloadRuntimeConfiguration:
             uart_device=raw.get("uart_device"),
             plane_peer_id=raw.get("plane_peer_id"),
             anchor_id_by_target_id=anchor_mapping,
+            wheel_transforms=wheel_transforms,
             uwb_role=uwb.get("role"),
             uwb_target_ids_override=(tuple(raw_target_ids) if raw_target_ids is not None else None),
             uwb_period_ms=uwb.get("period_ms"),
@@ -98,6 +137,21 @@ class PayloadRuntimeConfiguration:
         integer(self.plane_peer_id, "plane_peer_id", minimum=1, maximum=65534)
         integer(self.baudrate, "baudrate", minimum=1)
         positive_number(self.ready_timeout_s, "ready_timeout_s")
+
+        if not isinstance(self.wheel_transforms, dict):
+            raise ValueError("wheel_transforms must be a mapping")
+        for wheel_name, transform in self.wheel_transforms.items():
+            non_empty_string(wheel_name, "wheel name")
+            if not isinstance(transform, WheelTransform2D):
+                raise ValueError(f"wheel_transforms[{wheel_name!r}] must be a WheelTransform2D")
+            for axis in ("x", "y", "yaw"):
+                value = getattr(transform, axis)
+                if (
+                    isinstance(value, bool)
+                    or not isinstance(value, (int, float))
+                    or not math.isfinite(value)
+                ):
+                    raise ValueError(f"wheels.{wheel_name}.{axis} must be a finite number")
 
         if self.uwb_role is not None and (
             not isinstance(self.uwb_role, str)
