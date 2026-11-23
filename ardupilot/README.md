@@ -13,43 +13,45 @@ le véhicule poursuit l'atterrissage sans garantir l'alignement complet.
 
 ## Firmware nécessaire
 
-Le Lua seul ne suffit pas avec la révision ArduPilot du projet,
-`e5e9709416e388d355bb37927e01fc7cb923f25d`. Son API de scripting ne fournit pas
-de commande directe du lacet en QLAND. L'override RC a été écarté car il peut
-rafraîchir l'activité radio et masquer une perte du récepteur. Voir les
-[bindings de cette révision](https://github.com/ArduPilot/ardupilot/blob/e5e9709416e388d355bb37927e01fc7cb923f25d/libraries/AP_Scripting/generator/description/bindings.desc)
-et la [lecture des entrées RC](https://github.com/ArduPilot/ardupilot/blob/e5e9709416e388d355bb37927e01fc7cb923f25d/libraries/RC_Channel/RC_Channels.cpp).
-
-Le [correctif fourni](patches/0001-qland-lua-yaw-rate.patch) ajoute
-`quadplane:set_landing_yaw_rate(deg_s)` et `quadplane:clear_landing_yaw_rate()`.
+Le firmware est maintenu directement dans le dépôt voisin `../ardupilot`.
+Les sources `ArduPlane/quadplane.{h,cpp}` et les bindings Lua de ce dépôt
+fournissent `quadplane:set_landing_yaw_rate(deg_s)` et
+`quadplane:clear_landing_yaw_rate()`. Aucun fichier patch n'est conservé dans
+Autolander. L'override RC a été écarté car il peut rafraîchir l'activité radio et
+masquer une perte du récepteur.
 La consigne expire dans le firmware après **200 ms** sans rafraîchissement.
 Elle est acceptée uniquement en QLAND armé, pendant la descente et la phase finale,
 avec AHRS sain, sans failsafe actif et sans entrée pilote de roulis, tangage ou lacet.
 En phase finale, le firmware refuse la consigne à un mètre ou moins selon sa hauteur
 estimée au-dessus du sol. Le Lua conserve sa propre coupure, à quatre mètres
 au-dessus du marqueur par défaut, même si la phase finale commence plus haut.
-Chaque changement de mode efface la consigne. Le correctif ne modifie pas les
+Chaque changement de mode efface la consigne. Cette API ne modifie pas les
 entrées RC ni leurs horodatages. Un firmware standard sans cette API produit
 un message explicite au chargement du script et n'effectue aucune correction.
 
-Docker applique ce correctif à la révision fixée avant compilation. Les scripts
-et le lanceur restent inclus dans l'image. Depuis la racine du dépôt :
+Docker compile les sources locales de `../ardupilot`, y compris les modifications
+non commitées, via le contexte de construction additionnel `avion-cargo` de Compose,
+qui pointe vers le dossier parent.
+Ce dépôt doit donc être présent à côté d'Autolander. Les sous-modules sont
+initialisés dans l'image ; les scripts et le lanceur y sont également inclus.
+Depuis la racine du dépôt Autolander :
 
 ```bash
 docker compose -f compose.yaml -f compose-full-sim.yaml up --build --force-recreate -d dev
 COMPOSE_FILE=compose.yaml:compose-full-sim.yaml bash scripts/launch-simulation.sh
 ```
 
-Pour un FC physique, appliquer le correctif à cette même révision d'ArduPilot,
-compiler ArduPlane pour la carte avec le scripting activé, puis installer le
-firmware et copier le Lua dans `APM/scripts/` sur la carte SD. Ce travail ne
-flashe aucun FC. Les essais fournis couvrent SITL ; le comportement sur le
-matériel et le budget mémoire de sa carte restent à valider.
+Pour une construction Docker sans Compose, fournir le même contexte :
 
 ```bash
-git -C /chemin/ardupilot apply --check /chemin/autolander/ardupilot/patches/0001-qland-lua-yaw-rate.patch
-git -C /chemin/ardupilot apply /chemin/autolander/ardupilot/patches/0001-qland-lua-yaw-rate.patch
+docker build --build-context avion-cargo=.. -t avion-cargo-dev:ubuntu24.04 .
 ```
+
+Pour un FC physique, compiler ArduPlane depuis ce même dépôt `../ardupilot`
+pour la carte avec le scripting activé, puis installer le firmware et copier le
+Lua dans `APM/scripts/` sur la carte SD. Ce travail ne flashe aucun FC. Les essais
+fournis couvrent SITL ; le comportement sur le matériel et le budget mémoire de
+sa carte restent à valider.
 
 Activer `SCR_ENABLE=1`, redémarrer le FC et vérifier le message `QYAW: loaded`.
 Les paramètres `QYAW_*` deviennent disponibles après chargement du script ;
@@ -148,7 +150,7 @@ param set Q_LAND_FINAL_SPD 0.3
 param set PLND_XY_DIST_MAX 2.5
 ```
 
-Le correctif firmware doit également être reconstruit pour autoriser le lacet
+Le firmware du dépôt `../ardupilot` doit également être reconstruit pour autoriser le lacet
 pendant la phase finale. Les paramètres de descente seuls n'ajoutent pas cette
 possibilité à un ancien binaire.
 

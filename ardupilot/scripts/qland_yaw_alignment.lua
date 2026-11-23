@@ -21,7 +21,7 @@ local FORWARD = parameter(11, "FORWARD", 0)
 local supported, api = pcall(function()
     return quadplane.set_landing_yaw_rate and quadplane.clear_landing_yaw_rate
 end)
-assert(supported and api, "QYAW: install firmware patch 0001-qland-lua-yaw-rate")
+assert(supported and api, "QYAW: firmware lacks landing yaw API")
 mavlink:init(10, 1)
 mavlink:register_rx_msgid(149)
 

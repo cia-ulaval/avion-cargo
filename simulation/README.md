@@ -15,7 +15,7 @@ sudo apt install ros-jazzy-ros-gz-image
 poetry install --with faruco
 ```
 
-La commande `image_bridge` est décrite dans la [documentation de ros_gz_image](https://docs.ros.org/en/jazzy/p/ros_gz_image/). Les révisions présentes lors de la copie sont conservées dans [versions.txt](versions.txt). Utilisez ces révisions d'ArduPilot et du plugin pour retrouver la même base de simulation.
+La commande `image_bridge` est décrite dans la [documentation de ros_gz_image](https://docs.ros.org/en/jazzy/p/ros_gz_image/). Les révisions de référence sont conservées dans [versions.txt](versions.txt). Docker compile le dépôt local `../ardupilot`, avec son API de lacet QLAND, et utilise la révision fixée du plugin ArduPilot Gazebo.
 
 Les modèles standards `runway`, `iris_with_gimbal` et `iris_with_standoffs` restent fournis par le plugin ArduPilot. Le dossier `models/gimbal_small_3d` contient la caméra modifiée et doit être recherché avant les modèles standards.
 
@@ -42,7 +42,10 @@ L'ancien monde `iris_runway_aruco.sdf` reste disponible pour des essais ArUco av
 
 ## Tricopter QuadPlane avec Docker
 
-Depuis la racine du dépôt, activez le scénario tricopter puis lancez la simulation :
+Le dépôt ArduPilot contenant l'API de lacet doit être présent dans `../ardupilot`.
+Compose transmet ses sources locales à Docker comme contexte de construction
+additionnel. Depuis la racine d'Autolander, activez le scénario tricopter puis
+lancez la simulation :
 
 ```bash
 docker compose -f compose.yaml -f compose-full-sim.yaml up --build --force-recreate -d dev
@@ -96,9 +99,9 @@ Après ce message, activez-le dans MAVProxy avec `param set QYAW_ENABLE 1`.
 Ce paramètre Lua n'est disponible qu'après chargement du script et n'est pas
 initialisé par le fichier de valeurs par défaut de SITL sur cette révision.
 `QYAW_MIN_HGT=4` l'arrête sous quatre mètres au-dessus de la cible.
-Le Dockerfile applique le correctif du
-firmware avant compilation et copie le script dans l'image. Une modification du
-Lua ou du correctif nécessite donc aussi `up --build --force-recreate -d dev`.
+Le Dockerfile compile le firmware depuis `../ardupilot` et copie le script dans
+l'image. Une modification du Lua ou des sources ArduPilot nécessite donc aussi
+`up --build --force-recreate -d dev`.
 Les paramètres, le protocole et l'installation sur un FC sont décrits dans le
 [guide d'alignement Lua](../ardupilot/README.md).
 

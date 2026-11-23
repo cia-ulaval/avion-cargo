@@ -1,4 +1,5 @@
-ardupilot=e5e9709416e388d355bb37927e01fc7cb923f25d
+# ArduPilot base revision; Docker builds the local ../ardupilot working tree.
+ardupilot=5ec9286ba112717fbef0741a6e51452d6037dfdf
 ardupilot_gazebo=65937b77aace16735df6f192badb0e6b4eddd056
 autolander=317360feaff482a8d89e2756af4f2289ce0e50f7
 ubuntu=24.04

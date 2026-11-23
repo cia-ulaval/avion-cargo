@@ -61,22 +61,17 @@ RUN if id ubuntu >/dev/null 2>&1; then userdel -r ubuntu; fi \
     && chown -R dev:dev /workspace /home/dev
 
 COPY simulation/versions.txt /tmp/versions.txt
-COPY ardupilot/patches/0001-qland-lua-yaw-rate.patch /tmp/qland-lua-yaw-rate.patch
 
 USER dev
 WORKDIR /home/dev
 ENV PATH="/home/dev/.local/bin:/home/dev/venv-ardupilot/bin:${PATH}"
 RUN pipx install 'poetry>=2.1.3'
 
+COPY --from=avion-cargo --chown=dev:dev /ardupilot/ /home/dev/ardupilot/
+
 RUN set -eux; \
-    ARDUPILOT_REF="$(sed -n 's/^ardupilot=//p' /tmp/versions.txt)"; \
-    test -n "${ARDUPILOT_REF}"; \
-    git clone --filter=blob:none --no-checkout https://github.com/ArduPilot/ardupilot.git /home/dev/ardupilot; \
-    git -C /home/dev/ardupilot checkout --detach "${ARDUPILOT_REF}"; \
-    git -C /home/dev/ardupilot submodule update --init --recursive; \
     cd /home/dev/ardupilot; \
-    git apply --check /tmp/qland-lua-yaw-rate.patch; \
-    git apply /tmp/qland-lua-yaw-rate.patch; \
+    git submodule update --init --recursive; \
     Tools/environment_install/install-prereqs-ubuntu.sh -y; \
     ./waf configure --board sitl --debug; \
     ./waf copter -j2; \
@@ -143,7 +138,7 @@ if [[ "$VEHICLE" == ArduPlane ]]; then
     target_script="$PWD/scripts/$applet.lua"
     if [[ ! -f "$source_script" || ! -r "$source_script" || ! -s "$source_script" ]]; then
       echo "Cannot start ArduPlane: $description applet missing or unreadable: $source_script" >&2
-      echo "Restore the ArduPilot revision in simulation/versions.txt or rebuild the Docker image." >&2
+      echo "Check the source applet in ../ardupilot or ardupilot/scripts, then rebuild the Docker image." >&2
       exit 1
     fi
 

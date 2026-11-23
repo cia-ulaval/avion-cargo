@@ -25,8 +25,8 @@ Le logiciel détecte la cible, estime sa position et son orientation et les tran
 Il diffuse également la vidéo et la télémétrie dans un navigateur.
 
 Le [contrôleur Lua d’alignement QuadPlane](ardupilot/README.md) corrige le lacet sur le FC
-pendant la descente en `QLAND`. Il nécessite le correctif ArduPilot fourni dans ce dépôt,
-intégré à la construction Docker. Le superviseur de lacet Python a été supprimé.
+pendant la descente en `QLAND`. Il nécessite l'API de lacet intégrée au dépôt voisin
+`../ardupilot`, dont les sources sont compilées par Docker. Le superviseur de lacet Python a été supprimé.
 
 ## Documentation
 
