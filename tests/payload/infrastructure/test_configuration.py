@@ -94,8 +94,8 @@ def test_payload_runtime_configuration_parses_independent_wheel_transforms(tmp_p
                 "plane_peer_id": 10,
                 "uwb": {"anchor_id_by_target_id": {"200": "front-left"}},
                 "wheels": {
-                    "front_left": {"x": 0.1, "y": 0.2, "yaw": 0.3},
-                    "rear": {"x": -0.15, "y": -0.04, "yaw": -1.2},
+                    "front_left": {"x": 0.1, "y": 0.2, "yaw": 0.3, "radius": 0.04},
+                    "rear": {"x": -0.15, "y": -0.04, "yaw": -1.2, "radius": 0.05},
                 },
             }
         ),
@@ -107,20 +107,41 @@ def test_payload_runtime_configuration_parses_independent_wheel_transforms(tmp_p
     assert config.wheel_transforms["front_left"].x == pytest.approx(0.1)
     assert config.wheel_transforms["front_left"].y == pytest.approx(0.2)
     assert config.wheel_transforms["front_left"].yaw == pytest.approx(0.3)
+    assert config.wheel_transforms["front_left"].radius == pytest.approx(0.04)
     assert config.wheel_transforms["rear"].yaw == pytest.approx(-1.2)
+    assert config.wheel_transforms["rear"].radius == pytest.approx(0.05)
 
 
 @pytest.mark.parametrize(
     ("wheels", "message"),
     [
         ([], "wheels must be an object"),
-        ({"wheel_0": {"x": 0.1, "y": 0.2}}, "missing required field.*yaw"),
         (
-            {"wheel_0": {"x": 0.1, "y": float("nan"), "yaw": 0.0}},
+            {"wheel_0": {"x": 0.1, "y": 0.2, "radius": 0.04}},
+            "missing required field.*yaw",
+        ),
+        (
+            {"wheel_0": {"x": 0.1, "y": 0.2, "yaw": 0.0}},
+            "missing required field.*radius",
+        ),
+        (
+            {"wheel_0": {"x": 0.1, "y": 0.2, "yaw": 0.0, "radius": 0.0}},
+            "wheels.wheel_0.radius must be a finite positive number",
+        ),
+        (
+            {"wheel_0": {"x": 0.1, "y": 0.2, "yaw": 0.0, "radius": -0.01}},
+            "wheels.wheel_0.radius must be a finite positive number",
+        ),
+        (
+            {"wheel_0": {"x": 0.1, "y": 0.2, "yaw": 0.0, "radius": float("nan")}},
+            "wheels.wheel_0.radius must be a finite number",
+        ),
+        (
+            {"wheel_0": {"x": 0.1, "y": float("nan"), "yaw": 0.0, "radius": 0.04}},
             "wheels.wheel_0.y must be a finite number",
         ),
         (
-            {"wheel_0": {"x": True, "y": 0.2, "yaw": 0.0}},
+            {"wheel_0": {"x": True, "y": 0.2, "yaw": 0.0, "radius": 0.04}},
             "wheels.wheel_0.x must be a finite number",
         ),
     ],

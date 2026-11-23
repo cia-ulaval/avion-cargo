@@ -11,11 +11,12 @@ from shared.infrastructure.configuration import integer, non_empty_string, posit
 
 @dataclass(frozen=True, slots=True)
 class WheelTransform2D:
-    """Position and orientation of a wheel in the payload's 2D frame."""
+    """Wheel pose and physical radius in the payload frame (metres, radians)."""
 
     x: float
     y: float
     yaw: float
+    radius: float
 
 
 @dataclass(frozen=True, slots=True)
@@ -72,13 +73,13 @@ class PayloadRuntimeConfiguration:
             if not isinstance(raw_transform, dict):
                 raise ValueError(f"wheels.{wheel_name} must be an object")
 
-            missing = {"x", "y", "yaw"} - raw_transform.keys()
+            missing = {"x", "y", "yaw", "radius"} - raw_transform.keys()
             if missing:
                 missing_fields = ", ".join(sorted(missing))
                 raise ValueError(f"wheels.{wheel_name} is missing required field(s): {missing_fields}")
 
             values: dict[str, float] = {}
-            for axis in ("x", "y", "yaw"):
+            for axis in ("x", "y", "yaw", "radius"):
                 value = raw_transform[axis]
                 if (
                     isinstance(value, bool)
@@ -144,7 +145,7 @@ class PayloadRuntimeConfiguration:
             non_empty_string(wheel_name, "wheel name")
             if not isinstance(transform, WheelTransform2D):
                 raise ValueError(f"wheel_transforms[{wheel_name!r}] must be a WheelTransform2D")
-            for axis in ("x", "y", "yaw"):
+            for axis in ("x", "y", "yaw", "radius"):
                 value = getattr(transform, axis)
                 if (
                     isinstance(value, bool)
@@ -152,6 +153,7 @@ class PayloadRuntimeConfiguration:
                     or not math.isfinite(value)
                 ):
                     raise ValueError(f"wheels.{wheel_name}.{axis} must be a finite number")
+            positive_number(transform.radius, f"wheels.{wheel_name}.radius")
 
         if self.uwb_role is not None and (
             not isinstance(self.uwb_role, str)
