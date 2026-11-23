@@ -29,7 +29,7 @@ Les modèles standards `runway`, `iris_with_gimbal` et `iris_with_standoffs` res
 | [models/gimbal_small_3d/model.sdf](models/gimbal_small_3d/model.sdf) | Caméra de 640 × 480 pixels, cadence demandée de 30 Hz et réglages optiques de l'essai. |
 | [config/gazebo-iris-gimbal.parm](config/gazebo-iris-gimbal.parm) | Paramètres du véhicule et de la nacelle pour SITL. |
 | [config/autolanding_config.json](config/autolanding_config.json) | Configuration Iris : topic caméra, cible FArUco de 2,4384 m et port MAVLink 14550. |
-| [config/autolanding_config_tricopter_vtol.json](config/autolanding_config_tricopter_vtol.json) | Configuration tricopter : caméra vers le bas, même cible FArUco et supervision du lacet. |
+| [config/autolanding_config_tricopter_vtol.json](config/autolanding_config_tricopter_vtol.json) | Configuration tricopter : caméra vers le bas et publication de la pose complète de la cible FArUco. |
 | [calibration/pi_camera_calibration.yaml](calibration/pi_camera_calibration.yaml) | Calibration référencée lors de l'essai, conservée avec ses valeurs d'origine. |
 
 Les sources et attributions des fichiers sont indiquées dans [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
@@ -68,8 +68,8 @@ avec les mêmes fichiers Compose X11/NVIDIA éventuels. Un simple `restart` n'ap
 pas ces changements. Voir les [options de `docker compose up`](https://docs.docker.com/reference/cli/docker/compose/up/).
 
 Avant chaque démarrage d'ArduPlane, le lanceur vérifie et installe
-`scripts/plane_precland.lua` dans le dossier ArduPilot utilisé comme répertoire de travail
-de SITL. Il utilise l'applet fournie par la révision locale d'ArduPilot, répare un lien
+`scripts/plane_precland.lua` et `scripts/qland_yaw_alignment.lua` dans le dossier ArduPilot utilisé comme répertoire de travail
+de SITL. Il utilise les copies présentes dans l'image, répare un lien
 absent ou cassé et refuse de démarrer si la source manque. Un script personnalisé déjà
 présent est préservé et signalé pour inspection s'il diffère de l'applet fournie.
 
@@ -90,6 +90,23 @@ doit recevoir `PLND: Loaded`. Le fichier [tricopter-vtol.parm](config/tricopter-
 active `SCR_ENABLE=1`, `PLND_ENABLED=1`, `PLND_TYPE=1` et affecte `RC7_OPTION=39`.
 En `QLOITER`, activez RC7 avec `rc 7 1900` et vérifiez `PLND: PrecLoiter enabled`.
 En `QLAND`, l'applet applique automatiquement les corrections lorsque la cible est acquise.
+
+Le script de lacet doit également annoncer `QYAW: loaded; QLAND yaw controller`.
+Après ce message, activez-le dans MAVProxy avec `param set QYAW_ENABLE 1`.
+Ce paramètre Lua n'est disponible qu'après chargement du script et n'est pas
+initialisé par le fichier de valeurs par défaut de SITL sur cette révision.
+`QYAW_MIN_HGT=4` l'arrête sous quatre mètres au-dessus de la cible.
+Le Dockerfile applique le correctif du
+firmware avant compilation et copie le script dans l'image. Une modification du
+Lua ou du correctif nécessite donc aussi `up --build --force-recreate -d dev`.
+Les paramètres, le protocole et l'installation sur un FC sont décrits dans le
+[guide d'alignement Lua](../ardupilot/README.md).
+
+Le profil tricopter vise une descente nominale de 20 m en moins de 45 secondes
+jusqu'au contact : 1,5 m/s en hauteur, ralentissement entre 14 et 8 m, puis
+0,3 m/s sous 8 m. Le calcul idéal donne 38,7 s, dont 26,7 s à basse vitesse.
+Le centrage reste prioritaire et peut prolonger la descente au-delà de 45 s.
+Voir le [profil détaillé](../ardupilot/README.md#descente-de-20-m-avec-un-objectif-de-45-secondes).
 
 `PrecLand: Init Complete` confirme seulement l'initialisation de l'estimateur : ce message
 ne prouve pas que l'applet de commande est chargée. Sans elle, la vision peut détecter le

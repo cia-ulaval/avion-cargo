@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from enum import Enum
 
 from domain.models import Pose3D
+from domain.rigid_transform import RigidTransform
 
 
 class DroneMode(str, Enum):
@@ -165,6 +166,13 @@ class Drone(ABC):
         raise NotImplementedError()
 
     @abstractmethod
-    def send_landing_target(self, position: Pose3D, target_size: tuple[float, float]):
+    def send_landing_target(
+        self,
+        position: Pose3D,
+        target_size: tuple[float, float],
+        *,
+        body_from_marker: RigidTransform | None = None,
+        captured_at_s: float | None = None,
+    ):
         """Send a LANDING_TARGET measurement; this message does not select a flight mode."""
         raise NotImplementedError()

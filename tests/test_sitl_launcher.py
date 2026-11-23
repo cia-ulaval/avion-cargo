@@ -15,6 +15,7 @@ def sitl(tmp_path):
     source = root / "libraries/AP_Scripting/applets/plane_precland.lua"
     source.parent.mkdir(parents=True)
     source.write_text("-- bundled QuadPlane precision landing applet\n")
+    (source.parent / "qland_yaw_alignment.lua").write_text("local enabled = false\n")
     target = root / "scripts/plane_precland.lua"
     invocation = tmp_path / "sitl-invocation"
     simulator = root / "Tools/autotest/sim_vehicle.py"
@@ -114,6 +115,22 @@ def test_plane_accepts_existing_copy_of_bundled_applet(sitl):
 
     assert sitl.run().returncode == 0
     assert not sitl.target.is_symlink()
+
+
+def test_plane_installs_the_yaw_script_from_the_image(sitl):
+    result = sitl.run()
+    assert result.returncode == 0, result.stderr
+    target = sitl.root / "scripts/qland_yaw_alignment.lua"
+    assert target.resolve() == sitl.source.parent / "qland_yaw_alignment.lua"
+    assert "QuadPlane QLAND yaw alignment script ready" in result.stdout
+
+
+def test_plane_requires_the_image_yaw_script(sitl):
+    (sitl.source.parent / "qland_yaw_alignment.lua").unlink()
+    result = sitl.run()
+    assert result.returncode != 0
+    assert "QLAND yaw alignment applet missing or unreadable" in result.stderr
+    assert not sitl.invocation.exists()
 
 
 def test_copter_does_not_require_plane_applet(sitl):

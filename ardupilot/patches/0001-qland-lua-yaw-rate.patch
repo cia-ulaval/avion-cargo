@@ -1,0 +1,105 @@
+--- a/ArduPlane/quadplane.h
++++ b/ArduPlane/quadplane.h
+@@ -181,6 +181,11 @@
+      */
+     bool in_vtol_land_descent(void) const;
+ 
++#if AP_SCRIPTING_ENABLED
++    bool set_landing_yaw_rate(float rate_dps);
++    void clear_landing_yaw_rate() { landing_yaw.active = false; }
++#endif
++
+     // Should we allow stick mixing from the pilot
+     bool allow_stick_mixing() const;
+ 
+@@ -197,6 +202,15 @@
+ 
+ private:
+     AP_AHRS &ahrs;
++
++#if AP_SCRIPTING_ENABLED
++    bool landing_yaw_available();
++    struct {
++        float rate_dps;
++        uint32_t updated_ms;
++        bool active;
++    } landing_yaw;
++#endif
+ 
+     AP_InertialNav inertial_nav{ahrs};
+ 
+--- a/ArduPlane/quadplane.cpp
++++ b/ArduPlane/quadplane.cpp
+@@ -1361,8 +1361,45 @@
+ /*
+   get overall desired yaw rate in cd/s
+  */
++#if AP_SCRIPTING_ENABLED
++bool QuadPlane::landing_yaw_available()
++{
++    return initialised && hal.util->get_soft_armed() &&
++        plane.control_mode == &plane.mode_qland &&
++        (poscontrol.get_state() == QPOS_LAND_DESCEND ||
++         (poscontrol.get_state() == QPOS_LAND_FINAL &&
++          plane.relative_ground_altitude(RangeFinderUse::TAKEOFF_LANDING) > 1.0f)) &&
++        !plane.any_failsafe_triggered() && !plane.rc_failsafe_active() &&
++        !plane.failsafe.rc_failsafe && !plane.has_ekf_failsafed() && ahrs.healthy() &&
++        plane.channel_rudder->get_control_in() == 0 &&
++        plane.channel_roll->get_control_in() == 0 &&
++        plane.channel_pitch->get_control_in() == 0;
++}
++
++bool QuadPlane::set_landing_yaw_rate(float rate_dps)
++{
++    if (!isfinite(rate_dps) || fabsf(rate_dps) > 90 || !landing_yaw_available()) {
++        clear_landing_yaw_rate();
++        return false;
++    }
++    landing_yaw.rate_dps = rate_dps;
++    landing_yaw.updated_ms = AP_HAL::millis();
++    landing_yaw.active = true;
++    return true;
++}
++#endif
++
+ float QuadPlane::get_desired_yaw_rate_cds(bool should_weathervane)
+ {
++#if AP_SCRIPTING_ENABLED
++    if (landing_yaw.active) {
++        // Never let a stalled script retain control, or conceal RC/failsafe input.
++        if (AP_HAL::millis() - landing_yaw.updated_ms < 200 && landing_yaw_available()) {
++            return landing_yaw.rate_dps * 100;
++        }
++        clear_landing_yaw_rate();
++    }
++#endif
+     float yaw_cds = 0;
+     if (assisted_flight) {
+         // use bank angle to get desired yaw rate
+@@ -4719,6 +4756,9 @@
+ // called when we change mode (for any mode, not just Q modes)
+ void QuadPlane::mode_enter(void)
+ {
++#if AP_SCRIPTING_ENABLED
++    clear_landing_yaw_rate();
++#endif
+     if (available()) {
+         pos_control->set_lean_angle_max_cd(0);
+     }
+--- a/libraries/AP_Scripting/generator/description/bindings.desc
++++ b/libraries/AP_Scripting/generator/description/bindings.desc
+@@ -586,11 +586,14 @@
+ 
+ include ../ArduPlane/quadplane.h depends APM_BUILD_TYPE(APM_BUILD_ArduPlane)
+ singleton QuadPlane rename quadplane
++singleton QuadPlane scheduler-semaphore
+ singleton QuadPlane depends APM_BUILD_TYPE(APM_BUILD_ArduPlane) && HAL_QUADPLANE_ENABLED
+ singleton QuadPlane method in_vtol_mode boolean
+ singleton QuadPlane method in_assisted_flight boolean
+ singleton QuadPlane method abort_landing boolean
+ singleton QuadPlane method in_vtol_land_descent boolean
++singleton QuadPlane method set_landing_yaw_rate boolean float -90 90
++singleton QuadPlane method clear_landing_yaw_rate void
+ 
+ include ../ArduSub/Sub.h depends APM_BUILD_TYPE(APM_BUILD_ArduSub)
+ singleton Sub rename sub

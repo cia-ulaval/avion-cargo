@@ -21,11 +21,12 @@
 **AUTOLANDER** est un projet de vision numérique embarquée visant à faciliter l’atterrissage de précision pour drones
 à l’aide de tags ArUco et d’une caméra sur **Raspberry Pi**.  
 
-Le logiciel détecte la cible, estime sa position et la transmet au contrôleur de vol via MAVLink.
+Le logiciel détecte la cible, estime sa position et son orientation et les transmet au contrôleur de vol via MAVLink.
 Il diffuse également la vidéo et la télémétrie dans un navigateur.
 
-Le [superviseur d’alignement QuadPlane](https://github.com/cia-ulaval/avion-cargo/wiki/Alignement-autonome-du-lacet-QuadPlane) peut interrompre une descente en `QLAND`,
-aligner le lacet sur le marqueur en `GUIDED` VTOL, puis demander le retour en `QLAND`.
+Le [contrôleur Lua d’alignement QuadPlane](ardupilot/README.md) corrige le lacet sur le FC
+pendant la descente en `QLAND`. Il nécessite le correctif ArduPilot fourni dans ce dépôt,
+intégré à la construction Docker. Autolander ne démarre plus son superviseur de lacet.
 
 ## Documentation
 

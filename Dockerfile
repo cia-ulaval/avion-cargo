@@ -26,7 +26,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
       libglib2.0-0 libgtk-3-0 libopencv-dev libsm6 libx11-6 libxext6 libxkbcommon-x11-0 \
       libxrender1 libqt5svg5 locales lsb-release make mesa-utils nano net-tools ninja-build pipx \
       pkg-config procps python3 python3-debugpy python3-dev python3-pip python3-venv \
-      rapidjson-dev sudo tzdata unzip vim wget x11-apps x11-utils x11-xserver-utils \
+      rapidjson-dev sudo tzdata unzip vim wget lua5.4 x11-apps x11-utils x11-xserver-utils \
       xauth xdg-utils \
       libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev \
       gstreamer1.0-plugins-bad gstreamer1.0-libav gstreamer1.0-gl \
@@ -61,6 +61,7 @@ RUN if id ubuntu >/dev/null 2>&1; then userdel -r ubuntu; fi \
     && chown -R dev:dev /workspace /home/dev
 
 COPY simulation/versions.txt /tmp/versions.txt
+COPY ardupilot/patches/0001-qland-lua-yaw-rate.patch /tmp/qland-lua-yaw-rate.patch
 
 USER dev
 WORKDIR /home/dev
@@ -74,6 +75,8 @@ RUN set -eux; \
     git -C /home/dev/ardupilot checkout --detach "${ARDUPILOT_REF}"; \
     git -C /home/dev/ardupilot submodule update --init --recursive; \
     cd /home/dev/ardupilot; \
+    git apply --check /tmp/qland-lua-yaw-rate.patch; \
+    git apply /tmp/qland-lua-yaw-rate.patch; \
     Tools/environment_install/install-prereqs-ubuntu.sh -y; \
     ./waf configure --board sitl --debug; \
     ./waf copter -j2; \
@@ -83,6 +86,8 @@ RUN set -eux; \
       ../libraries/AP_Scripting/applets/plane_precland.lua \
       /home/dev/ardupilot/scripts/plane_precland.lua; \
     test -s /home/dev/ardupilot/scripts/plane_precland.lua
+
+COPY --chown=dev:dev ardupilot/scripts/qland_yaw_alignment.lua /home/dev/ardupilot/libraries/AP_Scripting/applets/qland_yaw_alignment.lua
 
 RUN set -eux; \
     ARDUPILOT_GAZEBO_REF="$(sed -n 's/^ardupilot_gazebo=//p' /tmp/versions.txt)"; \
@@ -131,29 +136,33 @@ MODEL="${AVION_SITL_MODEL:-}"
 PARAM_FILE="${AVION_SITL_PARAM_FILE-/workspace/avion-cargo/simulation/config/gazebo-iris-gimbal.parm}"
 
 if [[ "$VEHICLE" == ArduPlane ]]; then
-  source_script="$PWD/libraries/AP_Scripting/applets/plane_precland.lua"
-  target_script="$PWD/scripts/plane_precland.lua"
-  if [[ ! -f "$source_script" || ! -r "$source_script" || ! -s "$source_script" ]]; then
-    echo "Cannot start ArduPlane: precision landing applet missing or unreadable: $source_script" >&2
-    echo "Restore the ArduPilot revision in simulation/versions.txt or rebuild the Docker image." >&2
-    exit 1
-  fi
-
-  mkdir -p scripts
-  if [[ -e "$target_script" ]]; then
-    if ! cmp -s -- "$source_script" "$target_script"; then
-      echo "Cannot start ArduPlane: $target_script differs from the bundled precision landing applet." >&2
-      echo "Inspect and move the custom script before retrying; it has not been overwritten." >&2
+  for applet in plane_precland qland_yaw_alignment; do
+    description="precision landing"
+    [[ "$applet" != qland_yaw_alignment ]] || description="QLAND yaw alignment"
+    source_script="$PWD/libraries/AP_Scripting/applets/$applet.lua"
+    target_script="$PWD/scripts/$applet.lua"
+    if [[ ! -f "$source_script" || ! -r "$source_script" || ! -s "$source_script" ]]; then
+      echo "Cannot start ArduPlane: $description applet missing or unreadable: $source_script" >&2
+      echo "Restore the ArduPilot revision in simulation/versions.txt or rebuild the Docker image." >&2
       exit 1
     fi
-  else
-    ln -sfn -- ../libraries/AP_Scripting/applets/plane_precland.lua "$target_script"
-  fi
-  if ! cmp -s -- "$source_script" "$target_script"; then
-    echo "Cannot start ArduPlane: precision landing applet installation failed: $target_script" >&2
-    exit 1
-  fi
-  echo "QuadPlane precision landing script ready: $target_script"
+
+    mkdir -p scripts
+    if [[ -e "$target_script" ]]; then
+      if ! cmp -s -- "$source_script" "$target_script"; then
+        echo "Cannot start ArduPlane: $target_script differs from the bundled $description applet." >&2
+        echo "Inspect and move the custom script before retrying; it has not been overwritten." >&2
+        exit 1
+      fi
+    else
+      ln -sfn -- "../libraries/AP_Scripting/applets/$applet.lua" "$target_script"
+    fi
+    if ! cmp -s -- "$source_script" "$target_script"; then
+      echo "Cannot start ArduPlane: $description applet installation failed: $target_script" >&2
+      exit 1
+    fi
+    echo "QuadPlane $description script ready: $target_script"
+  done
 fi
 
 args=(-D -v "$VEHICLE" -f "$FRAME")
