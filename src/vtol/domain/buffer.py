@@ -5,6 +5,7 @@ import numpy as np
 
 from vtol.domain.drone import DroneStatus
 from vtol.domain.models import Pose3D
+from vtol.domain.tracking import TrackingResult
 
 
 class Buffer(ABC):
@@ -37,6 +38,10 @@ class PoseBufferPort(Protocol):
     def set_uav_pose_value(self, uav_pose: Pose3D | None, *, timestamp: float | None = None) -> None: ...
 
     def get_uav_pose_value(self) -> Pose3D | None: ...
+
+    def set_tracking_result(self, result: TrackingResult | None) -> None: ...
+
+    def get_tracking_result(self) -> TrackingResult | None: ...
 
 
 class DroneStatusBufferPort(Protocol):

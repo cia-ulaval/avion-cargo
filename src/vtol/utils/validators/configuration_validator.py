@@ -14,6 +14,7 @@ from vtol.domain.markers import (
     aruco_dictionary_capacity,
 )
 from vtol.utils.validators.validation_error import ValidationError
+from vtol.domain.yaw_alignment import YawAlignmentConfig
 
 
 class ConfigurationValidator:
@@ -96,16 +97,46 @@ class ConfigurationValidator:
             raise ValidationError("Root JSON must be an object/dict", "root")
 
         if "autolanding" in raw:
+            # Combined VTOL configuration.
             autolanding = self._req_obj(raw, "autolanding", "root")
             self._req_obj(raw, "d3kble", "root")
             self._no_extra_keys(raw, {"autolanding", "d3kble"}, "root")
+            autolanding_path = "autolanding"
         else:
+            # Legacy flat autolanding configuration.
             autolanding = raw
+            autolanding_path = "root"
 
         self._validate_camera(autolanding)
         self._validate_vision(autolanding)
         self._validate_streaming(autolanding)
         self._validate_drone_connection(autolanding)
+
+        if "yaw_alignment" in autolanding:
+            yaw_alignment = self._req_obj(
+                autolanding,
+                "yaw_alignment",
+                autolanding_path,
+            )
+            try:
+                YawAlignmentConfig(**yaw_alignment)
+            except (TypeError, ValueError) as error:
+                raise ValidationError(
+                    str(error),
+                    f"{autolanding_path}.yaw_alignment",
+                ) from error
+
+        self._no_extra_keys(
+            autolanding,
+            {
+                "camera",
+                "vision",
+                "streaming",
+                "drone_connection",
+                "yaw_alignment",
+            },
+            autolanding_path,
+        )
 
         if "autolanding" not in raw:
             self._no_extra_keys(raw, {"camera", "vision", "streaming", "drone_connection"}, "root")

@@ -106,9 +106,17 @@ class GazeboCamera(Camera):
             self._thread = threading.Thread(target=self._spin, name="autolander-ros-camera", daemon=True)
             self._thread.start()
             if not self._node.wait_first_frame(self._first_frame_timeout_sec):
-                raise TimeoutError(f"No image received on {self._topic_name} within {self._first_frame_timeout_sec}s")
-            self._raise_failure()
-            logger.info("ROS camera ready on {} at {} Hz", self._topic_name, self._fps)
+                # Keep the node and executor alive: the simulator may publish the
+                # camera later (for example, after the world finishes loading).
+                self._raise_failure()
+                logger.warning(
+                    "No initial image on {} within {}s; keeping camera open and waiting for frames",
+                    self._topic_name,
+                    self._first_frame_timeout_sec,
+                )
+            else:
+                self._raise_failure()
+                logger.info("ROS camera ready on {} at {} Hz", self._topic_name, self._fps)
         except BaseException:
             self.close()
             raise

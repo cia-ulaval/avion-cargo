@@ -1,5 +1,3 @@
-"""Exercise real HTTP, SDP, video, data channel and cleanup over loopback."""
-
 import asyncio
 
 import numpy as np

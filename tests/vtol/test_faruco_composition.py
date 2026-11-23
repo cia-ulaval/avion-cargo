@@ -76,6 +76,8 @@ def test_tracking_uses_the_current_bridge_annotation_with_or_without_pose(monkey
     if has_pose:
         assert result.status is TrackingStatus.DETECTED
         assert (result.pose.x, result.pose.y, result.pose.z) == (1, 2, 3)
+        assert result.target_identity == "faruco:FRACTAL_3L_6"
+        assert result.to_dict()["target_identity"] == "faruco:FRACTAL_3L_6"
     else:
         assert result.status is TrackingStatus.NOT_FOUND
         assert result.pose is None

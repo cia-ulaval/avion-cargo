@@ -1,5 +1,3 @@
-"""Decode actual packets to verify the public MAVLink contract."""
-
 import math
 from unittest.mock import Mock
 

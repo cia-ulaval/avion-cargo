@@ -7,6 +7,8 @@ from typing import Any, Callable
 from loguru import logger
 
 from vtol.application.autolanding.tracking_service import TrackingService
+from vtol.application.autolanding.yaw_alignment_supervisor import YawAlignmentSupervisor
+from vtol.application.autolanding.tracking_service import TrackingService
 from vtol.domain.buffer import DroneStatusBufferPort, FrameBufferPort, PoseBufferPort
 from vtol.domain.content_streamer import ContentStreamer
 from vtol.domain.drone import Drone
@@ -24,6 +26,7 @@ class DroneAutolandingService:
         drone_status_buffer: DroneStatusBufferPort,
         telemetry_dps: float = 5,
         shutdown_timeout_s: float = 5,
+        yaw_alignment: YawAlignmentConfig = YawAlignmentConfig(),
     ):
         if not isfinite(telemetry_dps) or telemetry_dps <= 0:
             raise ValueError("telemetry_dps must be finite and positive")
@@ -37,6 +40,7 @@ class DroneAutolandingService:
         self.content_streamer = content_streamer
         self.telemetry_dps = telemetry_dps
         self.shutdown_timeout_s = shutdown_timeout_s
+        self.yaw_supervisor = YawAlignmentSupervisor(drone, yaw_alignment) if yaw_alignment.enabled else None
         self._threads: dict[str, Thread] = dict()
         self._tracking_started: bool = False
         self._stop_event = Event()
@@ -78,25 +82,59 @@ class DroneAutolandingService:
     def _tracking_target_loop(self):
         waiting_period = 1.0 / max(1, self.aruco_tracker.camera.get_fps())
         previous_status = None
+        camera_outage_started_s = None
+        camera_unavailable_after_s = 5.0
 
         while self._tracking_started:
             start_time = time.monotonic()
 
-            vis, tracking_result = self.aruco_tracker.track_target()
+            try:
+                vis, tracking_result = self.aruco_tracker.track_target()
+            except TimeoutError as error:
+                # A missed frame deadline is a recoverable sensor outage, not a
+                # fatal worker failure. Never leave an old target pose publishable.
+                now = time.monotonic()
+                if camera_outage_started_s is None:
+                    camera_outage_started_s = now
+                    logger.warning("Camera frames are stale; clearing target until fresh frames return: {}", error)
+                camera_state = "UNAVAILABLE" if now - camera_outage_started_s >= camera_unavailable_after_s else "STALE"
+                self.frame_buffer.set_value(
+                    None,
+                    {
+                        "status": 2,  # TrackingStatus.NOT_FOUND
+                        "poses": {"estimated_pose_from_camera": None, "estimated_pose_to_uav": None},
+                        "marker_id": None,
+                        "confidence": None,
+                        "camera_state": camera_state,
+                    },
+                )
+                self.pose_buffer.set_value(None)
+                self.pose_buffer.set_uav_pose_value(None)
+                self.pose_buffer.set_tracking_result(None)
+                if self.yaw_supervisor is not None:
+                    self.yaw_supervisor.observe_tracking(None, now)
+                if camera_state != previous_status:
+                    logger.warning("Camera state: {}", camera_state)
+                    previous_status = camera_state
+            else:
+                if self._stop_event.is_set():
+                    break
+                camera_outage_started_s = None
+                if self.yaw_supervisor is not None:
+                    self.yaw_supervisor.observe_tracking(tracking_result, time.monotonic())
+                metadata = tracking_result.to_dict()
+                metadata["camera_state"] = "OK"
+                self.frame_buffer.set_value(vis, metadata, timestamp=tracking_result.captured_at_s)
+                self.pose_buffer.set_value(tracking_result.pose, timestamp=tracking_result.captured_at_s)
+                self.pose_buffer.set_uav_pose_value(tracking_result.uav_pose, timestamp=tracking_result.captured_at_s)
+                self.pose_buffer.set_tracking_result(tracking_result)
+                if tracking_result.status != previous_status:
+                    logger.info("Target tracking: {}", tracking_result.status.name)
+                    previous_status = tracking_result.status
+
             if self._stop_event.is_set():
                 break
-            self.frame_buffer.set_value(vis, tracking_result.to_dict(), timestamp=tracking_result.captured_at_s)
-            self.pose_buffer.set_value(tracking_result.pose, timestamp=tracking_result.captured_at_s)
-
-            self.pose_buffer.set_uav_pose_value(tracking_result.uav_pose, timestamp=tracking_result.captured_at_s)
-            if tracking_result.status != previous_status:
-                logger.info("Target tracking: {}", tracking_result.status.name)
-                previous_status = tracking_result.status
-
-            end_time = time.monotonic()
-            elapsed_time = end_time - start_time
-            remaining_time = waiting_period - elapsed_time
-
+            remaining_time = waiting_period - (time.monotonic() - start_time)
             if remaining_time > 0:
                 self._stop_event.wait(remaining_time)
 
@@ -129,7 +167,30 @@ class DroneAutolandingService:
                 payload["drone"]["last_signal_gpio_s"] = None
             payload["drone"].pop("last_heartbeat_monotonic_s", None)
 
+        if self.yaw_supervisor is not None:
+            payload["yaw_alignment"] = self.yaw_supervisor.to_dict()
         return payload
+
+    def _supervision_loop(self):
+        supervisor = self.yaw_supervisor
+        interval = 1.0 / supervisor.config.rate_hz
+        try:
+            while self._tracking_started:
+                start = time.monotonic()
+                status = self.drone_status_buffer.get_value()
+                tracking = self.pose_buffer.get_tracking_result()
+                # Publishers may update either buffer after this loop started.
+                # Check ages against a time sampled after reading both snapshots.
+                supervisor.step(status, tracking, time.monotonic())
+                self._stop_event.wait(max(0.0, interval - (time.monotonic() - start)))
+        finally:
+            # Drain pending heartbeats before deciding whether our GUIDED session
+            # still owns the mode. Never restore over a newly observed failsafe.
+            status = None
+            try:
+                status = self.drone.get_status()
+            finally:
+                supervisor.stop(status)
 
     def _target_publication_loop(self):
         waiting_period = 1.0 / max(1, self.aruco_tracker.camera.get_fps())
@@ -160,6 +221,8 @@ class DroneAutolandingService:
         self._tracking_started = True
         self._start_worker("tracking", self._tracking_target_loop)
         self._start_worker("telemetry", self._telemetry_loop)
+        if self.yaw_supervisor is not None:
+            self._start_worker("yaw-supervisor", self._supervision_loop)
         logger.info("Tracking started; telemetry cadence {} Hz", self.telemetry_dps)
 
     def stream_video(self):
@@ -184,7 +247,7 @@ class DroneAutolandingService:
 
     def stop_tracking(self):
         self.request_stop()
-        self._join_threads(["tracking", "telemetry"], time.monotonic() + self.shutdown_timeout_s)
+        self._join_threads(["tracking", "telemetry", "yaw-supervisor"], time.monotonic() + self.shutdown_timeout_s)
 
     def _join_threads(self, names: list[str], deadline: float) -> None:
         pending = []
