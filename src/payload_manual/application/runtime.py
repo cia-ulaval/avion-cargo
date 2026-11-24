@@ -15,13 +15,12 @@ from payload.domain.positioning.distance_sensor import DistanceSensor
 
 @dataclass(frozen=True, slots=True)
 class ManualControlLimits:
-    max_linear_speed_m_s: float = 0.15
     max_angular_speed_rad_s: float = 0.8
     command_timeout_ms: int = 300
     control_rate_hz: int = 50
 
     def __post_init__(self) -> None:
-        for name in ("max_linear_speed_m_s", "max_angular_speed_rad_s"):
+        for name in ("max_angular_speed_rad_s",):
             value = getattr(self, name)
             if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(value) or value <= 0:
                 raise ValueError(f"{name} must be finite and positive")
@@ -198,11 +197,8 @@ class ManualControlRuntime:
                 self._outputs_may_be_active = True
 
     def _within_limits(self, velocity: BodyVelocity) -> bool:
-        linear_speed = math.hypot(velocity.vx_m_s, velocity.vy_m_s)
-        return (
-            linear_speed <= self._limits.max_linear_speed_m_s
-            and abs(velocity.yaw_rate_rad_s) <= self._limits.max_angular_speed_rad_s
-        )
+        # Wheel surface-speed capabilities are the sole translational limit.
+        return abs(velocity.yaw_rate_rad_s) <= self._limits.max_angular_speed_rad_s
 
     async def _control_loop(self) -> None:
         interval = 1.0 / self._limits.control_rate_hz

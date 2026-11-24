@@ -74,10 +74,10 @@ async def test_manual_runtime_requires_arm_and_applies_drive_command():
         assert wheels.commands == []
 
         await peer.queue.put(ManualControlCommand("session-a", 2, "arm"))
-        await peer.queue.put(ManualControlCommand("session-a", 3, "drive", BodyVelocity(0.1, 0.0, 0.2)))
+        await peer.queue.put(ManualControlCommand("session-a", 3, "drive", BodyVelocity(0.3, 0.0, 0.2)))
         await asyncio.sleep(0.06)
         assert wheels.commands
-        assert wheels.commands[-1] == BodyVelocity(0.1, 0.0, 0.2)
+        assert wheels.commands[-1] == BodyVelocity(0.3, 0.0, 0.2)
         assert sensor.started
     finally:
         stop_event.set()
@@ -163,7 +163,7 @@ async def test_actuator_command_failure_disarms_without_terminating_runtime():
 
 def test_manual_control_limits_reject_invalid_values():
     with pytest.raises(ValueError):
-        ManualControlLimits(max_linear_speed_m_s=float("inf"))
+        ManualControlLimits(max_angular_speed_rad_s=float("inf"))
     with pytest.raises(ValueError):
         ManualControlLimits(command_timeout_ms=20)
 
