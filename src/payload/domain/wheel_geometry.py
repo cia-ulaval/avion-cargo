@@ -6,12 +6,8 @@ from dataclasses import dataclass
 
 @dataclass(frozen=True, slots=True)
 class WheelTransform2D:
-    """Wheel centre and positive rolling direction in the payload frame.
-
-    ``yaw`` is the direction of travel produced by a positive motor surface
-    velocity, measured counter-clockwise from payload +X. It describes the
-    tire's rolling direction, not the axle orientation. Reversing motor wiring
-    or mounting direction can be represented by adding pi radians.
+    """
+    Wheel centre and positive rolling direction in the payload frame.
     """
 
     x: float
