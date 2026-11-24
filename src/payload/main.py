@@ -10,7 +10,6 @@ import click
 from loguru import logger
 
 from payload.composition import build_payload_application
-from payload.entrypoint import run_payload_application
 from payload.infrastructure.configuration import PayloadRuntimeConfiguration
 
 

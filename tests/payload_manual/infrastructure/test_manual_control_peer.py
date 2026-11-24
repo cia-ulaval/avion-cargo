@@ -1,3 +1,4 @@
+from concurrent.futures import Future
 from types import SimpleNamespace
 
 import pytest
@@ -14,9 +15,8 @@ from shared.infrastructure.d3kble.router import D3kbleMessageRouter
 
 
 class FakeTicket:
-    def wait_ack(self, timeout):
-        self.timeout = timeout
-        return True
+    def __init__(self):
+        self.ack_future = Future()
 
 
 class FakeComms:
@@ -25,7 +25,8 @@ class FakeComms:
 
     def send(self, peer_id, payload):
         self.sent = (peer_id, payload)
-        return FakeTicket()
+        self.ticket = FakeTicket()
+        return self.ticket
 
     def on_message(self, callback=None):
         self.message_handler = callback
@@ -137,4 +138,7 @@ async def test_peer_sends_payload_arm_state_acknowledgement():
         "armed": True,
         "session_active": True,
     }
+    # The acknowledgement future intentionally remains unresolved. State
+    # reporting must not hold up the manual command consumer while it waits.
+    assert not node.comms.ticket.ack_future.done()
     router.close()

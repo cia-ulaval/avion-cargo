@@ -156,11 +156,26 @@ class D3kbleManualControlPeer:
             "armed": bool(armed),
             "session_active": bool(session_active),
         }
-        ticket = self._node.comms.send(self.controller_peer_id, payload)
         try:
-            await asyncio.to_thread(ticket.wait_ack, 0.8)
-        except Exception as exc:
-            logger.warning("could not report manual-control state to peer {}: {}", self.controller_peer_id, exc)
+            ticket = self._node.comms.send(self.controller_peer_id, payload)
+        except Exception:
+            logger.exception(
+                "could not queue manual-control state for peer {}",
+                self.controller_peer_id,
+            )
+            return
+
+        def report_delivery_result(future) -> None:
+            try:
+                future.result()
+            except Exception as exc:
+                logger.warning(
+                    "manual-control state delivery to peer {} failed: {}",
+                    self.controller_peer_id,
+                    exc,
+                )
+
+        ticket.ack_future.add_done_callback(report_delivery_result)
 
     async def events(self) -> AsyncIterator[ManualControlCommand]:
         await self.start()

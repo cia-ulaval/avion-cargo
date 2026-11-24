@@ -28,11 +28,15 @@ class FakeWheelController:
     def __init__(self):
         self.commands = []
         self.stops = 0
+        self.fail_next_command = False
 
     async def stop(self):
         self.stops += 1
 
     async def set_body_velocity(self, velocity):
+        if self.fail_next_command:
+            self.fail_next_command = False
+            raise RuntimeError("simulated wheel command failure")
         self.commands.append(velocity)
 
 
@@ -131,6 +135,32 @@ async def test_manual_runtime_disarm_stops_output_immediately():
         await task
 
 
+@pytest.mark.asyncio
+async def test_actuator_command_failure_disarms_without_terminating_runtime():
+    peer = FakePeer()
+    wheels = FakeWheelController()
+    sensor = FakeDistanceSensor()
+    runtime = ManualControlRuntime(
+        peer, wheels, sensor,
+        ManualControlLimits(command_timeout_ms=500, control_rate_hz=50),
+    )
+    stop_event = asyncio.Event()
+    task = asyncio.create_task(runtime.run(stop_event))
+    try:
+        await peer.queue.put(ManualControlCommand("session-a", 1, "arm"))
+        await asyncio.sleep(0.03)
+        wheels.fail_next_command = True
+        await peer.queue.put(ManualControlCommand("session-a", 2, "drive", BodyVelocity(0.05, 0.0, 0.0)))
+        await asyncio.sleep(0.08)
+
+        assert not task.done()
+        assert wheels.stops >= 2
+        assert peer.status_messages[-1] == ("session-a", 2, False, True)
+    finally:
+        stop_event.set()
+        await task
+
+
 def test_manual_control_limits_reject_invalid_values():
     with pytest.raises(ValueError):
         ManualControlLimits(max_linear_speed_m_s=float("inf"))
@@ -185,6 +215,57 @@ async def test_status_command_reports_actual_arm_state_without_changing_session(
         await peer.queue.put(ManualControlCommand("session-b", 1, "disarm"))
         await asyncio.sleep(0.02)
         assert peer.status_messages[-1] == ("session-b", 1, False, True)
+    finally:
+        stop_event.set()
+        await task
+
+
+@pytest.mark.asyncio
+async def test_manual_runtime_allows_arm_ack_round_trip_before_starting_drive_watchdog():
+    peer = FakePeer()
+    wheels = FakeWheelController()
+    sensor = FakeDistanceSensor()
+    runtime = ManualControlRuntime(
+        peer, wheels, sensor,
+        ManualControlLimits(command_timeout_ms=100, control_rate_hz=50),
+    )
+    stop_event = asyncio.Event()
+    task = asyncio.create_task(runtime.run(stop_event))
+    try:
+        await peer.queue.put(ManualControlCommand("session-a", 1, "arm"))
+        # Longer than the 100 ms motion watchdog: the UI is still waiting for
+        # the ARM status acknowledgement and has not started its drive heartbeat.
+        await asyncio.sleep(0.3)
+        assert runtime._armed is True
+        assert peer.status_messages == [("session-a", 1, True, True)]
+
+        await peer.queue.put(
+            ManualControlCommand("session-a", 2, "drive", BodyVelocity(0.05, 0.0, 0.0))
+        )
+        await asyncio.sleep(0.04)
+        assert runtime._armed is True
+        assert wheels.commands[-1] == BodyVelocity(0.05, 0.0, 0.0)
+    finally:
+        stop_event.set()
+        await task
+
+
+@pytest.mark.asyncio
+async def test_manual_runtime_disarms_if_no_drive_follows_arm_handshake_grace():
+    peer = FakePeer()
+    wheels = FakeWheelController()
+    sensor = FakeDistanceSensor()
+    runtime = ManualControlRuntime(
+        peer, wheels, sensor,
+        ManualControlLimits(command_timeout_ms=100, control_rate_hz=50),
+    )
+    stop_event = asyncio.Event()
+    task = asyncio.create_task(runtime.run(stop_event))
+    try:
+        await peer.queue.put(ManualControlCommand("session-a", 1, "arm"))
+        await asyncio.sleep(1.7)
+        assert runtime._armed is False
+        assert peer.status_messages[-1] == ("session-a", 1, False, True)
     finally:
         stop_event.set()
         await task

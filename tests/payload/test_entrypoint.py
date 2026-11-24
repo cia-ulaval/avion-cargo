@@ -2,7 +2,7 @@ import asyncio
 
 import pytest
 
-from payload.entrypoint import run_payload_application
+from payload.main import run_payload_application
 
 
 class FakeSyncApplication:

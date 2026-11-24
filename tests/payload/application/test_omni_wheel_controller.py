@@ -56,6 +56,21 @@ def test_pure_yaw_rotation_produces_equal_wheel_speeds_for_symmetric_layout():
     assert velocities == pytest.approx((0.078, 0.078, 0.078))
 
 
+def test_scaled_wheel_velocities_are_clamped_after_float_rounding():
+    actuators = [FakeActuator(0.12) for _ in range(3)]
+    controller = OmniWheelController(make_wheels(), actuators)
+
+    velocities = controller._limit_surface_velocities(
+        (0.12000000000000001, -0.12000000000000001, 0.06)
+    )
+
+    assert velocities == pytest.approx((0.12, -0.12, 0.06))
+    assert all(
+        abs(value) <= actuator.capabilities.max_surface_velocity
+        for value, actuator in zip(velocities, actuators)
+    )
+
+
 def test_wheel_limits_scale_all_wheels_proportionally():
     actuators = [FakeActuator(0.2) for _ in range(3)]
     controller = OmniWheelController(make_wheels(), actuators)

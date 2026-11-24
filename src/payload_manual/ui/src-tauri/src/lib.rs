@@ -1,7 +1,7 @@
 mod d3k_protocol;
 
 use serde::{Deserialize, Serialize};
-use serde_json::json;
+use serde_json::{json, Value};
 use serialport::{SerialPort, SerialPortInfo};
 use std::collections::VecDeque;
 use std::sync::Mutex;
@@ -56,6 +56,17 @@ struct PayloadManualStatus {
     session_active: bool,
 }
 
+// d3kble wraps every application message in this envelope before BLE transport.
+// ACK envelopes omit `payload` and instead carry `ack_id`.
+#[derive(Deserialize)]
+struct D3kbleEnvelope {
+    v: u8,
+    id: String,
+    kind: String,
+    #[serde(default)]
+    payload: Option<Value>,
+}
+
 fn next_sequence(state: &mut ControllerState) -> u16 {
     let current = state.sequence;
     state.sequence = state.sequence.wrapping_add(1);
@@ -95,6 +106,27 @@ fn emit_status(app: &AppHandle, state: &ControllerState) {
     let _ = app.emit("controller-status", status_snapshot(state));
 }
 
+fn send_comms_ack(
+    state: &mut ControllerState,
+    peer_id: u16,
+    received_message_id: &str,
+) -> Result<Vec<d3k_protocol::Event>, String> {
+    let sequence = next_sequence(state);
+    let acknowledgement = json!({
+        "v": 1,
+        "id": format!("{}-ack-{}", state.session_id, sequence),
+        "kind": "ack",
+        "ack_id": received_message_id,
+    });
+    let bytes = serde_json::to_vec(&acknowledgement).map_err(|e| e.to_string())?;
+    let port = state
+        .port
+        .as_mut()
+        .ok_or_else(|| "Controller disconnected while acknowledging BLE message".to_string())?;
+    let (_, events) = d3k_protocol::send_message(port, sequence, peer_id, &bytes)?;
+    Ok(events)
+}
+
 fn handle_events(
     app: &AppHandle,
     state: &mut ControllerState,
@@ -120,7 +152,47 @@ fn handle_events(
         match received {
             Ok((bytes, nested_events)) => {
                 queue.extend(nested_events);
-                match serde_json::from_slice::<PayloadManualStatus>(&bytes) {
+                let envelope = match serde_json::from_slice::<D3kbleEnvelope>(&bytes) {
+                    Ok(envelope) if envelope.v == 1 && !envelope.id.is_empty() => envelope,
+                    Ok(_) => {
+                        state.last_error = Some("Unsupported d3kble application envelope".into());
+                        emit_status(app, state);
+                        continue;
+                    }
+                    Err(error) => {
+                        state.last_error = Some(format!("Invalid d3kble application envelope: {error}"));
+                        emit_status(app, state);
+                        continue;
+                    }
+                };
+
+                // d3kble's CommsManager expects an application ACK after the
+                // complete envelope has been consumed from the firmware queue.
+                if envelope.kind == "ack" {
+                    continue;
+                }
+                if !matches!(envelope.kind.as_str(), "message" | "request" | "response") {
+                    state.last_error = Some(format!("Unsupported d3kble message kind: {}", envelope.kind));
+                    emit_status(app, state);
+                    continue;
+                }
+                match send_comms_ack(state, peer_id, &envelope.id) {
+                    Ok(ack_events) => queue.extend(ack_events),
+                    Err(error) => {
+                        state.last_error = Some(format!("Could not acknowledge payload message: {error}"));
+                        emit_status(app, state);
+                    }
+                }
+
+                if envelope.kind != "message" {
+                    continue;
+                }
+                let Some(payload) = envelope.payload else {
+                    state.last_error = Some("Payload d3kble message has no payload".into());
+                    emit_status(app, state);
+                    continue;
+                };
+                match serde_json::from_value::<PayloadManualStatus>(payload) {
                     Ok(payload_status)
                         if payload_status.protocol == "payload-manual-control-status"
                             && payload_status.version == 1
@@ -135,9 +207,7 @@ fn handle_events(
                         state.last_error = None;
                         emit_status(app, state);
                     }
-                    Ok(_) => {
-                        // Other application messages are not part of the manual-control status contract.
-                    }
+                    Ok(_) => {}
                     Err(error) => {
                         state.last_error = Some(format!("Invalid payload status message: {error}"));
                         emit_status(app, state);
@@ -359,7 +429,9 @@ fn send_control_inner(
                 "sequence": sequence
             })
         };
-        let bytes = serde_json::to_vec(&payload).map_err(|e| e.to_string())?;
+        let message_id = format!("{}-{}", session_id, sequence);
+        let envelope = json!({ "v": 1, "id": message_id, "kind": "message", "payload": payload });
+        let bytes = serde_json::to_vec(&envelope).map_err(|e| e.to_string())?;
         if bytes.len() > 496 {
             return Err("D3K application message exceeds 496 bytes".into());
         }

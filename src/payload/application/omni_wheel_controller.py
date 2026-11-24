@@ -53,7 +53,14 @@ class OmniWheelController:
                 scale = min(scale, maximum / abs(value))
         if scale == 1.0:
             return values
-        return tuple(value * scale for value in values)
+
+        return tuple(
+            max(
+                -actuator.capabilities.max_surface_velocity,
+                min(actuator.capabilities.max_surface_velocity, value * scale),
+            )
+            for value, actuator in zip(values, self._actuators)
+        )
 
     async def set_body_velocity(self, velocity: BodyVelocity) -> tuple[float, ...]:
         if self._closed:

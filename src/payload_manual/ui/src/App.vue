@@ -41,6 +41,10 @@ let commandInFlight = false;
 let refreshingStatus = false;
 let lastStatusRequestAt = 0;
 
+function isBleTransmitBusy(error: unknown): boolean {
+  return String(error).includes('D3K command 0x55 rejected with status 4');
+}
+
 const linkLabel = computed(() => !status.value.connected ? 'Controller disconnected' : status.value.peer_connected ? `Payload ${status.value.payload_peer_id} connected` : `Controller connected · waiting for payload ${status.value.payload_peer_id}`);
 const armedLabel = computed(() => status.value.pending_action === 'arm' ? 'Arming…' : status.value.pending_action === 'disarm' ? 'Disarming…' : !status.value.armed_confirmed ? 'State unknown' : status.value.armed && !status.value.session_active ? 'Armed by another controller' : status.value.armed ? 'Armed' : 'Disarmed');
 const isArmed = computed(() => status.value.armed && status.value.armed_confirmed && status.value.session_active && status.value.peer_connected && !status.value.pending_action);
@@ -87,6 +91,23 @@ function drainCommandQueue() {
           error.value = '';
           command.resolve();
         } catch (e) {
+          if (isBleTransmitBusy(e)) {
+            // D3K allows one active outgoing BLE message per peer. BUSY is
+            // backpressure while the previous message is still being consumed.
+            // A drive setpoint is refreshed by the heartbeat, so drop this copy
+            // but retain the held keys and retry the newest setpoint shortly.
+            // Safety transitions must remain queued until they are accepted.
+            error.value = '';
+            if (command.type === 'drive' || command.type === 'status') {
+              command.resolve();
+              await new Promise(resolve => window.setTimeout(resolve, 60));
+              break;
+            }
+            commandQueue.unshift(command);
+            await new Promise(resolve => window.setTimeout(resolve, 60));
+            continue;
+          }
+
           command.resolve();
           error.value = String(e);
           if (command.type === 'drive') pressed.value.clear();
@@ -214,11 +235,16 @@ onMounted(async () => {
   poller = window.setInterval(() => {
     if (!status.value.connected) return;
     if (!commandInFlight) void refreshStatus();
-    if (status.value.peer_connected && Date.now() - lastStatusRequestAt >= 900) {
+    // Only query until the payload has acknowledged this UI session. After
+    // that, arm/disarm/watchdog status messages are sent by the payload itself.
+    if (status.value.peer_connected && !status.value.armed_confirmed && Date.now() - lastStatusRequestAt >= 900) {
       lastStatusRequestAt = Date.now();
       void send('status');
     }
-  }, 100);
+    // Peer-link status changes much more slowly than motor setpoints. Polling it
+    // every 100 ms contends with the command serial channel without improving
+    // control responsiveness. Keep the 100 ms drive heartbeat separate.
+  }, 250);
 });
 onUnmounted(() => {
   clearKeys();
