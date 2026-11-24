@@ -352,6 +352,13 @@ for entry in "$@"; do
       ;;
     avion-vtol) require_file AVION_VTOL_CONFIG ;;
     avion-payload) require_file AVION_PAYLOAD_CONFIG ;;
+    avion-payload-manual) require_file AVION_MANUAL_PAYLOAD_CONFIG ;;
+    avion-payload-manual-ui)
+      if [[ ! -f /workspace/avion-cargo/src/payload_manual/ui/package.json ]]; then
+        echo "Payload manual UI package.json is missing." >&2
+        exit 2
+      fi
+      ;;
     avion-d3k-diagnostics) require_file AVION_D3K_DIAGNOSTICS_CONFIG ;;
     avion-sitl)
       if [[ -n "${AVION_SITL_PARAM_FILE:-}" ]]; then

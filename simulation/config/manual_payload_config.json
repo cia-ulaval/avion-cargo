@@ -1,0 +1,42 @@
+{
+  "payload_id": "payload-manual-simulator",
+  "uart_device": "/tmp/payload-anchor",
+  "plane_peer_id": 3,
+  "uwb": {
+    "anchor_id_by_target_id": {
+      "2": "manual-controller-d3k-node"
+    }
+  },
+  "wheels": [
+    {
+      "x": 0.0675499815,
+      "y": 0.039,
+      "yaw": 2.0943951027948966,
+      "radius": 0.027,
+      "driver": {
+        "type": "gazebo",
+        "topic": "/model/payload/joint/wheel_0_joint/cmd_vel"
+      }
+    },
+    {
+      "x": -0.0675499815,
+      "y": 0.039,
+      "yaw": 4.188790206794897,
+      "radius": 0.027,
+      "driver": {
+        "type": "gazebo",
+        "topic": "/model/payload/joint/wheel_1_joint/cmd_vel"
+      }
+    },
+    {
+      "x": 0.0,
+      "y": -0.078,
+      "yaw": 0,
+      "radius": 0.027,
+      "driver": {
+        "type": "gazebo",
+        "topic": "/model/payload/joint/wheel_2_joint/cmd_vel"
+      }
+    }
+  ]
+}

@@ -7,3 +7,6 @@ __pycache__
 .coverage
 htmlcov
 *.py[cod]
+**/node_modules
+**/target
+**/dist

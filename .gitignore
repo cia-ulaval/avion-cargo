@@ -134,3 +134,7 @@ temp/
 
 # Local-only scripts
 *.local.py
+
+# Tauri / frontend generated files
+**/node_modules/
+**/target/

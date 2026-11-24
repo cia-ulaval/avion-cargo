@@ -29,6 +29,7 @@ dependencies = [
 packages = [
     { include = "vtol", from = "src" },
     { include = "payload", from = "src" },
+    { include = "payload_manual", from = "src" },
     { include = "shared", from = "src" },
 ]
 
@@ -80,6 +81,7 @@ calibrate_camera = "vtol.ui.camera_calibration_cli:main"
 precision_landing = "vtol.ui.precision_landing_cli:main"
 generate_markers = "vtol.ui.marker_generation_cli:main"
 run_payload = "payload.main:main"
+run_payload_manual = "payload_manual.main:main"
 run_vtol = "vtol.main:main"
 run_d3k_diagnostics = "d3k_diagnostics.main:main"
 fmt = "script:run_code_formatting"

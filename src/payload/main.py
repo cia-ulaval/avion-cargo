@@ -1,17 +1,23 @@
 from __future__ import annotations
 
 import asyncio
+import inspect
 import signal
+from typing import Any
 from pathlib import Path
 
 import click
 from loguru import logger
 
-from payload.composition import PayloadApplication, build_payload_application
+from payload.composition import build_payload_application
+from payload.entrypoint import run_payload_application
 from payload.infrastructure.configuration import PayloadRuntimeConfiguration
 
 
-async def _run_application(application: PayloadApplication) -> None:
+async def run_payload_application(application: Any) -> None:
+    """
+    Run a payload application until SIGINT/SIGTERM, then close it.
+    """
     stop_event = asyncio.Event()
     loop = asyncio.get_running_loop()
 
@@ -22,7 +28,12 @@ async def _run_application(application: PayloadApplication) -> None:
             # Signal handlers are not available on all event-loop platforms.
             pass
 
-    await application.run(stop_event)
+    try:
+        await application.run(stop_event)
+    finally:
+        close_result = application.close()
+        if inspect.isawaitable(close_result):
+            await close_result
 
 
 @click.command(context_settings={"help_option_names": ["-h", "--help"]})
@@ -37,14 +48,16 @@ async def _run_application(application: PayloadApplication) -> None:
 def main(config_path: Path) -> None:
     config = PayloadRuntimeConfiguration.from_file(config_path)
     application = build_payload_application(config)
+    logger.info(
+        "Payload {} started; connecting to plane BLE peer {}",
+        config.payload_id,
+        config.plane_peer_id,
+    )
     try:
-        logger.info("Payload {} started; connecting to plane BLE peer {}", config.payload_id, config.plane_peer_id)
-        asyncio.run(_run_application(application))
+        asyncio.run(run_payload_application(application))
     except KeyboardInterrupt:
         logger.info("Payload application interrupted")
-    finally:
-        application.close()
-        logger.info("Payload application stopped")
+    logger.info("Payload application stopped")
 
 
 if __name__ == "__main__":

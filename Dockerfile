@@ -59,7 +59,20 @@ RUN set -eux; \
     ./waf copter -j2; \
     ./waf plane -j2
 
+# Keep every dependency below the expensive ArduPilot build above as much as 
+# possible. Docker reuses earlier layers when a later layer changes. A change 
+# above the ArduPilot build will invalidate its cache and trigger the long 
+# rebuild, so do it only if strictly necessary.
 USER root
+
+RUN curl -fsSL https://deb.nodesource.com/setup_22.x | bash - \
+    && apt-get update \
+    && apt-get install -y --no-install-recommends \
+       nodejs libwebkit2gtk-4.1-dev libayatana-appindicator3-dev \
+       librsvg2-dev libxdo-dev libssl-dev libgtk-3-dev patchelf \
+    && node --version \
+    && npm --version \
+    && rm -rf /var/lib/apt/lists/*
 
 RUN ROS_APT_SOURCE_VERSION="$(curl -fsSL https://api.github.com/repos/ros-infrastructure/ros-apt-source/releases/latest | python3 -c 'import json,sys; print(json.load(sys.stdin)["tag_name"])')" \
     && curl -fL --retry 4 --retry-delay 2 \
@@ -80,6 +93,12 @@ RUN curl -fL --retry 4 --retry-delay 2 \
     && rm -rf /var/lib/apt/lists/*
 
 USER dev
+WORKDIR /home/dev
+ENV PATH="/home/dev/.cargo/bin:/home/dev/.local/bin:/home/dev/venv-ardupilot/bin:${PATH}"
+RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | \
+    sh -s -- -y --profile minimal --default-toolchain stable \
+    && rustc --version \
+    && cargo --version
 
 COPY simulation/versions/ardupilot_gazebo_plugin.version /tmp/versions/ardupilot_gazebo_plugin.version
 
@@ -258,6 +277,55 @@ fi
 exec poetry run run_payload --config "$CONFIG"
 SCRIPT
 
+cat > /usr/local/bin/avion-payload-manual <<'SCRIPT'
+#!/usr/bin/env bash
+set -Eeuo pipefail
+cd /workspace/avion-cargo
+
+CONFIG="${AVION_MANUAL_PAYLOAD_CONFIG:-}"
+UART_DEVICE="${AVION_MANUAL_PAYLOAD_UART_DEVICE:-}"
+CONTROLLER_PEER_ID="${AVION_MANUAL_CONTROLLER_PEER_ID:-}"
+MAX_WHEEL_SPEED="${AVION_MANUAL_MAX_WHEEL_SURFACE_VELOCITY_M_S:-}"
+if [[ -z "$CONFIG" || ! -f "$CONFIG" ]]; then
+  echo "AVION_MANUAL_PAYLOAD_CONFIG must point to an existing manual payload JSON configuration." >&2
+  exit 2
+fi
+if [[ -z "$CONTROLLER_PEER_ID" || -z "$MAX_WHEEL_SPEED" ]]; then
+  echo "AVION_MANUAL_CONTROLLER_PEER_ID and AVION_MANUAL_MAX_WHEEL_SURFACE_VELOCITY_M_S must be set." >&2
+  exit 2
+fi
+if [[ -n "$UART_DEVICE" ]]; then
+  echo "Waiting for payload D3K PTY: $UART_DEVICE"
+  for _ in {1..60}; do
+    [[ -e "$UART_DEVICE" ]] && break
+    sleep 1
+  done
+  if [[ ! -e "$UART_DEVICE" ]]; then
+    echo "Payload D3K PTY did not appear: $UART_DEVICE" >&2
+    exit 1
+  fi
+fi
+exec poetry run run_payload_manual \
+  --config "$CONFIG" \
+  --controller-peer-id "$CONTROLLER_PEER_ID" \
+  --max-wheel-surface-velocity-m-s "$MAX_WHEEL_SPEED" \
+  --max-linear-speed-m-s "${AVION_MANUAL_MAX_LINEAR_SPEED_M_S:-0.15}" \
+  --max-angular-speed-rad-s "${AVION_MANUAL_MAX_ANGULAR_SPEED_RAD_S:-0.8}"
+SCRIPT
+
+cat > /usr/local/bin/avion-payload-manual-ui <<'SCRIPT'
+#!/usr/bin/env bash
+set -Eeuo pipefail
+cd /workspace/avion-cargo/src/payload_manual/ui
+
+if [[ ! -x node_modules/.bin/tauri ]]; then
+  echo "Installing the Payload Manual Control UI dependencies..."
+  npm install --no-audit --no-fund
+fi
+
+exec npm run tauri -- dev
+SCRIPT
+
 cat > /usr/local/bin/avion-d3k-diagnostics <<'SCRIPT'
 #!/usr/bin/env bash
 set -Eeuo pipefail
@@ -280,6 +348,7 @@ chmod 0755 /usr/local/bin/avion-sitl /usr/local/bin/avion-gazebo \
   /usr/local/bin/avion-image-bridge /usr/local/bin/avion-autolander \
   /usr/local/bin/avion-entrypoint /usr/local/bin/avion-web-proxy \
   /usr/local/bin/avion-vtol /usr/local/bin/avion-payload \
+  /usr/local/bin/avion-payload-manual /usr/local/bin/avion-payload-manual-ui \
   /usr/local/bin/avion-d3k-diagnostics
 CREATE_LAUNCHERS
 

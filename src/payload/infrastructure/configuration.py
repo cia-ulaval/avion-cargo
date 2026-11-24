@@ -6,17 +6,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Literal
 
+from payload.domain.wheel_geometry import WheelTransform2D
 from shared.infrastructure.configuration import integer, non_empty_string, positive_number
-
-
-@dataclass(frozen=True, slots=True)
-class WheelTransform2D:
-    """Wheel pose and physical radius in the payload frame (metres, radians)."""
-
-    x: float
-    y: float
-    yaw: float
-    radius: float
 
 
 @dataclass(frozen=True, slots=True)
