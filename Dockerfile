@@ -89,7 +89,7 @@ RUN curl -fL --retry 4 --retry-delay 2 \
     && apt-get update \
     && apt-get install -y --no-install-recommends \
        ros-jazzy-ros-base ros-jazzy-ros-gz-bridge ros-jazzy-ros-gz-image \
-       gz-harmonic libgz-sim8-dev libgz-plugin2-dev \
+       gz-harmonic libgz-sim8-dev libgz-plugin2-dev python3-gz-transport13 \
     && rm -rf /var/lib/apt/lists/*
 
 USER dev
