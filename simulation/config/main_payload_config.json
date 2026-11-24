@@ -15,7 +15,7 @@
       "y": 0.039,
       "yaw": 0.523598776,
       "radius": 0.019,
-      "max_surface_velocity": 0.3,
+      "max_surface_velocity": 0.2,
       "driver": {
         "type": "gazebo",
         "topic": "/model/payload/joint/wheel_0_joint/cmd_vel"
@@ -26,7 +26,7 @@
       "y": 0.039,
       "yaw": 2.61799388,
       "radius": 0.019,
-      "max_surface_velocity": 0.3,
+      "max_surface_velocity": 0.2,
       "driver": {
         "type": "gazebo",
         "topic": "/model/payload/joint/wheel_1_joint/cmd_vel"
@@ -37,7 +37,7 @@
       "y": -0.078,
       "yaw": 4.71238898,
       "radius": 0.019,
-      "max_surface_velocity": 0.3,
+      "max_surface_velocity": 0.2,
       "driver": {
         "type": "gazebo",
         "topic": "/model/payload/joint/wheel_2_joint/cmd_vel"

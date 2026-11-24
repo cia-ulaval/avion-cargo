@@ -232,7 +232,7 @@
                     <lower>-1e16</lower>
                     <upper>1e16</upper>
                     <effort>0.10</effort>
-                    <velocity>25</velocity>
+                    <velocity>11</velocity>
                 </limit>
                 <dynamics>
                     <damping>0.001</damping>
@@ -249,7 +249,7 @@
                     <lower>-1e16</lower>
                     <upper>1e16</upper>
                     <effort>0.10</effort>
-                    <velocity>25</velocity>
+                    <velocity>11</velocity>
                 </limit>
                 <dynamics>
                     <damping>0.001</damping>
@@ -266,7 +266,7 @@
                     <lower>-1e16</lower>
                     <upper>1e16</upper>
                     <effort>0.10</effort>
-                    <velocity>25</velocity>
+                    <velocity>11</velocity>
                 </limit>
                 <dynamics>
                     <damping>0.001</damping>
