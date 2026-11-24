@@ -42,6 +42,7 @@ MotorDriverConfiguration = (
 class WheelConfiguration:
     transform: WheelTransform2D
     driver: MotorDriverConfiguration
+    max_surface_velocity: float
 
 
 def _parse_motor_driver_configuration(
@@ -149,7 +150,9 @@ class PayloadRuntimeConfiguration:
             if not isinstance(raw_wheel, dict):
                 raise ValueError(f"{wheel_path} must be an object")
 
-            missing = {"x", "y", "yaw", "radius"} - raw_wheel.keys()
+            missing = {
+                "x", "y", "yaw", "radius", "max_surface_velocity"
+            } - raw_wheel.keys()
             if missing:
                 missing_fields = ", ".join(sorted(missing))
                 raise ValueError(
@@ -168,12 +171,24 @@ class PayloadRuntimeConfiguration:
                 values[axis] = float(value)
 
             positive_number(values["radius"], f"{wheel_path}.radius")
+            max_surface_velocity = raw_wheel["max_surface_velocity"]
+            positive_number(
+                max_surface_velocity,
+                f"{wheel_path}.max_surface_velocity",
+            )
+            max_surface_velocity = float(max_surface_velocity)
             transform = WheelTransform2D(**values)
 
             driver = _parse_motor_driver_configuration(
                 wheel_path, raw_wheel.get("driver")
             )
-            wheels.append(WheelConfiguration(transform=transform, driver=driver))
+            wheels.append(
+                WheelConfiguration(
+                    transform=transform,
+                    driver=driver,
+                    max_surface_velocity=max_surface_velocity,
+                )
+            )
 
         uwb = raw.get("uwb")
 
@@ -244,6 +259,10 @@ class PayloadRuntimeConfiguration:
                 ):
                     raise ValueError(f"{wheel_path}.{axis} must be a finite number")
             positive_number(transform.radius, f"{wheel_path}.radius")
+            positive_number(
+                wheel.max_surface_velocity,
+                f"{wheel_path}.max_surface_velocity",
+            )
 
             driver = wheel.driver
             if isinstance(driver, GazeboMotorDriverConfiguration):

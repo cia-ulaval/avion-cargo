@@ -106,6 +106,7 @@ def test_payload_runtime_configuration_parses_independent_wheels(tmp_path):
                         "y": 0.2,
                         "yaw": 0.3,
                         "radius": 0.04,
+                        "max_surface_velocity": 0.5,
                         "driver": {"type": "gazebo", "topic": "/wheel/front_left"},
                     },
                     {
@@ -113,6 +114,7 @@ def test_payload_runtime_configuration_parses_independent_wheels(tmp_path):
                         "y": -0.04,
                         "yaw": -1.2,
                         "radius": 0.05,
+                        "max_surface_velocity": 0.5,
                         "driver": {"type": "gazebo", "topic": "/wheel/rear"},
                     },
                 ],
@@ -129,6 +131,7 @@ def test_payload_runtime_configuration_parses_independent_wheels(tmp_path):
     assert config.wheels[0].transform.y == pytest.approx(0.2)
     assert config.wheels[0].transform.yaw == pytest.approx(0.3)
     assert config.wheels[0].transform.radius == pytest.approx(0.04)
+    assert config.wheels[0].max_surface_velocity == pytest.approx(0.5)
     assert config.wheels[1].transform.yaw == pytest.approx(-1.2)
     assert config.wheels[1].transform.radius == pytest.approx(0.05)
 
@@ -176,7 +179,8 @@ def test_payload_runtime_configuration_rejects_invalid_wheel_transforms(
             {
                 **wheel,
                 **(
-                    {"driver": {"type": "gazebo", "topic": f"/wheel/{index}"}}
+                    {"max_surface_velocity": 0.5,
+                     "driver": {"type": "gazebo", "topic": f"/wheel/{index}"}}
                     if {"x", "y", "yaw", "radius"}.issubset(wheel)
                     else {}
                 ),
@@ -268,6 +272,7 @@ def test_payload_runtime_configuration_parses_motor_driver_types(tmp_path):
                         "y": 0.2,
                         "yaw": 0.3,
                         "radius": 0.04,
+                        "max_surface_velocity": 0.5,
                         "driver": {
                             "type": "gazebo",
                             "topic": "/model/payload/joint/wheel_0_joint/cmd_vel",
@@ -278,6 +283,7 @@ def test_payload_runtime_configuration_parses_motor_driver_types(tmp_path):
                         "y": 0.2,
                         "yaw": -0.3,
                         "radius": 0.04,
+                        "max_surface_velocity": 0.5,
                         "driver": {
                             "type": "mx1616",
                             "in1_pin": 17,
@@ -289,6 +295,7 @@ def test_payload_runtime_configuration_parses_motor_driver_types(tmp_path):
                         "y": -0.2,
                         "yaw": 1.5,
                         "radius": 0.04,
+                        "max_surface_velocity": 0.5,
                         "driver": {
                             "type": "mx1616",
                             "in1_pin": 19,
@@ -353,6 +360,7 @@ def test_payload_runtime_configuration_rejects_invalid_motor_drivers(
                         "y": 0.2,
                         "yaw": 0.3,
                         "radius": 0.04,
+                        "max_surface_velocity": 0.5,
                         **({"driver": driver} if driver is not _MISSING else {}),
                     }
                 ],
@@ -380,6 +388,7 @@ def test_payload_runtime_configuration_rejects_reused_gpio_pins(tmp_path):
                         "y": 0.2,
                         "yaw": 0.3,
                         "radius": 0.04,
+                        "max_surface_velocity": 0.5,
                         "driver": {
                             "type": "mx1616",
                             "in1_pin": 17,
@@ -391,6 +400,7 @@ def test_payload_runtime_configuration_rejects_reused_gpio_pins(tmp_path):
                         "y": 0.2,
                         "yaw": -0.3,
                         "radius": 0.04,
+                        "max_surface_velocity": 0.5,
                         "driver": {
                             "type": "mx1616",
                             "in1_pin": 18,

@@ -106,7 +106,7 @@
             <collision name="wheel_0_contact">
                 <geometry>
                     <cylinder>
-                        <radius>0.027</radius>
+                        <radius>0.019</radius>
                         <length>0.016</length>
                     </cylinder>
                 </geometry>
@@ -124,7 +124,7 @@
                 <pose>0 0 0 0 0 0</pose>
                 <geometry>
                     <cylinder>
-                        <radius>0.027</radius>
+                        <radius>0.019</radius>
                         <length>0.016</length>
                     </cylinder>
                 </geometry>
@@ -150,7 +150,7 @@
             <collision name="wheel_1_contact">
                 <geometry>
                     <cylinder>
-                        <radius>0.027</radius>
+                        <radius>0.019</radius>
                         <length>0.016</length>
                     </cylinder>
                 </geometry>
@@ -168,7 +168,7 @@
                 <pose>0 0 0 0 0 0</pose>
                 <geometry>
                     <cylinder>
-                        <radius>0.027</radius>
+                        <radius>0.019</radius>
                         <length>0.016</length>
                     </cylinder>
                 </geometry>
@@ -194,7 +194,7 @@
             <collision name="wheel_2_contact">
                 <geometry>
                     <cylinder>
-                        <radius>0.027</radius>
+                        <radius>0.019</radius>
                         <length>0.016</length>
                     </cylinder>
                 </geometry>
@@ -212,7 +212,7 @@
                 <pose>0 0 0 0 0 0</pose>
                 <geometry>
                     <cylinder>
-                        <radius>0.027</radius>
+                        <radius>0.019</radius>
                         <length>0.016</length>
                     </cylinder>
                 </geometry>
