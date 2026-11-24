@@ -42,7 +42,8 @@ L'ancien monde `iris_runway_aruco.sdf` reste disponible pour des essais ArUco av
 
 ## Tricopter QuadPlane avec Docker
 
-Le dépôt ArduPilot contenant l'API de lacet doit être présent dans `../ardupilot`.
+Le dépôt ArduPilot contenant l'API de lacet et l'applet `qland_yaw_alignment.lua`
+doit être présent dans `../ardupilot`.
 Compose transmet ses sources locales à Docker comme contexte de construction
 additionnel. Depuis la racine d'Autolander, activez le scénario tricopter puis
 lancez la simulation :
@@ -72,7 +73,8 @@ pas ces changements. Voir les [options de `docker compose up`](https://docs.dock
 
 Avant chaque démarrage d'ArduPlane, le lanceur vérifie et installe
 `scripts/plane_precland.lua` et `scripts/qland_yaw_alignment.lua` dans le dossier ArduPilot utilisé comme répertoire de travail
-de SITL. Il utilise les copies présentes dans l'image, répare un lien
+de SITL. Les deux applets proviennent de `../ardupilot/libraries/AP_Scripting/applets/`
+et sont incluses dans l'image. Le lanceur répare un lien
 absent ou cassé et refuse de démarrer si la source manque. Un script personnalisé déjà
 présent est préservé et signalé pour inspection s'il diffère de l'applet fournie.
 
@@ -99,8 +101,8 @@ Après ce message, activez-le dans MAVProxy avec `param set QYAW_ENABLE 1`.
 Ce paramètre Lua n'est disponible qu'après chargement du script et n'est pas
 initialisé par le fichier de valeurs par défaut de SITL sur cette révision.
 `QYAW_MIN_HGT=4` l'arrête sous quatre mètres au-dessus de la cible.
-Le Dockerfile compile le firmware depuis `../ardupilot` et copie le script dans
-l'image. Une modification du Lua ou des sources ArduPilot nécessite donc aussi
+Le Dockerfile compile le firmware et inclut les applets depuis `../ardupilot`.
+Une modification du Lua ou des sources ArduPilot nécessite donc aussi
 `up --build --force-recreate -d dev`.
 Les paramètres, le protocole et l'installation sur un FC sont décrits dans le
 [guide d'alignement Lua](../ardupilot/README.md).

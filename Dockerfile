@@ -82,8 +82,6 @@ RUN set -eux; \
       /home/dev/ardupilot/scripts/plane_precland.lua; \
     test -s /home/dev/ardupilot/scripts/plane_precland.lua
 
-COPY --chown=dev:dev ardupilot/scripts/qland_yaw_alignment.lua /home/dev/ardupilot/libraries/AP_Scripting/applets/qland_yaw_alignment.lua
-
 RUN set -eux; \
     ARDUPILOT_GAZEBO_REF="$(sed -n 's/^ardupilot_gazebo=//p' /tmp/versions.txt)"; \
     test -n "${ARDUPILOT_GAZEBO_REF}"; \
@@ -138,7 +136,7 @@ if [[ "$VEHICLE" == ArduPlane ]]; then
     target_script="$PWD/scripts/$applet.lua"
     if [[ ! -f "$source_script" || ! -r "$source_script" || ! -s "$source_script" ]]; then
       echo "Cannot start ArduPlane: $description applet missing or unreadable: $source_script" >&2
-      echo "Check the source applet in ../ardupilot or ardupilot/scripts, then rebuild the Docker image." >&2
+      echo "Check the source applet in ../ardupilot/libraries/AP_Scripting/applets, then rebuild the Docker image." >&2
       exit 1
     fi
 

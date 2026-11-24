@@ -25,7 +25,7 @@ def test_qland_yaw_control(tmp_path, scenario):
         assert probe.connect_ex(("127.0.0.1", port)) != 0, "SITL test port already in use"
     scripts = tmp_path / "scripts"
     scripts.mkdir()
-    shutil.copy(root / "ardupilot/scripts/qland_yaw_alignment.lua", scripts)
+    shutil.copy(ap / "libraries/AP_Scripting/applets/qland_yaw_alignment.lua", scripts)
     shutil.copy(ap / "libraries/AP_Scripting/applets/plane_precland.lua", scripts)
     params = tmp_path / "test.parm"
     flight_parameters = {"Q_LAND_FINAL_ALT": 6, "Q_LAND_FINAL_SPD": 0.5}
