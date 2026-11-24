@@ -2,7 +2,3 @@
 *.mtl filter=lfs diff=lfs merge=lfs -text
 *.dae filter=lfs diff=lfs merge=lfs -text
 *.png filter=lfs diff=lfs merge=lfs -text
-src/payload_manual/ui/package-lock.json filter=lfs diff=lfs merge=lfs -text
-src/payload_manual/ui/src-tauri/gen/schemas/desktop-schema.json filter=lfs diff=lfs merge=lfs -text
-src/payload_manual/ui/src-tauri/gen/schemas/linux-schema.json filter=lfs diff=lfs merge=lfs -text
-src/payload_manual/ui/src-tauri/Cargo.lock filter=lfs diff=lfs merge=lfs -text
