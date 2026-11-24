@@ -33,12 +33,6 @@ from payload_manual.composition import build_manual_control_application
     help="Conservative configured maximum wheel surface speed in m/s",
 )
 @click.option(
-    "--max-angular-speed-rad-s",
-    type=click.FloatRange(min=0.000001),
-    default=0.8,
-    show_default=True,
-)
-@click.option(
     "--command-timeout-ms",
     type=click.IntRange(100, 5000),
     default=300,
@@ -55,13 +49,11 @@ def main(
     config_path: Path,
     controller_peer_id: int,
     max_wheel_surface_velocity_m_s: float,
-    max_angular_speed_rad_s: float,
     command_timeout_ms: int,
     control_rate_hz: int,
 ) -> None:
     config = PayloadRuntimeConfiguration.from_file(config_path)
     limits = ManualControlLimits(
-        max_angular_speed_rad_s=max_angular_speed_rad_s,
         command_timeout_ms=command_timeout_ms,
         control_rate_hz=control_rate_hz,
     )

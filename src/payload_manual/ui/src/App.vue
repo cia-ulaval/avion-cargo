@@ -24,7 +24,6 @@ const status = ref<Status>({ connected: false, armed: false, armed_confirmed: fa
 const busy = ref(false);
 const error = ref('');
 const pressed = ref(new Set<string>());
-const maxYaw = 0.8;
 let heartbeat: number | undefined;
 let poller: number | undefined;
 let unlistenStatus: UnlistenFn | undefined;
@@ -184,7 +183,7 @@ function velocity() {
   const length = Math.hypot(vx, vy);
   if (length > 1) { vx /= length; vy /= length; }
   const yaw = (keys.has('q') ? 1 : 0) - (keys.has('e') ? 1 : 0);
-  return { vx, vy, yaw: yaw * maxYaw };
+  return { vx, vy, yaw };
 }
 function updateDrive() {
   if (!isArmed.value) return;
@@ -300,7 +299,7 @@ onUnmounted(() => {
             </div>
           </div>
         </div>
-        <div class="limits"><span>Wheel speed <b>Actuator-limited</b></span><span>Rotation cap <b>0.80 rad/s</b></span><span>Command refresh <b>100 ms</b></span></div>
+        <div class="limits"><span>Wheel speed <b>Actuator-limited</b></span><span>Command refresh <b>100 ms</b></span></div>
       </div>
 
       <aside class="panel safety-panel">

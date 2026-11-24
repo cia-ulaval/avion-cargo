@@ -308,8 +308,7 @@ fi
 exec poetry run run_payload_manual \
   --config "$CONFIG" \
   --controller-peer-id "$CONTROLLER_PEER_ID" \
-  --max-wheel-surface-velocity-m-s "$MAX_WHEEL_SPEED" \
-  --max-angular-speed-rad-s "${AVION_MANUAL_MAX_ANGULAR_SPEED_RAD_S:-0.8}"
+  --max-wheel-surface-velocity-m-s "$MAX_WHEEL_SPEED"
 SCRIPT
 
 cat > /usr/local/bin/avion-payload-manual-ui <<'SCRIPT'

@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import asyncio
-import math
 from dataclasses import dataclass
 
 from loguru import logger
@@ -15,15 +14,10 @@ from payload.domain.positioning.distance_sensor import DistanceSensor
 
 @dataclass(frozen=True, slots=True)
 class ManualControlLimits:
-    max_angular_speed_rad_s: float = 0.8
     command_timeout_ms: int = 300
     control_rate_hz: int = 50
 
     def __post_init__(self) -> None:
-        for name in ("max_angular_speed_rad_s",):
-            value = getattr(self, name)
-            if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(value) or value <= 0:
-                raise ValueError(f"{name} must be finite and positive")
         if (
             isinstance(self.command_timeout_ms, bool)
             or not isinstance(self.command_timeout_ms, int)
@@ -182,23 +176,10 @@ class ManualControlRuntime:
                     logger.warning("ignoring drive command while manual control is disarmed")
                     continue
                 assert command.velocity is not None
-                if not self._within_limits(command.velocity):
-                    logger.warning("drive command exceeded configured manual-control limits; disarming")
-                    self._armed = False
-                    self._desired_velocity = BodyVelocity(0.0, 0.0, 0.0)
-                    self._last_command_at = None
-                    self._arm_started_at = None
-                    await self._stop_wheels_safely("out-of-limits command")
-                    await self._report_status_safely(command.session_id, command.sequence)
-                    continue
                 self._desired_velocity = command.velocity
                 self._last_command_at = now
                 self._arm_started_at = None
                 self._outputs_may_be_active = True
-
-    def _within_limits(self, velocity: BodyVelocity) -> bool:
-        # Wheel surface-speed capabilities are the sole translational limit.
-        return abs(velocity.yaw_rate_rad_s) <= self._limits.max_angular_speed_rad_s
 
     async def _control_loop(self) -> None:
         interval = 1.0 / self._limits.control_rate_hz
