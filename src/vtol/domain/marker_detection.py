@@ -3,7 +3,7 @@ from typing import Optional
 
 import numpy as np
 
-from domain.rigid_transform import RigidTransform
+from vtol.domain.rigid_transform import RigidTransform
 
 
 @dataclass(frozen=True, slots=True)

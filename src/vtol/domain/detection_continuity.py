@@ -1,6 +1,6 @@
 import math
 
-from domain.tracking import TrackingResult, TrackingStatus
+from vtol.domain.tracking import TrackingResult, TrackingStatus
 
 
 class DetectionContinuity:

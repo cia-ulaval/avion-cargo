@@ -12,6 +12,7 @@ from pymavlink.dialects.v20 import ardupilotmega as mavlink2
 from vtol.domain.drone import Drone, DroneMode, DroneStatus, LandedState, VtolState, HoldPosition
 from vtol.domain.mission.execution_status import MissionExecutionStatus
 from vtol.domain.models import Pose3D
+from vtol.domain.rigid_transform import RigidTransform
 
 from .mavlink_connection_params import MavlinkConnectionParams
 
@@ -159,9 +160,16 @@ class DroneMavlinkBase(Drone):
         with self._lock:
             return self._mission_execution_status
 
-    def send_landing_target(self, uav_pose: Pose3D, target_size: tuple[float, float]) -> None:
+    def send_landing_target(
+        self,
+        position: Pose3D,
+        target_size: tuple[float, float],
+        *,
+        body_from_marker: RigidTransform | None = None,
+        captured_at_s: float | None = None,
+    ) -> None:
         with self._lock:
-            self._send_landing_target(uav_pose, target_size)
+            self._send_landing_target(position, target_size, body_from_marker, captured_at_s)
 
     def _request_parameter(self, name: str) -> None:
         now = time.monotonic()
@@ -341,7 +349,13 @@ class DroneMavlinkBase(Drone):
                 self.connection.mav.rc_channels_override_send(self._target_system, self._target_component, *channels)
             self._yaw_channel = None
 
-    def _send_landing_target(self, uav_pose: Pose3D, target_size: tuple[float, float]) -> None:
+    def _send_landing_target(
+        self,
+        uav_pose: Pose3D,
+        target_size: tuple[float, float],
+        body_from_marker: RigidTransform | None,
+        captured_at_s: float | None,
+    ) -> None:
         """Send the MAVLink 2 position branch in BODY_FRD coordinates (in meters).
 
         Image angles/sizes cannot be recovered from a body-frame translation
@@ -354,8 +368,19 @@ class DroneMavlinkBase(Drone):
         if not math.isfinite(distance) or uav_pose.z <= 0:
             raise ValueError("Landing target must be finite and below the vehicle (BODY_FRD z > 0)")
 
+        quaternion = [0.0, 0.0, 0.0, 0.0]
+        if body_from_marker is not None:
+            if body_from_marker.position != uav_pose:
+                raise ValueError("Landing position and orientation must come from the same transform")
+            if captured_at_s is None:
+                raise ValueError("Oriented landing targets require a capture timestamp")
+            quaternion = body_from_marker.quaternion_wxyz()
+        timestamp = time.monotonic() if captured_at_s is None else captured_at_s
+        if not math.isfinite(timestamp) or timestamp < 0 or timestamp >= 2**63 / 1_000_000:
+            raise ValueError("Landing target capture timestamp is invalid")
+
         self.connection.mav.landing_target_send(
-            int(time.time() * 1_000_000),  # time_usec
+            int(timestamp * 1_000_000),  # time_usec
             0,  # target_num
             mavutil.mavlink.MAV_FRAME_BODY_FRD,  # frame
             0.0,  # angle_x: not provided by the position branch
@@ -366,7 +391,7 @@ class DroneMavlinkBase(Drone):
             uav_pose.x,  # x
             uav_pose.y,  # y
             uav_pose.z,  # z
-            [1.0, 0.0, 0.0, 0.0],  # q  <-- tableau de 4 floats
+            quaternion,  # marker-to-BODY_FRD rotation, w/x/y/z; all-zero means unknown
             mavutil.mavlink.LANDING_TARGET_TYPE_VISION_FIDUCIAL,
             1,  # position_valid
         )

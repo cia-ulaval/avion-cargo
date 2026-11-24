@@ -345,7 +345,7 @@ for entry in "$@"; do
   fi
   case "$entry" in
     avion-gazebo)
-      require_file AVION_WORLD /workspace/avion-cargo/simulation/worlds/iris_runway_aruco.sdf
+      require_file AVION_WORLD /workspace/avion-cargo/simulation/worlds/runway_iris_aruco.sdf
       ;;
     avion-autolander)
       require_file AVION_AUTOLANDER_CONFIG /workspace/avion-cargo/simulation/config/autolanding_config.json
