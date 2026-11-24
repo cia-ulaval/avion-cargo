@@ -3,9 +3,6 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-      # Use the parent: ArduPilot's own .dockerignore excludes its sources.
-      additional_contexts:
-        avion-cargo: ..
     image: avion-cargo-dev:ubuntu24.04
     user: "0:0"
     entrypoint: ["/usr/local/bin/fix-volume-permissions.sh"]
@@ -18,8 +15,6 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-      additional_contexts:
-        avion-cargo: ..
     image: avion-cargo-dev:ubuntu24.04
     init: true
     stdin_open: true

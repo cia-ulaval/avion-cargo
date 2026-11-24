@@ -6,18 +6,18 @@ sur le FC et commande le lacet pendant la descente native en `QLAND`.
 
 Le [script `qland_yaw_alignment.lua`](https://github.com/bertrand-awz/ardupilot/blob/master/libraries/AP_Scripting/applets/qland_yaw_alignment.lua),
 sa [documentation](https://github.com/bertrand-awz/ardupilot/blob/master/libraries/AP_Scripting/applets/qland_yaw_alignment.md)
-et ses tests unitaires sont maintenus dans le dépôt voisin `../ardupilot`,
+et ses tests unitaires sont maintenus dans le [dépôt ArduPilot patché](https://github.com/bertrand-awz/ardupilot),
 avec les bindings `quadplane:set_landing_yaw_rate(deg_s)` et
 `quadplane:clear_landing_yaw_rate()` dont il dépend. Le script se trouve dans
 `libraries/AP_Scripting/applets/`, à côté de `plane_precland.lua`.
 
 ## Firmware et installation
 
-Docker compile les sources locales de `../ardupilot`, y compris les modifications
-non commitées, via le contexte de construction additionnel `avion-cargo` de Compose,
-qui pointe vers le dossier parent.
-Ce dépôt doit donc être présent à côté d'Autolander. Les sous-modules sont
-initialisés dans l'image ; les scripts et le lanceur y sont également inclus.
+Docker clone `https://github.com/bertrand-awz/ardupilot.git` à la révision
+`ardupilot=` fixée dans [`simulation/versions.txt`](../simulation/versions.txt),
+puis initialise les sous-modules et compile le firmware. Cette révision contient
+l'API de lacet et les deux applets. Les scripts et le lanceur sont inclus dans
+l'image ; aucune copie locale d'ArduPilot n'est nécessaire pour la construction.
 Depuis la racine du dépôt Autolander :
 
 ```bash
@@ -25,13 +25,18 @@ docker compose -f compose.yaml -f compose-full-sim.yaml up --build --force-recre
 COMPOSE_FILE=compose.yaml:compose-full-sim.yaml bash scripts/launch-simulation.sh
 ```
 
-Pour une construction Docker sans Compose, fournir le même contexte :
+Pour une construction Docker sans Compose :
 
 ```bash
-docker build --build-context avion-cargo=.. -t avion-cargo-dev:ubuntu24.04 .
+docker build -t avion-cargo-dev:ubuntu24.04 .
 ```
 
-Pour un FC physique, compiler ArduPlane depuis ce même dépôt `../ardupilot`
+Pour intégrer de nouvelles modifications du firmware ou du Lua, les pousser dans
+le dépôt patché, puis mettre à jour `ardupilot=` avec le nouveau commit avant
+de reconstruire l'image.
+
+Pour un FC physique, compiler ArduPlane depuis une copie de ce même dépôt patché
+à la révision indiquée dans `simulation/versions.txt`
 pour la carte avec le scripting activé, puis installer le firmware et copier
 `libraries/AP_Scripting/applets/qland_yaw_alignment.lua` dans `APM/scripts/`
 sur la carte SD. Suivre la [documentation de l’applet](https://github.com/bertrand-awz/ardupilot/blob/master/libraries/AP_Scripting/applets/qland_yaw_alignment.md)
@@ -102,14 +107,14 @@ param set Q_LAND_FINAL_SPD 0.3
 param set PLND_XY_DIST_MAX 2.5
 ```
 
-Le firmware du dépôt `../ardupilot` doit également être reconstruit pour autoriser le lacet
-pendant la phase finale. Les paramètres de descente seuls n'ajoutent pas cette
-possibilité à un ancien binaire.
+Le firmware doit inclure l'API de lacet pendant la phase finale, présente dans
+la révision patchée fixée par Docker. Les paramètres de descente seuls n'ajoutent
+pas cette possibilité à un ancien binaire.
 
 ## Vérification
 
-Les tests unitaires accompagnent le script dans ArduPilot. Depuis la racine
-d’Autolander :
+Les tests unitaires accompagnent le script dans ArduPilot. Avec une copie du
+dépôt patché dans `../ardupilot`, depuis la racine d’Autolander :
 
 ```bash
 lua5.4 ../ardupilot/libraries/AP_Scripting/tests/qland_yaw_alignment_test.lua ../ardupilot/libraries/AP_Scripting/applets/qland_yaw_alignment.lua
