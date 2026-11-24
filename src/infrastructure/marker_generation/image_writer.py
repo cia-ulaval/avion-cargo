@@ -1,5 +1,3 @@
-"""Write marker rasters with an explicit physical size (in meters)."""
-
 import math
 from pathlib import Path
 

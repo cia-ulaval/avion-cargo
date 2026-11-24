@@ -10,6 +10,7 @@ from application.tracking_service import TrackingService
 from domain.buffer import DroneStatusBufferPort, FrameBufferPort, PoseBufferPort
 from domain.content_streamer import ContentStreamer
 from domain.drone import Drone
+from domain.tracking import TrackingStatus
 
 
 class DroneAutolandingService:
@@ -78,25 +79,55 @@ class DroneAutolandingService:
     def _tracking_target_loop(self):
         waiting_period = 1.0 / max(1, self.aruco_tracker.camera.get_fps())
         previous_status = None
+        camera_outage_started_s = None
+        camera_unavailable_after_s = 5.0
 
         while self._tracking_started:
             start_time = time.monotonic()
 
-            vis, tracking_result = self.aruco_tracker.track_target()
+            try:
+                vis, tracking_result = self.aruco_tracker.track_target()
+            except TimeoutError as error:
+                # A missed frame deadline is a recoverable sensor outage, not a
+                # fatal worker failure. Never leave an old target pose publishable.
+                now = time.monotonic()
+                if camera_outage_started_s is None:
+                    camera_outage_started_s = now
+                    logger.warning("Camera frames are stale; clearing target until fresh frames return: {}", error)
+                camera_state = "UNAVAILABLE" if now - camera_outage_started_s >= camera_unavailable_after_s else "STALE"
+                self.frame_buffer.set_value(
+                    None,
+                    {
+                        "status": 2,  # TrackingStatus.NOT_FOUND
+                        "poses": {"estimated_pose_from_camera": None, "estimated_pose_to_uav": None},
+                        "marker_id": None,
+                        "confidence": None,
+                        "camera_state": camera_state,
+                    },
+                )
+                self.pose_buffer.set_value(None)
+                self.pose_buffer.set_uav_pose_value(None)
+                self.pose_buffer.set_tracking_result(None)
+                if camera_state != previous_status:
+                    logger.warning("Camera state: {}", camera_state)
+                    previous_status = camera_state
+            else:
+                if self._stop_event.is_set():
+                    break
+                camera_outage_started_s = None
+                metadata = tracking_result.to_dict()
+                metadata["camera_state"] = "OK"
+                self.frame_buffer.set_value(vis, metadata, timestamp=tracking_result.captured_at_s)
+                self.pose_buffer.set_value(tracking_result.pose, timestamp=tracking_result.captured_at_s)
+                self.pose_buffer.set_uav_pose_value(tracking_result.uav_pose, timestamp=tracking_result.captured_at_s)
+                self.pose_buffer.set_tracking_result(tracking_result)
+                if tracking_result.status != previous_status:
+                    logger.info("Target tracking: {}", tracking_result.status.name)
+                    previous_status = tracking_result.status
+
             if self._stop_event.is_set():
                 break
-            self.frame_buffer.set_value(vis, tracking_result.to_dict(), timestamp=tracking_result.captured_at_s)
-            self.pose_buffer.set_value(tracking_result.pose, timestamp=tracking_result.captured_at_s)
-
-            self.pose_buffer.set_uav_pose_value(tracking_result.uav_pose, timestamp=tracking_result.captured_at_s)
-            if tracking_result.status != previous_status:
-                logger.info("Target tracking: {}", tracking_result.status.name)
-                previous_status = tracking_result.status
-
-            end_time = time.monotonic()
-            elapsed_time = end_time - start_time
-            remaining_time = waiting_period - elapsed_time
-
+            remaining_time = waiting_period - (time.monotonic() - start_time)
             if remaining_time > 0:
                 self._stop_event.wait(remaining_time)
 
@@ -135,6 +166,7 @@ class DroneAutolandingService:
         waiting_period = 1.0 / max(1, self.aruco_tracker.camera.get_fps())
         self._raise_worker_failure()
         logger.info("Target position publication active at {} Hz; waiting for detections", 1 / waiting_period)
+        last_capture = None
 
         while self._tracking_started:
             start_time = time.monotonic()
@@ -142,11 +174,25 @@ class DroneAutolandingService:
             drone_status = self.drone.get_status()
             self.drone_status_buffer.set_value(drone_status)
 
-            uav_pose = self.pose_buffer.get_uav_pose_value()
-            if uav_pose is not None and drone_status.connected:
+            tracking = self.pose_buffer.get_tracking_result()
+            if (
+                tracking is not None
+                and tracking.status == TrackingStatus.DETECTED
+                and tracking.uav_pose is not None
+                and tracking.captured_at_s is not None
+                and 0 <= time.monotonic() - tracking.captured_at_s < 0.4
+                and tracking.captured_at_s != last_capture
+                and drone_status.connected
+            ):
                 target = self.aruco_tracker.get_target()
                 target_size = target.length, target.length
-                self.drone.send_landing_target(uav_pose, target_size)
+                self.drone.send_landing_target(
+                    tracking.uav_pose,
+                    target_size,
+                    body_from_marker=tracking.body_from_marker,
+                    captured_at_s=tracking.captured_at_s,
+                )
+                last_capture = tracking.captured_at_s
 
             self._stop_event.wait(max(0, waiting_period - (time.monotonic() - start_time)))
         self._raise_worker_failure()

@@ -1,5 +1,3 @@
-"""Optional real ROS 2 publisher/subscriber test; no Gazebo or camera required."""
-
 import time
 from threading import Event, Thread
 

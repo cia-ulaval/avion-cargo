@@ -4,21 +4,49 @@ from dataclasses import dataclass
 from enum import Enum
 
 from domain.models import Pose3D
+from domain.rigid_transform import RigidTransform
 
 
 class DroneMode(str, Enum):
+    """ArduPlane/QuadPlane flight modes, with existing ArduCopter support."""
+
     UNKNOWN = "UNKNOWN"
+
+    # ArduPlane modes, including names shared with ArduCopter.
+    MANUAL = "MANUAL"
+    CIRCLE = "CIRCLE"
     STABILIZE = "STABILIZE"
+    TRAINING = "TRAINING"
     ACRO = "ACRO"
-    ALT_HOLD = "ALT_HOLD"
-    POSHOLD = "POSHOLD"
-    LOITER = "LOITER"
-    GUIDED = "GUIDED"
+    FBWA = "FBWA"
+    FBWB = "FBWB"
+    CRUISE = "CRUISE"
+    AUTOTUNE = "AUTOTUNE"
     AUTO = "AUTO"
     RTL = "RTL"
+    LOITER = "LOITER"
+    TAKEOFF = "TAKEOFF"
+    AVOID_ADSB = "AVOID_ADSB"
+    GUIDED = "GUIDED"
+    INITIALISING = "INITIALISING"
+    THERMAL = "THERMAL"
+    AUTOLAND = "AUTOLAND"
+
+    # QuadPlane VTOL modes.
+    QSTABILIZE = "QSTABILIZE"
+    QHOVER = "QHOVER"
+    QLOITER = "QLOITER"
+    QLAND = "QLAND"
+    QRTL = "QRTL"
+    QAUTOTUNE = "QAUTOTUNE"
+    QACRO = "QACRO"
+    LOITER_ALT_QLAND = "LOITER_ALT_QLAND"
+
+    # Additional modes retained for ArduCopter simulations and callers.
+    ALT_HOLD = "ALT_HOLD"
+    POSHOLD = "POSHOLD"
     LAND = "LAND"
     BRAKE = "BRAKE"
-    CIRCLE = "CIRCLE"
     DRIFT = "DRIFT"
     SPORT = "SPORT"
     FLIP = "FLIP"
@@ -32,6 +60,9 @@ class DroneMode(str, Enum):
         aliases = {
             "ALTHOLD": "ALT_HOLD",
             "POS_HOLD": "POSHOLD",
+            "FLY_BY_WIRE_A": "FBWA",
+            "FLY_BY_WIRE_B": "FBWB",
+            "LOITERALTQLAND": "LOITER_ALT_QLAND",
         }
         s = aliases.get(s, s)
         return cls(s) if s in cls._value2member_map_ else cls.UNKNOWN
@@ -73,7 +104,7 @@ class DroneStatus:
 
 
 class Drone(ABC):
-    """Receive vehicle telemetry and send target measurements, without flight control."""
+    """Vehicle telemetry and landing target measurements."""
 
     def close(self) -> None:
         """Release the connection; adapters owning a transport override this."""
@@ -87,6 +118,13 @@ class Drone(ABC):
         raise NotImplementedError()
 
     @abstractmethod
-    def send_landing_target(self, position: Pose3D, target_size: tuple[float, float]):
+    def send_landing_target(
+        self,
+        position: Pose3D,
+        target_size: tuple[float, float],
+        *,
+        body_from_marker: RigidTransform | None = None,
+        captured_at_s: float | None = None,
+    ):
         """Send a LANDING_TARGET measurement; this message does not select a flight mode."""
         raise NotImplementedError()

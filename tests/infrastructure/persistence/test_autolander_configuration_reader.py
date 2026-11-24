@@ -11,6 +11,7 @@ from infrastructure.persistence.configuration_models import (
     StreamingVideoConfiguration,
 )
 from tests.conftest import write_config
+from utils.validators.validation_error import ValidationError
 
 
 def test_reader_maps_a_valid_json_file_to_runtime_configuration_objects(
@@ -48,6 +49,12 @@ def test_reader_preserves_optional_fc_timeout_settings(tmp_path, valid_config_da
 
     assert config.drone_connection_config.timeout == 0.25
     assert config.drone_connection_config.fail_on_timeout is False
+
+
+def test_reader_rejects_removed_companion_yaw_configuration(tmp_path, valid_config_data):
+    valid_config_data["yaw_alignment"] = {"enabled": True}
+    with pytest.raises(ValidationError, match="Unknown root keys.*yaw_alignment"):
+        AutolanderConfigurationReader(write_config(tmp_path, valid_config_data))
 
 
 def test_reader_resolves_relative_calibration_paths_from_the_config_file_directory(

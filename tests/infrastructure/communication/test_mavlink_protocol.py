@@ -1,5 +1,3 @@
-"""Decode actual packets to verify the public MAVLink contract."""
-
 import math
 from unittest.mock import Mock
 
@@ -8,6 +6,7 @@ from pymavlink import mavutil
 from pymavlink.dialects.v20 import ardupilotmega as mavlink2
 
 from domain.models import Pose3D
+from domain.rigid_transform import RigidTransform
 from infrastructure.communication.mavlink import DroneMavlinkUDPConnector, MavlinkConnectionParams
 
 
@@ -70,3 +69,44 @@ def test_target_requires_a_connection():
     drone = DroneMavlinkUDPConnector(MavlinkConnectionParams("127.0.0.1", 14550))
     with pytest.raises(RuntimeError, match="not connected"):
         drone.send_landing_target(Pose3D(0, 0, 2), (0.4, 0.4))
+
+
+@pytest.mark.parametrize("rotation", [[0, 0, math.pi / 3], [math.pi, 0, 0], [0, math.pi, 0], [0, 0, math.pi]])
+def test_target_carries_marker_to_body_quaternion_and_capture_time(rotation):
+    drone = connected_drone()
+    transform = RigidTransform.from_vectors(rotation, [0.3, -0.2, 6])
+    drone.send_landing_target(
+        transform.position,
+        (0.4, 0.4),
+        body_from_marker=transform,
+        captured_at_s=123.456789,
+    )
+    message = last_packet(drone)
+    assert message.time_usec == 123456789
+    q = message.q
+    angle = math.sqrt(sum(value * value for value in rotation))
+    expected = [math.cos(angle / 2), *(value / angle * math.sin(angle / 2) for value in rotation)]
+    assert q == pytest.approx(expected, abs=1e-6)
+
+
+def test_position_only_target_does_not_claim_a_known_orientation():
+    drone = connected_drone()
+    drone.send_landing_target(Pose3D(0, 0, 5), (0.4, 0.4))
+    assert last_packet(drone).q == [0, 0, 0, 0]
+
+
+@pytest.mark.parametrize("capture", [None, -1, float("nan"), float("inf")])
+def test_oriented_target_requires_valid_capture_time(capture):
+    drone = connected_drone()
+    transform = RigidTransform.from_vectors([0, 0, 0], [0, 0, 6])
+    with pytest.raises(ValueError, match="timestamp"):
+        drone.send_landing_target(transform.position, (1, 1), body_from_marker=transform, captured_at_s=capture)
+    drone.connection.write.assert_not_called()
+
+
+def test_orientation_cannot_be_combined_with_a_different_position():
+    drone = connected_drone()
+    transform = RigidTransform.from_vectors([0, 0, 0], [0, 0, 6])
+    with pytest.raises(ValueError, match="same transform"):
+        drone.send_landing_target(Pose3D(0, 0, 5), (1, 1), body_from_marker=transform, captured_at_s=123)
+    drone.connection.write.assert_not_called()

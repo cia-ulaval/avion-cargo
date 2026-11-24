@@ -6,6 +6,7 @@ from pymavlink import mavutil
 from pymavlink.dialects.v20 import ardupilotmega as mavlink2
 
 from domain.drone import DroneMode
+from domain.rigid_transform import RigidTransform
 from infrastructure.communication.mavlink import DroneMavlinkUDPConnector, MavlinkConnectionParams
 
 
@@ -47,10 +48,16 @@ def sourced(message, system=1, component=1):
     return message
 
 
-def heartbeat(mode=9, system=1, component=1, autopilot=mavlink2.MAV_AUTOPILOT_ARDUPILOTMEGA):
+def heartbeat(
+    mode=9,
+    system=1,
+    component=1,
+    autopilot=mavlink2.MAV_AUTOPILOT_ARDUPILOTMEGA,
+    vehicle_type=mavlink2.MAV_TYPE_QUADROTOR,
+):
     return sourced(
         mavlink2.MAVLink_heartbeat_message(
-            mavlink2.MAV_TYPE_QUADROTOR,
+            vehicle_type,
             autopilot,
             mavlink2.MAV_MODE_FLAG_CUSTOM_MODE_ENABLED,
             mode,
@@ -227,15 +234,25 @@ def test_connection_timeout_must_be_positive_and_finite(timeout):
         MavlinkConnectionParams("127.0.0.1", timeout=timeout)
 
 
-@pytest.mark.parametrize("mode", [0, 4, 9])
-def test_measurements_do_not_issue_flight_commands_regardless_of_observed_mode(link, mode):
-    from domain.models import Pose3D
-
-    drone, connection, _ = link
-    connection.incoming.append(heartbeat(mode=mode))
+@pytest.mark.parametrize(
+    "vehicle_type,mode",
+    [
+        (mavlink2.MAV_TYPE_QUADROTOR, 0),
+        (mavlink2.MAV_TYPE_QUADROTOR, 4),
+        (mavlink2.MAV_TYPE_QUADROTOR, 9),
+        (mavlink2.MAV_TYPE_FIXED_WING, 15),
+        (mavlink2.MAV_TYPE_FIXED_WING, 19),
+        (mavlink2.MAV_TYPE_FIXED_WING, 20),
+    ],
+)
+def test_measurements_do_not_issue_flight_commands_regardless_of_observed_mode(link, vehicle_type, mode):
+    drone, connection, clock = link
+    connection.incoming.append(heartbeat(mode=mode, vehicle_type=vehicle_type))
     drone.connect()
     drone.get_status()
-    drone.send_landing_target(Pose3D(0.1, 0.2, 3), (0.4, 0.4))
+    transform = RigidTransform.from_vectors([0, 0, 0.4], [0.1, 0.2, 3])
+    drone.send_landing_target(transform.position, (0.4, 0.4), body_from_marker=transform, captured_at_s=clock.now)
+    drone.close()
 
     # Only telemetry subscriptions may use the command protocol.
     assert {message.get_type() for message in connection.outgoing} == {"HEARTBEAT", "COMMAND_LONG", "LANDING_TARGET"}

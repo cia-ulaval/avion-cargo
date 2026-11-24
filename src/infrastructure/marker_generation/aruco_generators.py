@@ -1,5 +1,3 @@
-"""ArUco marker and calibration board generators adapted from feat/add-markers-generators."""
-
 import math
 from dataclasses import dataclass
 from pathlib import Path

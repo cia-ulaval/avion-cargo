@@ -2,6 +2,7 @@ import sys
 from types import SimpleNamespace
 from unittest.mock import Mock
 
+import cv2
 import numpy as np
 import pytest
 
@@ -55,6 +56,8 @@ def test_bridge_pose_is_used_unchanged_on_the_first_frame_even_for_small_markers
     np.testing.assert_array_equal(detection.rotation_vectors.reshape(3), observed.rvec.reshape(3))
     np.testing.assert_array_equal(detection.translation_vectors.reshape(3), observed.tvec.reshape(3))
     assert detection.reprojection_error_px == observed.reprojection_error_px
+    np.testing.assert_allclose(detection.camera_from_marker.as_matrix()[:3, :3], cv2.Rodrigues(observed.rvec)[0])
+    np.testing.assert_allclose(detection.camera_from_marker.as_matrix()[:3, 3], observed.tvec.reshape(3))
     bridge.detect.assert_called_once_with(FRAME)
 
 

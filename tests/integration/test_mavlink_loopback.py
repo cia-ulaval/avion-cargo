@@ -1,5 +1,3 @@
-"""Exercise UDP bytes against an in-process fake ArduPilot, not a firmware."""
-
 import socket
 import time
 from threading import Event, Thread
