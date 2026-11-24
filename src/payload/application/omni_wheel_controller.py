@@ -33,40 +33,124 @@ class OmniWheelController:
     def wheel_count(self) -> int:
         return len(self._wheels)
 
+    def _calculate_surface_velocity_components(
+        self, velocity: BodyVelocity
+    ) -> tuple[tuple[float, ...], tuple[float, ...]]:
+        """Return the translation and rotation contributions for each wheel."""
+        linear_values: list[float] = []
+        angular_values: list[float] = []
+        for wheel in self._wheels:
+            rolling_x = math.cos(wheel.yaw)
+            rolling_y = math.sin(wheel.yaw)
+            linear_values.append(
+                rolling_x * velocity.vx_m_s + rolling_y * velocity.vy_m_s
+            )
+            angular_values.append(
+                velocity.yaw_rate_rad_s
+                * (-rolling_x * wheel.y + rolling_y * wheel.x)
+            )
+        return tuple(linear_values), tuple(angular_values)
+
     def calculate_surface_velocities(self, velocity: BodyVelocity) -> tuple[float, ...]:
         """Return signed wheel surface speeds in m/s for a body velocity."""
-        values: list[float] = []
-        for wheel in self._wheels:
-            transform = wheel
-            local_vx = velocity.vx_m_s - velocity.yaw_rate_rad_s * transform.y
-            local_vy = velocity.vy_m_s + velocity.yaw_rate_rad_s * transform.x
-            rolling_x = math.cos(transform.yaw)
-            rolling_y = math.sin(transform.yaw)
-            values.append(rolling_x * local_vx + rolling_y * local_vy)
-        return tuple(values)
+        linear, angular = self._calculate_surface_velocity_components(velocity)
+        return tuple(
+            linear_value + angular_value
+            for linear_value, angular_value in zip(linear, angular)
+        )
 
-    def _limit_surface_velocities(self, values: tuple[float, ...]) -> tuple[float, ...]:
-        scale = 1.0
-        for value, actuator in zip(values, self._actuators):
+    def _translation_scale_interval(
+        self,
+        linear_values: tuple[float, ...],
+        angular_values: tuple[float, ...],
+        angular_scale: float,
+    ) -> tuple[float, float] | None:
+        """Return feasible translation-scale bounds for a fixed yaw scale."""
+        lower, upper = 0.0, 1.0
+        for linear, angular, actuator in zip(
+            linear_values, angular_values, self._actuators
+        ):
             maximum = actuator.capabilities.max_surface_velocity
-            if abs(value) > maximum:
-                scale = min(scale, maximum / abs(value))
-        if scale == 1.0:
-            return values
+            angular = angular * angular_scale
 
+            if linear == 0.0:
+                if abs(angular) > maximum:
+                    return None
+                continue
+
+            first = (-maximum - angular) / linear
+            second = (maximum - angular) / linear
+            lower = max(lower, min(first, second))
+            upper = min(upper, max(first, second))
+            if lower > upper:
+                return None
+
+        return lower, upper
+
+    def _limit_surface_velocities(
+        self,
+        linear_values: tuple[float, ...],
+        angular_values: tuple[float, ...],
+    ) -> tuple[float, ...]:
+        """Maximize yaw first, then maximize the translation scale."""
+        if (
+            len(linear_values) != len(self._actuators)
+            or len(angular_values) != len(self._actuators)
+        ):
+            raise ValueError("wheel velocity components and actuator counts must match")
+
+        # First try to retain the full requested angular velocity.
+        angular_scale = 1.0
+        interval = self._translation_scale_interval(
+            linear_values, angular_values, angular_scale
+        )
+
+        # If no translation scale can make full yaw feasible, find the largest
+        # feasible yaw scale. Feasibility is monotonic because (alpha, beta)=(0,0)
+        # is feasible and the actuator constraints are linear.
+        if interval is None:
+            low, high = 0.0, 1.0
+            for _ in range(60):
+                candidate = (low + high) / 2.0
+                if self._translation_scale_interval(
+                    linear_values, angular_values, candidate
+                ) is None:
+                    high = candidate
+                else:
+                    low = candidate
+            angular_scale = low
+            interval = self._translation_scale_interval(
+                linear_values, angular_values, angular_scale
+            )
+
+        if interval is None:
+            raise RuntimeError("unable to find feasible wheel velocity scales")
+
+        # With the maximum feasible yaw scale fixed, use as much translation
+        # as possible while preserving the requested translation direction.
+        translation_scale = interval[1]
+        maximums = tuple(
+            actuator.capabilities.max_surface_velocity
+            for actuator in self._actuators
+        )
         return tuple(
             max(
-                -actuator.capabilities.max_surface_velocity,
-                min(actuator.capabilities.max_surface_velocity, value * scale),
+                -maximum,
+                min(
+                    maximum,
+                    translation * translation_scale + rotation * angular_scale,
+                ),
             )
-            for value, actuator in zip(values, self._actuators)
+            for translation, rotation, maximum in zip(
+                linear_values, angular_values, maximums
+            )
         )
 
     async def set_body_velocity(self, velocity: BodyVelocity) -> tuple[float, ...]:
         if self._closed:
             raise RuntimeError("wheel controller is closed")
-        requested = self.calculate_surface_velocities(velocity)
-        limited = self._limit_surface_velocities(requested)
+        linear, angular = self._calculate_surface_velocity_components(velocity)
+        limited = self._limit_surface_velocities(linear, angular)
         async with self._lock:
             if self._closed:
                 raise RuntimeError("wheel controller is closed")

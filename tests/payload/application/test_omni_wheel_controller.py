@@ -61,7 +61,8 @@ def test_scaled_wheel_velocities_are_clamped_after_float_rounding():
     controller = OmniWheelController(make_wheels(), actuators)
 
     velocities = controller._limit_surface_velocities(
-        (0.12000000000000001, -0.12000000000000001, 0.06)
+        (0.12000000000000001, -0.12000000000000001, 0.06),
+        (0.0, 0.0, 0.0),
     )
 
     assert velocities == pytest.approx((0.12, -0.12, 0.06))
@@ -75,7 +76,10 @@ def test_wheel_limits_scale_all_wheels_proportionally():
     actuators = [FakeActuator(0.2) for _ in range(3)]
     controller = OmniWheelController(make_wheels(), actuators)
 
-    velocities = controller._limit_surface_velocities((0.4, -0.2, 0.1))
+    velocities = controller._limit_surface_velocities(
+        (0.4, -0.2, 0.1),
+        (0.0, 0.0, 0.0),
+    )
 
     assert velocities == pytest.approx((0.2, -0.1, 0.05))
 
@@ -103,6 +107,59 @@ async def test_controller_does_not_republish_an_unchanged_setpoint():
     assert [len(actuator.commands) for actuator in actuators] == [1, 1, 1]
     await controller.close()
     assert all(actuator.closed for actuator in actuators)
+
+
+
+@pytest.mark.asyncio
+async def test_controller_scales_translation_before_angular_velocity():
+    actuators = [FakeActuator(0.12) for _ in range(3)]
+    controller = OmniWheelController(make_wheels(), actuators)
+    velocity = BodyVelocity(0.1, 0.0, 1.0)
+
+    linear, angular = controller._calculate_surface_velocity_components(velocity)
+    limited = await controller.set_body_velocity(velocity)
+
+    assert linear == pytest.approx((-0.05, -0.05, 0.1))
+    assert angular == pytest.approx((0.078, 0.078, 0.078))
+    assert limited == pytest.approx((0.057, 0.057, 0.12))
+    assert max(abs(value) for value in limited) <= 0.12
+
+    # The 0.078 m/s rotational contribution is unchanged; only translation
+    # is scaled, by the same factor on all three wheels.
+    for actual, translation, rotation in zip(limited, linear, angular):
+        assert (actual - rotation) / translation == pytest.approx(0.42)
+
+
+@pytest.mark.asyncio
+async def test_controller_reduces_angular_velocity_only_when_required():
+    actuators = [FakeActuator(0.12) for _ in range(3)]
+    controller = OmniWheelController(make_wheels(), actuators)
+
+    limited = await controller.set_body_velocity(BodyVelocity(0.0, 0.0, 2.0))
+
+    assert limited == pytest.approx((0.12, 0.12, 0.12))
+
+
+@pytest.mark.asyncio
+async def test_translation_can_compensate_for_an_over_limit_rotation_component():
+    # On the first wheel, the translation and rotation components oppose
+    # each other. Full requested yaw is feasible when translation is retained.
+    wheels = (
+        WheelTransform2D(0.0, 0.2, math.pi, 0.04),
+        WheelTransform2D(0.0, 0.0, 0.0, 0.04),
+        WheelTransform2D(0.0, 0.0, 0.0, 0.04),
+    )
+    actuators = [FakeActuator(0.1) for _ in range(3)]
+    controller = OmniWheelController(wheels, actuators)
+
+    linear, angular = controller._calculate_surface_velocity_components(
+        BodyVelocity(0.1, 0.0, 1.0)
+    )
+    limited = await controller.set_body_velocity(BodyVelocity(0.1, 0.0, 1.0))
+
+    assert linear == pytest.approx((-0.1, 0.1, 0.1))
+    assert angular == pytest.approx((0.2, 0.0, 0.0))
+    assert limited == pytest.approx((0.1, 0.1, 0.1))
 
 
 def test_reversing_positive_rolling_direction_reverses_motor_command():
