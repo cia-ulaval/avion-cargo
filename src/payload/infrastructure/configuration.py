@@ -167,7 +167,9 @@ class PayloadRuntimeConfiguration:
                     raise ValueError(f"{wheel_path}.{axis} must be a finite number")
                 values[axis] = float(value)
 
+            positive_number(values["radius"], f"{wheel_path}.radius")
             transform = WheelTransform2D(**values)
+
             driver = _parse_motor_driver_configuration(
                 wheel_path, raw_wheel.get("driver")
             )
