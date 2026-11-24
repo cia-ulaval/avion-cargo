@@ -8,5 +8,43 @@
       "3": "plane-anchor-front-right",
       "4": "plane-anchor-back"
     }
-  }
+  },
+  "wheels": [
+    {
+      "x": 0.0675499815,
+      "y": 0.039,
+      "yaw": 0.523598776,
+      "radius": 0.019,
+      "max_surface_velocity": 0.2,
+      "driver": {
+        "type": "mx1616",
+        "in1_pin": 17,
+        "in2_pin": 18
+      }
+    },
+    {
+      "x": -0.0675499815,
+      "y": 0.039,
+      "yaw": 2.61799388,
+      "radius": 0.019,
+      "max_surface_velocity": 0.2,
+      "driver": {
+        "type": "mx1616",
+        "in1_pin": 22,
+        "in2_pin": 23
+      }
+    },
+    {
+      "x": 0.0,
+      "y": -0.078,
+      "yaw": 4.71238898,
+      "radius": 0.019,
+      "max_surface_velocity": 0.2,
+      "driver": {
+        "type": "mx1616",
+        "in1_pin": 24,
+        "in2_pin": 25
+      }
+    }
+  ]
 }

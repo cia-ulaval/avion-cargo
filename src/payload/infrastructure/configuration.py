@@ -3,9 +3,96 @@ from __future__ import annotations
 import json
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
 from shared.infrastructure.configuration import integer, non_empty_string, positive_number
+
+
+@dataclass(frozen=True, slots=True)
+class WheelTransform2D:
+    """Wheel pose and physical radius in the payload frame (metres, radians)."""
+
+    x: float
+    y: float
+    yaw: float
+    radius: float
+
+
+@dataclass(frozen=True, slots=True)
+class GazeboMotorDriverConfiguration:
+    type: Literal["gazebo"]
+    topic: str
+
+
+@dataclass(frozen=True, slots=True)
+class MX1616MotorDriverConfiguration:
+    type: Literal["mx1616"]
+    in1_pin: int
+    in2_pin: int
+
+
+MotorDriverConfiguration = (
+    GazeboMotorDriverConfiguration
+    | MX1616MotorDriverConfiguration
+)
+
+
+@dataclass(frozen=True, slots=True)
+class WheelConfiguration:
+    transform: WheelTransform2D
+    driver: MotorDriverConfiguration
+    max_surface_velocity: float
+
+
+def _parse_motor_driver_configuration(
+    wheel_path: str,
+    raw: Any,
+) -> MotorDriverConfiguration:
+    field_name = f"{wheel_path}.driver"
+    if not isinstance(raw, dict):
+        raise ValueError(f"{field_name} must be an object")
+
+    driver_type = raw.get("type")
+    fields_by_type = {
+        "gazebo": {"topic"},
+        "mx1616": {"in1_pin", "in2_pin"},
+    }
+    if not isinstance(driver_type, str) or driver_type not in fields_by_type:
+        raise ValueError(
+            f"{field_name}.type must be one of: gazebo, mx1616"
+        )
+
+    expected_fields = fields_by_type[driver_type]
+    missing = expected_fields - raw.keys()
+    if missing:
+        missing_fields = ", ".join(sorted(missing))
+        raise ValueError(
+            f"{field_name} is missing required field(s): {missing_fields}"
+        )
+
+    unexpected = raw.keys() - expected_fields - {"type"}
+    if unexpected:
+        unexpected_fields = ", ".join(sorted(unexpected))
+        raise ValueError(
+            f"{field_name} has unsupported field(s): {unexpected_fields}"
+        )
+
+    if driver_type == "gazebo":
+        topic = raw["topic"]
+        non_empty_string(topic, f"{field_name}.topic")
+        return GazeboMotorDriverConfiguration(type="gazebo", topic=topic)
+
+    pins = {name: raw[name] for name in sorted(expected_fields)}
+    for name, pin in pins.items():
+        integer(pin, f"{field_name}.{name}", minimum=0)
+    if len(set(pins.values())) != len(pins):
+        raise ValueError(f"{field_name} GPIO pins must be distinct")
+
+    return MX1616MotorDriverConfiguration(
+        type="mx1616",
+        in1_pin=raw["in1_pin"],
+        in2_pin=raw["in2_pin"],
+    )
 
 
 @dataclass(frozen=True, slots=True)
@@ -14,6 +101,7 @@ class PayloadRuntimeConfiguration:
     uart_device: str
     plane_peer_id: int
     anchor_id_by_target_id: dict[int, str]
+    wheels: tuple[WheelConfiguration, ...] = ()
     uwb_role: str | None = None
     uwb_target_ids_override: tuple[int, ...] | None = None
     uwb_period_ms: int | None = None
@@ -51,6 +139,56 @@ class PayloadRuntimeConfiguration:
         if not isinstance(raw, dict):
             raise ValueError("payload configuration must be a JSON object")
 
+        raw_wheels = raw.get("wheels", [])
+        if not isinstance(raw_wheels, list):
+            raise ValueError("wheels must be a list")
+
+        wheels: list[WheelConfiguration] = []
+        for wheel_index, raw_wheel in enumerate(raw_wheels):
+            wheel_path = f"wheels[{wheel_index}]"
+            if not isinstance(raw_wheel, dict):
+                raise ValueError(f"{wheel_path} must be an object")
+
+            missing = {
+                "x", "y", "yaw", "radius", "max_surface_velocity"
+            } - raw_wheel.keys()
+            if missing:
+                missing_fields = ", ".join(sorted(missing))
+                raise ValueError(
+                    f"{wheel_path} is missing required field(s): {missing_fields}"
+                )
+
+            values: dict[str, float] = {}
+            for axis in ("x", "y", "yaw", "radius"):
+                value = raw_wheel[axis]
+                if (
+                    isinstance(value, bool)
+                    or not isinstance(value, (int, float))
+                    or not math.isfinite(value)
+                ):
+                    raise ValueError(f"{wheel_path}.{axis} must be a finite number")
+                values[axis] = float(value)
+
+            positive_number(values["radius"], f"{wheel_path}.radius")
+            max_surface_velocity = raw_wheel["max_surface_velocity"]
+            positive_number(
+                max_surface_velocity,
+                f"{wheel_path}.max_surface_velocity",
+            )
+            max_surface_velocity = float(max_surface_velocity)
+            transform = WheelTransform2D(**values)
+
+            driver = _parse_motor_driver_configuration(
+                wheel_path, raw_wheel.get("driver")
+            )
+            wheels.append(
+                WheelConfiguration(
+                    transform=transform,
+                    driver=driver,
+                    max_surface_velocity=max_surface_velocity,
+                )
+            )
+
         uwb = raw.get("uwb")
 
         if not isinstance(uwb, dict):
@@ -80,6 +218,7 @@ class PayloadRuntimeConfiguration:
             uart_device=raw.get("uart_device"),
             plane_peer_id=raw.get("plane_peer_id"),
             anchor_id_by_target_id=anchor_mapping,
+            wheels=tuple(wheels),
             uwb_role=uwb.get("role"),
             uwb_target_ids_override=(tuple(raw_target_ids) if raw_target_ids is not None else None),
             uwb_period_ms=uwb.get("period_ms"),
@@ -97,6 +236,54 @@ class PayloadRuntimeConfiguration:
         integer(self.plane_peer_id, "plane_peer_id", minimum=1, maximum=65534)
         integer(self.baudrate, "baudrate", minimum=1)
         positive_number(self.ready_timeout_s, "ready_timeout_s")
+
+        if not isinstance(self.wheels, tuple):
+            raise ValueError("wheels must be a tuple")
+
+        configured_gpio_pins: set[int] = set()
+        for wheel_index, wheel in enumerate(self.wheels):
+            wheel_path = f"wheels[{wheel_index}]"
+            if not isinstance(wheel, WheelConfiguration):
+                raise ValueError(f"{wheel_path} must be a WheelConfiguration")
+
+            transform = wheel.transform
+            if not isinstance(transform, WheelTransform2D):
+                raise ValueError(f"{wheel_path}.transform must be a WheelTransform2D")
+            for axis in ("x", "y", "yaw", "radius"):
+                value = getattr(transform, axis)
+                if (
+                    isinstance(value, bool)
+                    or not isinstance(value, (int, float))
+                    or not math.isfinite(value)
+                ):
+                    raise ValueError(f"{wheel_path}.{axis} must be a finite number")
+            positive_number(transform.radius, f"{wheel_path}.radius")
+            positive_number(
+                wheel.max_surface_velocity,
+                f"{wheel_path}.max_surface_velocity",
+            )
+
+            driver = wheel.driver
+            if isinstance(driver, GazeboMotorDriverConfiguration):
+                non_empty_string(driver.topic, f"{wheel_path}.driver.topic")
+                continue
+
+            if isinstance(driver, MX1616MotorDriverConfiguration):
+                pins = (driver.in1_pin, driver.in2_pin)
+            else:
+                raise ValueError(
+                    f"{wheel_path}.driver has an unsupported driver configuration"
+                )
+
+            for pin_name, pin in zip(("in1_pin", "in2_pin"), pins):
+                integer(pin, f"{wheel_path}.driver.{pin_name}", minimum=0)
+                if pin in configured_gpio_pins:
+                    raise ValueError(
+                        f"GPIO pin {pin} is assigned to more than one wheel driver"
+                    )
+                configured_gpio_pins.add(pin)
+            if len(set(pins)) != len(pins):
+                raise ValueError(f"{wheel_path}.driver GPIO pins must be distinct")
 
         if self.uwb_role is not None and (
             not isinstance(self.uwb_role, str)
