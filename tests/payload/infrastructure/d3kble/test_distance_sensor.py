@@ -40,9 +40,7 @@ def test_distance_sensor_converts_invalid_measurements_to_failures() -> None:
         events = sensor.events()
         pending = asyncio.create_task(anext(events))
         await asyncio.sleep(0.02)
-        node.uwb.measurements.subscriptions[0].publish(
-            fake_measurement(distance_m=None, status=2, quality_flags=16)
-        )
+        node.uwb.measurements.subscriptions[0].publish(fake_measurement(distance_m=None, status=2, quality_flags=16))
         failure = await asyncio.wait_for(pending, timeout=1)
         assert isinstance(failure, DistanceFailure)
         assert failure.reason.code == "uwb_measurement_status_2"

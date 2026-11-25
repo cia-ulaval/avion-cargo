@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-import math
 import json
+import math
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Literal
@@ -32,10 +32,7 @@ class MX1616MotorDriverConfiguration:
     in2_pin: int
 
 
-MotorDriverConfiguration = (
-    GazeboMotorDriverConfiguration
-    | MX1616MotorDriverConfiguration
-)
+MotorDriverConfiguration = GazeboMotorDriverConfiguration | MX1616MotorDriverConfiguration
 
 
 @dataclass(frozen=True, slots=True)
@@ -59,24 +56,18 @@ def _parse_motor_driver_configuration(
         "mx1616": {"in1_pin", "in2_pin"},
     }
     if not isinstance(driver_type, str) or driver_type not in fields_by_type:
-        raise ValueError(
-            f"{field_name}.type must be one of: gazebo, mx1616"
-        )
+        raise ValueError(f"{field_name}.type must be one of: gazebo, mx1616")
 
     expected_fields = fields_by_type[driver_type]
     missing = expected_fields - raw.keys()
     if missing:
         missing_fields = ", ".join(sorted(missing))
-        raise ValueError(
-            f"{field_name} is missing required field(s): {missing_fields}"
-        )
+        raise ValueError(f"{field_name} is missing required field(s): {missing_fields}")
 
     unexpected = raw.keys() - expected_fields - {"type"}
     if unexpected:
         unexpected_fields = ", ".join(sorted(unexpected))
-        raise ValueError(
-            f"{field_name} has unsupported field(s): {unexpected_fields}"
-        )
+        raise ValueError(f"{field_name} has unsupported field(s): {unexpected_fields}")
 
     if driver_type == "gazebo":
         topic = raw["topic"]
@@ -136,7 +127,7 @@ class PayloadRuntimeConfiguration:
     def from_file(cls, path: str | Path) -> PayloadRuntimeConfiguration:
         with Path(path).open("r", encoding="utf-8") as stream:
             raw = json.load(stream)
-            
+
         if not isinstance(raw, dict):
             raise ValueError("payload configuration must be a JSON object")
 
@@ -150,23 +141,15 @@ class PayloadRuntimeConfiguration:
             if not isinstance(raw_wheel, dict):
                 raise ValueError(f"{wheel_path} must be an object")
 
-            missing = {
-                "x", "y", "yaw", "radius", "max_surface_velocity"
-            } - raw_wheel.keys()
+            missing = {"x", "y", "yaw", "radius", "max_surface_velocity"} - raw_wheel.keys()
             if missing:
                 missing_fields = ", ".join(sorted(missing))
-                raise ValueError(
-                    f"{wheel_path} is missing required field(s): {missing_fields}"
-                )
+                raise ValueError(f"{wheel_path} is missing required field(s): {missing_fields}")
 
             values: dict[str, float] = {}
             for axis in ("x", "y", "yaw", "radius"):
                 value = raw_wheel[axis]
-                if (
-                    isinstance(value, bool)
-                    or not isinstance(value, (int, float))
-                    or not math.isfinite(value)
-                ):
+                if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(value):
                     raise ValueError(f"{wheel_path}.{axis} must be a finite number")
                 values[axis] = float(value)
 
@@ -179,9 +162,7 @@ class PayloadRuntimeConfiguration:
             max_surface_velocity = float(max_surface_velocity)
             transform = WheelTransform2D(**values)
 
-            driver = _parse_motor_driver_configuration(
-                wheel_path, raw_wheel.get("driver")
-            )
+            driver = _parse_motor_driver_configuration(wheel_path, raw_wheel.get("driver"))
             wheels.append(
                 WheelConfiguration(
                     transform=transform,
@@ -194,17 +175,17 @@ class PayloadRuntimeConfiguration:
 
         if not isinstance(uwb, dict):
             raise ValueError("payload configuration requires an 'uwb' object")
-        
+
         mapping = uwb.get("anchor_id_by_target_id")
 
         if not isinstance(mapping, dict) or not mapping:
             raise ValueError("uwb.anchor_id_by_target_id must be a non-empty object")
-        
+
         try:
             converted = [(int(target_id), anchor_id) for target_id, anchor_id in mapping.items()]
         except (TypeError, ValueError) as exc:
             raise ValueError("UWB target IDs in anchor_id_by_target_id must be integers") from exc
-        
+
         anchor_mapping = dict(converted)
 
         if len(anchor_mapping) != len(converted):
@@ -252,11 +233,7 @@ class PayloadRuntimeConfiguration:
                 raise ValueError(f"{wheel_path}.transform must be a WheelTransform2D")
             for axis in ("x", "y", "yaw", "radius"):
                 value = getattr(transform, axis)
-                if (
-                    isinstance(value, bool)
-                    or not isinstance(value, (int, float))
-                    or not math.isfinite(value)
-                ):
+                if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(value):
                     raise ValueError(f"{wheel_path}.{axis} must be a finite number")
             positive_number(transform.radius, f"{wheel_path}.radius")
             positive_number(
@@ -272,23 +249,18 @@ class PayloadRuntimeConfiguration:
             if isinstance(driver, MX1616MotorDriverConfiguration):
                 pins = (driver.in1_pin, driver.in2_pin)
             else:
-                raise ValueError(
-                    f"{wheel_path}.driver has an unsupported driver configuration"
-                )
+                raise ValueError(f"{wheel_path}.driver has an unsupported driver configuration")
 
             for pin_name, pin in zip(("in1_pin", "in2_pin"), pins):
                 integer(pin, f"{wheel_path}.driver.{pin_name}", minimum=0)
                 if pin in configured_gpio_pins:
-                    raise ValueError(
-                        f"GPIO pin {pin} is assigned to more than one wheel driver"
-                    )
+                    raise ValueError(f"GPIO pin {pin} is assigned to more than one wheel driver")
                 configured_gpio_pins.add(pin)
             if len(set(pins)) != len(pins):
                 raise ValueError(f"{wheel_path}.driver GPIO pins must be distinct")
 
         if self.uwb_role is not None and (
-            not isinstance(self.uwb_role, str)
-            or self.uwb_role not in {"idle", "initiator", "responder"}
+            not isinstance(self.uwb_role, str) or self.uwb_role not in {"idle", "initiator", "responder"}
         ):
             raise ValueError("uwb.role must be 'idle', 'initiator', 'responder', or null")
 
@@ -311,10 +283,10 @@ class PayloadRuntimeConfiguration:
 
         if not self.anchor_id_by_target_id:
             raise ValueError("at least one UWB target-to-anchor mapping is required")
-        
+
         if len(self.anchor_id_by_target_id) > 16:
             raise ValueError("at most 16 UWB targets can be configured")
-        
+
         for target_id, anchor_id in self.anchor_id_by_target_id.items():
             integer(target_id, "UWB target ID", minimum=1, maximum=65534)
             non_empty_string(anchor_id, "UWB anchor ID")

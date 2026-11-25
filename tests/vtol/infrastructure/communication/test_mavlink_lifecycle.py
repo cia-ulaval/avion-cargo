@@ -104,9 +104,7 @@ def test_connect_accepts_only_autopilot_and_initializes_status_from_first_heartb
 
 def test_fixed_wing_heartbeat_maps_manual_mode_from_pymavlink(link):
     drone, connection, _ = link
-    connection.incoming.append(
-        heartbeat(mode=0, vehicle_type=mavlink2.MAV_TYPE_FIXED_WING)
-    )
+    connection.incoming.append(heartbeat(mode=0, vehicle_type=mavlink2.MAV_TYPE_FIXED_WING))
 
     drone.connect()
 

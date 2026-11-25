@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import json
-import math
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -96,10 +95,7 @@ class VtolRuntimeConfiguration:
         while leaving the service in its firmware-configured state (or
         explicitly disabling it).
         """
-        candidates = [
-            device for device in self.devices
-            if device.payloads or device.ble_enabled is True
-        ]
+        candidates = [device for device in self.devices if device.payloads or device.ble_enabled is True]
         return candidates[0] if candidates else None
 
     @property
@@ -120,7 +116,7 @@ class VtolRuntimeConfiguration:
 
         if not isinstance(raw, dict):
             raise ValueError("d3kble configuration must be an object")
-        
+
         _no_extra_keys(raw, {"devices"}, "d3kble")
 
         raw_devices = raw.get("devices")
@@ -155,14 +151,9 @@ class VtolRuntimeConfiguration:
         if len(uart_devices) != len(set(uart_devices)):
             raise ValueError("D3K UART device paths must be unique")
 
-        ble_devices = [
-            device for device in self.devices
-            if device.payloads or device.ble_enabled is True
-        ]
+        ble_devices = [device for device in self.devices if device.payloads or device.ble_enabled is True]
         if len(ble_devices) > 1:
-            raise ValueError(
-                "only one local D3K device can own BLE payload communication or explicitly enable BLE"
-            )
+            raise ValueError("only one local D3K device can own BLE payload communication or explicitly enable BLE")
 
         payloads = ble_devices[0].payloads if ble_devices else ()
         if len(payloads) > 8:
@@ -184,10 +175,10 @@ class VtolRuntimeConfiguration:
 
 def _parse_device(raw: Any, index: int) -> D3KDeviceConfiguration:
     name = f"d3kble.devices[{index}]"
-    
+
     if not isinstance(raw, dict):
         raise ValueError(f"{name} must be an object")
-    
+
     _no_extra_keys(
         raw,
         {"device_id", "uart_device", "baudrate", "ready_timeout_s", "uwb", "ble"},
@@ -205,7 +196,7 @@ def _parse_device(raw: Any, index: int) -> D3KDeviceConfiguration:
 
     if not isinstance(raw_uwb, dict):
         raise ValueError(f"{name}.uwb must be an object")
-    
+
     _no_extra_keys(
         raw_uwb,
         {
@@ -249,7 +240,7 @@ def _parse_device(raw: Any, index: int) -> D3KDeviceConfiguration:
 
     if not isinstance(raw_ble, dict):
         raise ValueError(f"{name}.ble must be an object or null")
-    
+
     _no_extra_keys(raw_ble, {"enabled", "payloads"}, f"{name}.ble")
     ble_enabled = raw_ble.get("enabled")
     raw_payloads = raw_ble.get("payloads", [])

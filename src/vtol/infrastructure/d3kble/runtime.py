@@ -55,9 +55,7 @@ def build_vtol_d3kble_application(
         try:
             from d3kble import D3KNode
         except ImportError as exc:
-            raise RuntimeError(
-                "The d3kble package is required. Install the vehicle runtime dependencies."
-            ) from exc
+            raise RuntimeError("The d3kble package is required. Install the vehicle runtime dependencies.") from exc
 
         node_factory = D3KNode
 
@@ -108,8 +106,7 @@ def build_vtol_d3kble_application(
         ble_device = config.ble_device
         if ble_device is not None:
             ble_session = next(
-                session for session in device_sessions
-                if session.configuration.device_id == ble_device.device_id
+                session for session in device_sessions if session.configuration.device_id == ble_device.device_id
             )
             ble_node = ble_session.node
             router = D3kbleMessageRouter(ble_node)

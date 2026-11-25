@@ -5,6 +5,7 @@ import pytest
 from pymavlink.dialects.v20 import ardupilotmega as mavlink2
 
 from vtol.domain.drone import DroneMode, HoldPosition
+
 from .test_mavlink_protocol import connected_drone, last_packet
 
 

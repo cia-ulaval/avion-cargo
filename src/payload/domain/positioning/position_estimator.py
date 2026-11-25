@@ -9,5 +9,4 @@ class PositionEstimator(Protocol):
     Consumes ranging events and emits an estimate when enough data is available.
     """
 
-    def update(self, event: DistanceEvent) -> PositionEstimate | None:
-        ...
+    def update(self, event: DistanceEvent) -> PositionEstimate | None: ...

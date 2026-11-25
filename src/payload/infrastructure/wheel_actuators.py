@@ -8,8 +8,8 @@ from typing import Any
 from payload.domain.wheel_actuator import WheelActuator, WheelActuatorCapabilities
 from payload.infrastructure.configuration import (
     GazeboMotorDriverConfiguration,
-    MX1616MotorDriverConfiguration,
     MotorDriverConfiguration,
+    MX1616MotorDriverConfiguration,
 )
 
 
@@ -71,8 +71,14 @@ class GazeboWheelActuator:
     @staticmethod
     async def _publish_with_gz(topic: str, angular_velocity_rad_s: float) -> None:
         process = await asyncio.create_subprocess_exec(
-            "gz", "topic", "-t", topic, "-m", "gz.msgs.Double",
-            "-p", f"data: {angular_velocity_rad_s:.12g}",
+            "gz",
+            "topic",
+            "-t",
+            topic,
+            "-m",
+            "gz.msgs.Double",
+            "-p",
+            f"data: {angular_velocity_rad_s:.12g}",
             stdout=asyncio.subprocess.DEVNULL,
             stderr=asyncio.subprocess.PIPE,
         )
@@ -154,7 +160,5 @@ def create_wheel_actuator(
     if isinstance(driver, GazeboMotorDriverConfiguration):
         return GazeboWheelActuator(driver.topic, radius_m, capabilities)
     if isinstance(driver, MX1616MotorDriverConfiguration):
-        return MX1616WheelActuator(
-            driver.in1_pin, driver.in2_pin, capabilities, output_factory=output_factory
-        )
+        return MX1616WheelActuator(driver.in1_pin, driver.in2_pin, capabilities, output_factory=output_factory)
     raise TypeError(f"Unsupported motor driver configuration: {type(driver).__name__}")

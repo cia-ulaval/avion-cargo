@@ -301,6 +301,7 @@ _ERROR_EVENTS = {
 
 def _attach_event_logging(node: Any, device_name: str) -> None:
     for event_name in _EVENT_NAMES:
+
         def report(value: Any, name: str = event_name) -> None:
             log = logger.warning if name in _ERROR_EVENTS else logger.info
             log("D3K [{}] {}: {}", device_name, name, value)
@@ -442,9 +443,7 @@ class _BleDiagnostics:
                 await router.start()
                 self._routers.append(router)
                 for peer_id in device.selected_peer_ids:
-                    self._registrations.append(
-                        router.register_peer(peer_id, request_handler=_handle_ping_request)
-                    )
+                    self._registrations.append(router.register_peer(peer_id, request_handler=_handle_ping_request))
 
             # Probe each physical link once, from the lower device ID. Both ends
             # must list the other endpoint so routing is configured in both directions.
@@ -463,9 +462,7 @@ class _BleDiagnostics:
                             peer_id,
                         )
                         continue
-                    task = asyncio.create_task(
-                        self._run_peer_loop(node, peer_id, device.name)
-                    )
+                    task = asyncio.create_task(self._run_peer_loop(node, peer_id, device.name))
                     self._tasks.add(task)
                     task.add_done_callback(self._tasks.discard)
 
@@ -574,14 +571,9 @@ def run_diagnostics(config: DiagnosticsConfiguration, stop_event: threading.Even
             node = D3KNode(device.uart_device, baudrate=device.baudrate)
             sessions.append((device, node, None))
             _attach_event_logging(node, device.name)
-            statistics_by_peer = {
-                peer_id: _RangingStatistics(peer_id)
-                for peer_id in device.selected_peer_ids
-            }
+            statistics_by_peer = {peer_id: _RangingStatistics(peer_id) for peer_id in device.selected_peer_ids}
             ranging_statistics[device.name] = statistics_by_peer
-            range_failure_handlers[device.name] = _attach_range_failure_collection(
-                node, statistics_by_peer
-            )
+            range_failure_handlers[device.name] = _attach_range_failure_collection(node, statistics_by_peer)
             subscription = node.uwb.measurements.subscribe(maxsize=256, overflow="drop_oldest")
             sessions[-1] = (device, node, subscription)
             dropped_counts[device.name] = 0

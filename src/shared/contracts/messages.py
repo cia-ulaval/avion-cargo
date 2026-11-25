@@ -66,13 +66,7 @@ class PayloadStatusRequested:
     request_id: str
 
 
-PlaneEvent: TypeAlias = (
-    PlaneHeadingUpdated
-    | DLZStateUpdated
-    | DockRequest
-    | UndockRequest
-    | PayloadStatusRequested
-)
+PlaneEvent: TypeAlias = PlaneHeadingUpdated | DLZStateUpdated | DockRequest | UndockRequest | PayloadStatusRequested
 
 
 @dataclass(frozen=True, slots=True)
