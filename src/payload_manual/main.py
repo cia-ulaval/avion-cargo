@@ -27,12 +27,6 @@ from payload_manual.composition import build_manual_control_application
     help="D3K BLE peer ID of the manual controller node",
 )
 @click.option(
-    "--max-wheel-surface-velocity-m-s",
-    type=click.FloatRange(min=0.000001),
-    required=True,
-    help="Conservative configured maximum wheel surface speed in m/s",
-)
-@click.option(
     "--command-timeout-ms",
     type=click.IntRange(100, 5000),
     default=300,

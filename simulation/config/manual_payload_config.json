@@ -1,7 +1,7 @@
 {
   "payload_id": "payload-manual-simulator",
   "uart_device": "/tmp/payload-anchor",
-  "plane_peer_id": 3,
+  "controller_peer_id": 3,
   "uwb": {
     "anchor_id_by_target_id": {
       "2": "manual-controller-d3k-node"
@@ -12,6 +12,7 @@
       "x": 0.0675499815,
       "y": 0.039,
       "yaw": 5.23598775638,
+      "max_surface_velocity": 0.2,
       "radius": 0.027,
       "driver": {
         "type": "gazebo",
@@ -23,6 +24,7 @@
       "y": 0.039,
       "yaw": 1.04719755321,
       "radius": 0.027,
+      "max_surface_velocity": 0.2,
       "driver": {
         "type": "gazebo",
         "topic": "/model/payload/joint/wheel_1_joint/cmd_vel"
@@ -32,6 +34,7 @@
       "x": 0.0,
       "y": -0.078,
       "yaw": 3.14159265359,
+      "max_surface_velocity": 0.2,
       "radius": 0.027,
       "driver": {
         "type": "gazebo",

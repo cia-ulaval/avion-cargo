@@ -348,13 +348,8 @@ cd /workspace/avion-cargo
 CONFIG="${AVION_MANUAL_PAYLOAD_CONFIG:-}"
 UART_DEVICE="${AVION_MANUAL_PAYLOAD_UART_DEVICE:-}"
 CONTROLLER_PEER_ID="${AVION_MANUAL_CONTROLLER_PEER_ID:-}"
-MAX_WHEEL_SPEED="${AVION_MANUAL_MAX_WHEEL_SURFACE_VELOCITY_M_S:-}"
 if [[ -z "$CONFIG" || ! -f "$CONFIG" ]]; then
   echo "AVION_MANUAL_PAYLOAD_CONFIG must point to an existing manual payload JSON configuration." >&2
-  exit 2
-fi
-if [[ -z "$CONTROLLER_PEER_ID" || -z "$MAX_WHEEL_SPEED" ]]; then
-  echo "AVION_MANUAL_CONTROLLER_PEER_ID and AVION_MANUAL_MAX_WHEEL_SURFACE_VELOCITY_M_S must be set." >&2
   exit 2
 fi
 if [[ -n "$UART_DEVICE" ]]; then
@@ -371,7 +366,6 @@ fi
 exec poetry run run_payload_manual \
   --config "$CONFIG" \
   --controller-peer-id "$CONTROLLER_PEER_ID" \
-  --max-wheel-surface-velocity-m-s "$MAX_WHEEL_SPEED"
 SCRIPT
 
 cat > /usr/local/bin/avion-payload-manual-ui <<'SCRIPT'
