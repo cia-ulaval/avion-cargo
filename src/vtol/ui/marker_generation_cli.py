@@ -1,5 +1,3 @@
-"""Generate ArUco markers, calibration boards and FArUco markers for printing."""
-
 from contextlib import contextmanager
 from pathlib import Path
 

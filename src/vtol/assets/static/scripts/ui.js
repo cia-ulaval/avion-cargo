@@ -74,10 +74,14 @@ export function renderTracking(tracking) {
   const attitude = isPlainObject(tracking.attitude) ? tracking.attitude : {};
   const hasTarget = tracking.status === 1 && Boolean(poseCamera) && tracking.markerId != null;
 
+  const cameraState = tracking.cameraState ?? 'OK';
+  const unavailable = cameraState === 'UNAVAILABLE';
+  const stale = cameraState === 'STALE';
+  const statusLabel = unavailable ? 'Camera unavailable' : stale ? 'Camera stale' : hasTarget ? 'Locked' : 'Searching';
   setText(refs.markerId, hasTarget ? String(tracking.markerId) : '--');
-  setText(refs.trackingStatus, hasTarget ? 'Locked' : 'Searching');
-  setText(refs.markerLockChip, hasTarget ? 'Locked' : 'Searching');
-  setText(refs.targetStatePill, hasTarget ? 'Target locked' : 'Target lost');
+  setText(refs.trackingStatus, statusLabel);
+  setText(refs.markerLockChip, statusLabel);
+  setText(refs.targetStatePill, hasTarget ? 'Target locked' : unavailable ? 'Camera unavailable' : stale ? 'Camera stale' : 'Target lost');
   refs.targetStatePill.classList.toggle('status-pill-accent', hasTarget);
 
   setText(refs.poseX, formatMetric(poseCamera?.x, ' m'));
@@ -90,7 +94,7 @@ export function renderTracking(tracking) {
   setText(refs.attRoll, formatDegrees(attitude.roll ?? tracking.roll));
   setText(refs.attPitch, formatDegrees(attitude.pitch ?? tracking.pitch));
   setText(refs.attYaw, formatDegrees(attitude.yaw ?? tracking.yaw));
-  setText(refs.cameraFramePill, poseCamera ? 'Camera frame' : 'No pose');
+  setText(refs.cameraFramePill, unavailable ? 'Camera unavailable' : stale ? 'Camera stale' : poseCamera ? 'Camera frame' : 'No pose');
 
   updateMap(poseUav);
 }

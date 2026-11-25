@@ -20,7 +20,7 @@ class State(Protocol[InputT, OutputT]):
 
     async def start(self, input: InputT) -> None:
         """
-        Run once when this state becomes active and before running exec(). 
+        Run once when this state becomes active and before running exec().
         """
         ...
 
@@ -82,7 +82,7 @@ class StateMachine(Generic[InputT, OutputT]):
         """
         if self._closed:
             raise RuntimeError("state machine is closed")
-        
+
         if self._stepping:
             raise RuntimeError("state machine execution is already in progress")
 
@@ -117,7 +117,7 @@ class StateMachine(Generic[InputT, OutputT]):
         """
         if self._closed:
             raise RuntimeError("state machine is closed")
-        
+
         state = self._active_state or self._pending_state
         state.debug(input)
 
@@ -127,12 +127,12 @@ class StateMachine(Generic[InputT, OutputT]):
         """
         if self._closed:
             return
-        
+
         if self._stepping:
             raise RuntimeError("cannot close a state machine while it is executing")
 
         self._closed = True
         state, self._active_state = self._active_state, None
-        
+
         if state is not None:
             await state.stop(input)

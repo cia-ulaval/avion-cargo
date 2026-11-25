@@ -2,10 +2,9 @@ import asyncio
 
 import pytest
 
-from payload_manual.application.runtime import ManualControlLimits, ManualControlRuntime
 from payload.domain.body_velocity import BodyVelocity
+from payload_manual.application.runtime import ManualControlLimits, ManualControlRuntime
 from payload_manual.domain.manual_control import ManualControlCommand
-from payload.domain.wheel_actuator import WheelActuatorCapabilities
 
 
 class FakePeer:
@@ -63,7 +62,9 @@ async def test_manual_runtime_requires_arm_and_applies_drive_command():
     wheels = FakeWheelController()
     sensor = FakeDistanceSensor()
     runtime = ManualControlRuntime(
-        peer, wheels, sensor,
+        peer,
+        wheels,
+        sensor,
         ManualControlLimits(command_timeout_ms=500, control_rate_hz=50),
     )
     stop_event = asyncio.Event()
@@ -92,7 +93,9 @@ async def test_manual_runtime_watchdog_stops_and_disarms():
     wheels = FakeWheelController()
     sensor = FakeDistanceSensor()
     runtime = ManualControlRuntime(
-        peer, wheels, sensor,
+        peer,
+        wheels,
+        sensor,
         ManualControlLimits(command_timeout_ms=100, control_rate_hz=50),
     )
     stop_event = asyncio.Event()
@@ -117,7 +120,9 @@ async def test_manual_runtime_disarm_stops_output_immediately():
     wheels = FakeWheelController()
     sensor = FakeDistanceSensor()
     runtime = ManualControlRuntime(
-        peer, wheels, sensor,
+        peer,
+        wheels,
+        sensor,
         ManualControlLimits(command_timeout_ms=500, control_rate_hz=50),
     )
     stop_event = asyncio.Event()
@@ -141,7 +146,9 @@ async def test_actuator_command_failure_disarms_without_terminating_runtime():
     wheels = FakeWheelController()
     sensor = FakeDistanceSensor()
     runtime = ManualControlRuntime(
-        peer, wheels, sensor,
+        peer,
+        wheels,
+        sensor,
         ManualControlLimits(command_timeout_ms=500, control_rate_hz=50),
     )
     stop_event = asyncio.Event()
@@ -172,7 +179,9 @@ async def test_new_controller_session_can_rearm_with_a_fresh_sequence():
     wheels = FakeWheelController()
     sensor = FakeDistanceSensor()
     runtime = ManualControlRuntime(
-        peer, wheels, sensor,
+        peer,
+        wheels,
+        sensor,
         ManualControlLimits(command_timeout_ms=500, control_rate_hz=50),
     )
     stop_event = asyncio.Event()
@@ -196,7 +205,9 @@ async def test_status_command_reports_actual_arm_state_without_changing_session(
     wheels = FakeWheelController()
     sensor = FakeDistanceSensor()
     runtime = ManualControlRuntime(
-        peer, wheels, sensor,
+        peer,
+        wheels,
+        sensor,
         ManualControlLimits(command_timeout_ms=500, control_rate_hz=50),
     )
     stop_event = asyncio.Event()
@@ -224,7 +235,9 @@ async def test_manual_runtime_allows_arm_ack_round_trip_before_starting_drive_wa
     wheels = FakeWheelController()
     sensor = FakeDistanceSensor()
     runtime = ManualControlRuntime(
-        peer, wheels, sensor,
+        peer,
+        wheels,
+        sensor,
         ManualControlLimits(command_timeout_ms=100, control_rate_hz=50),
     )
     stop_event = asyncio.Event()
@@ -237,9 +250,7 @@ async def test_manual_runtime_allows_arm_ack_round_trip_before_starting_drive_wa
         assert runtime._armed is True
         assert peer.status_messages == [("session-a", 1, True, True)]
 
-        await peer.queue.put(
-            ManualControlCommand("session-a", 2, "drive", BodyVelocity(0.05, 0.0, 0.0))
-        )
+        await peer.queue.put(ManualControlCommand("session-a", 2, "drive", BodyVelocity(0.05, 0.0, 0.0)))
         await asyncio.sleep(0.04)
         assert runtime._armed is True
         assert wheels.commands[-1] == BodyVelocity(0.05, 0.0, 0.0)
@@ -254,7 +265,9 @@ async def test_manual_runtime_disarms_if_no_drive_follows_arm_handshake_grace():
     wheels = FakeWheelController()
     sensor = FakeDistanceSensor()
     runtime = ManualControlRuntime(
-        peer, wheels, sensor,
+        peer,
+        wheels,
+        sensor,
         ManualControlLimits(command_timeout_ms=100, control_rate_hz=50),
     )
     stop_event = asyncio.Event()

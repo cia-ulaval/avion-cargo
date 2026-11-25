@@ -1,5 +1,3 @@
-import asyncio
-
 import pytest
 
 from payload.main import run_payload_application

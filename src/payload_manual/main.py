@@ -6,9 +6,9 @@ from pathlib import Path
 import click
 from loguru import logger
 
-from payload_manual.application.runtime import ManualControlLimits
-from payload.main import run_payload_application
 from payload.infrastructure.configuration import PayloadRuntimeConfiguration
+from payload.main import run_payload_application
+from payload_manual.application.runtime import ManualControlLimits
 from payload_manual.composition import build_manual_control_application
 
 

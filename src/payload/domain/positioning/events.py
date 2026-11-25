@@ -9,6 +9,7 @@ class DistanceSample:
     """
     One measured distance to a plane anchor, in meters.
     """
+
     anchor_id: str
     distance_m: float
     sequence: int
@@ -19,6 +20,7 @@ class DistanceFailure:
     """
     A failed ranging attempt to a plane anchor.
     """
+
     anchor_id: str
     reason: FailureReason
 

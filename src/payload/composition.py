@@ -53,9 +53,7 @@ def build_payload_application(
         try:
             from d3kble import D3KNode
         except ImportError as exc:
-            raise RuntimeError(
-                "The d3kble package is required. Install the vehicle runtime dependencies."
-            ) from exc
+            raise RuntimeError("The d3kble package is required. Install the vehicle runtime dependencies.") from exc
         node_factory = D3KNode
 
     node = node_factory(config.uart_device, baudrate=config.baudrate)

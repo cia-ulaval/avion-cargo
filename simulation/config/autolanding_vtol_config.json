@@ -10,9 +10,9 @@
   },
   "vision": {
     "targeted_marker": {
-      "length": 0.896,
-      "id": 29,
-      "aruco_dictionary": 16
+      "length": 2.4384,
+      "fractal_type": "FRACTAL_5L_6",
+      "type": "faruco"
     }
   },
   "streaming": {
@@ -29,6 +29,6 @@
     "address": "127.0.0.1",
     "port": 14550,
     "baud_rate": 921600,
-    "timeout": 30.0
+    "fail_on_timeout": false
   }
 }

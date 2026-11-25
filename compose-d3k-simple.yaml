@@ -1,7 +1,7 @@
 services:
   dev:
     environment:
-      AVION_WORLD: /workspace/avion-cargo/simulation/worlds/d3k_range_simple.sdf
+      AVION_WORLD: /workspace/avion-cargo/simulation/worlds/empty_d3k_ranging.sdf
       AVION_SIM_STARTUP_DELAY: "2"
       AVION_SIM_SERVICES: "avion-gazebo avion-d3k-diagnostics"
       AVION_D3K_DIAGNOSTICS_CONFIG: /workspace/avion-cargo/simulation/config/d3k_diagnostics_config.json

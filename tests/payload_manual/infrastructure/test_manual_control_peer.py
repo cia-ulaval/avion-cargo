@@ -58,14 +58,24 @@ def test_manual_control_protocol_round_trips_drive_and_state_commands():
         {"protocol": "payload-manual-control", "version": 1, "type": "arm", "session_id": "s", "sequence": True},
         {"protocol": "payload-manual-control", "version": 1, "type": "arm", "sequence": 0},
         {
-            "protocol": "payload-manual-control", "version": 1,
-            "type": "drive", "session_id": "s", "sequence": 0,
-            "vx_m_s": float("nan"), "vy_m_s": 0.0, "yaw_rate_rad_s": 0.0,
+            "protocol": "payload-manual-control",
+            "version": 1,
+            "type": "drive",
+            "session_id": "s",
+            "sequence": 0,
+            "vx_m_s": float("nan"),
+            "vy_m_s": 0.0,
+            "yaw_rate_rad_s": 0.0,
         },
         {
-            "protocol": "payload-manual-control", "version": 1,
-            "type": "drive", "session_id": "s", "sequence": 0,
-            "vx_m_s": True, "vy_m_s": 0.0, "yaw_rate_rad_s": 0.0,
+            "protocol": "payload-manual-control",
+            "version": 1,
+            "type": "drive",
+            "session_id": "s",
+            "sequence": 0,
+            "vx_m_s": True,
+            "vy_m_s": 0.0,
+            "yaw_rate_rad_s": 0.0,
         },
         {
             "protocol": "payload-manual-control",
@@ -91,22 +101,28 @@ async def test_peer_routes_only_registered_peer_and_coalesces_drive_setpoints():
 
     handler = node.comms.message_handler
     # The router dispatches by sender peer ID.
-    handler(SimpleNamespace(
-        peer_id=51,
-        payload=encode_manual_control_message(ManualControlCommand("test-session", 1, "arm")),
-    ))
-    handler(SimpleNamespace(
-        peer_id=50,
-        payload=encode_manual_control_message(
-            ManualControlCommand("test-session", 2, "drive", BodyVelocity(0.1, 0, 0))
-        ),
-    ))
-    handler(SimpleNamespace(
-        peer_id=50,
-        payload=encode_manual_control_message(
-            ManualControlCommand("test-session", 3, "drive", BodyVelocity(0.2, 0, 0))
-        ),
-    ))
+    handler(
+        SimpleNamespace(
+            peer_id=51,
+            payload=encode_manual_control_message(ManualControlCommand("test-session", 1, "arm")),
+        )
+    )
+    handler(
+        SimpleNamespace(
+            peer_id=50,
+            payload=encode_manual_control_message(
+                ManualControlCommand("test-session", 2, "drive", BodyVelocity(0.1, 0, 0))
+            ),
+        )
+    )
+    handler(
+        SimpleNamespace(
+            peer_id=50,
+            payload=encode_manual_control_message(
+                ManualControlCommand("test-session", 3, "drive", BodyVelocity(0.2, 0, 0))
+            ),
+        )
+    )
 
     events = peer.events()
     received = await anext(events)

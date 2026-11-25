@@ -30,9 +30,13 @@ services:
       ROS_DOMAIN_ID: "42"
       ROS_LOCALHOST_ONLY: "1"
       PYTHONUNBUFFERED: "1"
+      AVION_WORLD: /workspace/avion-cargo/simulation/worlds/runway_iris_faruco.sdf
+      AVION_SITL_GCS_OUT: "tcpin:0.0.0.0:5761"
     ipc: host
     ports:
       - "127.0.0.1:8085:8086"
+      # QGroundControl connects to MAVProxy; SITL's 5760 stays with MAVProxy.
+      - "127.0.0.1:5761:5761/tcp"
     volumes:
       - .:/workspace/avion-cargo:cached
       - autolander_venv:/workspace/avion-cargo/.venv

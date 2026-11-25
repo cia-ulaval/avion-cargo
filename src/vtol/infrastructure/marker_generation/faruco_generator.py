@@ -1,5 +1,3 @@
-"""Generate the bridge's native fractal raster without resampling its cells."""
-
 from dataclasses import dataclass
 from pathlib import Path
 from tempfile import TemporaryDirectory

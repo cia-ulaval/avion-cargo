@@ -1,5 +1,3 @@
-"""Terminal presentation of calibration reports."""
-
 from typing import Any
 
 import numpy as np

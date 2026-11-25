@@ -17,9 +17,5 @@ class BodyVelocity:
     def __post_init__(self) -> None:
         for name in ("vx_m_s", "vy_m_s", "yaw_rate_rad_s"):
             value = getattr(self, name)
-            if (
-                isinstance(value, bool)
-                or not isinstance(value, (int, float))
-                or not math.isfinite(value)
-            ):
+            if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(value):
                 raise ValueError(f"{name} must be a finite number")

@@ -40,9 +40,7 @@ class PlanePeer(Protocol):
         """
         ...
 
-    async def respond_status_request(
-        self, request_id: str, report: PayloadStatusReport
-    ) -> None:
+    async def respond_status_request(self, request_id: str, report: PayloadStatusReport) -> None:
         """Return the application's current status snapshot for a plane query."""
         ...
 

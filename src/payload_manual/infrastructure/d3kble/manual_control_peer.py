@@ -32,11 +32,13 @@ def encode_manual_control_message(command: ManualControlCommand) -> dict[str, An
         "sequence": command.sequence,
     }
     if command.velocity is not None:
-        data.update({
-            "vx_m_s": command.velocity.vx_m_s,
-            "vy_m_s": command.velocity.vy_m_s,
-            "yaw_rate_rad_s": command.velocity.yaw_rate_rad_s,
-        })
+        data.update(
+            {
+                "vx_m_s": command.velocity.vx_m_s,
+                "vy_m_s": command.velocity.vy_m_s,
+                "yaw_rate_rad_s": command.velocity.yaw_rate_rad_s,
+            }
+        )
     return data
 
 
@@ -46,20 +48,11 @@ def decode_manual_control_message(payload: Any) -> ManualControlCommand:
     if payload.get("protocol") != PROTOCOL_NAME:
         raise ManualControlProtocolError("unexpected manual-control protocol")
     version = payload.get("version")
-    if (
-        isinstance(version, bool)
-        or not isinstance(version, int)
-        or version != PROTOCOL_VERSION
-    ):
-        raise ManualControlProtocolError(
-            f"unsupported manual-control protocol version: {version!r}"
-        )
+    if isinstance(version, bool) or not isinstance(version, int) or version != PROTOCOL_VERSION:
+        raise ManualControlProtocolError(f"unsupported manual-control protocol version: {version!r}")
 
     command_type = payload.get("type")
-    if (
-        not isinstance(command_type, str)
-        or command_type not in {"arm", "drive", "stop", "disarm", "status"}
-    ):
+    if not isinstance(command_type, str) or command_type not in {"arm", "drive", "stop", "disarm", "status"}:
         raise ManualControlProtocolError(f"unsupported manual-control command: {command_type!r}")
     session_id = payload.get("session_id")
     if not isinstance(session_id, str) or not session_id or len(session_id) > 64:
@@ -79,11 +72,7 @@ def decode_manual_control_message(payload: Any) -> ManualControlCommand:
         values: list[float] = []
         for name in ("vx_m_s", "vy_m_s", "yaw_rate_rad_s"):
             value = payload[name]
-            if (
-                isinstance(value, bool)
-                or not isinstance(value, (int, float))
-                or not math.isfinite(value)
-            ):
+            if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(value):
                 raise ManualControlProtocolError(f"{name} must be a finite number")
             values.append(float(value))
         velocity = BodyVelocity(*values)
@@ -143,9 +132,7 @@ class D3kbleManualControlPeer:
             message_handler=self._on_message,
         )
 
-    async def send_status(
-        self, session_id: str, sequence: int, armed: bool, session_active: bool
-    ) -> None:
+    async def send_status(self, session_id: str, sequence: int, armed: bool, session_active: bool) -> None:
         """Report the payload's actual arm state to the connected controller node."""
         payload = {
             "protocol": "payload-manual-control-status",
@@ -236,21 +223,17 @@ class D3kbleManualControlPeer:
         elif command.command_type == "arm":
             # A fresh arm must not be preceded by an old queued drive target.
             retained = deque(
-                pending for pending in self._pending
-                if not (
-                    isinstance(pending, ManualControlCommand)
-                    and pending.command_type == "drive"
-                )
+                pending
+                for pending in self._pending
+                if not (isinstance(pending, ManualControlCommand) and pending.command_type == "drive")
             )
             self.dropped_commands += len(self._pending) - len(retained)
             self._pending = retained
         elif command.command_type == "stop":
             retained = deque(
-                pending for pending in self._pending
-                if not (
-                    isinstance(pending, ManualControlCommand)
-                    and pending.command_type == "drive"
-                )
+                pending
+                for pending in self._pending
+                if not (isinstance(pending, ManualControlCommand) and pending.command_type == "drive")
             )
             self.dropped_commands += len(self._pending) - len(retained)
             self._pending = retained
@@ -260,7 +243,8 @@ class D3kbleManualControlPeer:
         elif len(self._pending) >= self._queue_size:
             drive_index = next(
                 (
-                    index for index, pending in enumerate(self._pending)
+                    index
+                    for index, pending in enumerate(self._pending)
                     if isinstance(pending, ManualControlCommand) and pending.command_type == "drive"
                 ),
                 None,

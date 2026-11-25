@@ -2,7 +2,7 @@ from payload.domain.docking.plane_peer import PlanePeer
 from payload.domain.positioning.distance_sensor import DistanceSensor
 from payload.domain.positioning.events import DistanceFailure, DistanceSample
 from payload.domain.positioning.position_estimator import PositionEstimator
-from shared.contracts.geometry import Position, PositionEstimate
+from shared.contracts.geometry import Position
 from shared.contracts.messages import FailureReason
 
 

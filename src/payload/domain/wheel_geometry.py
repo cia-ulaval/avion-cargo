@@ -18,11 +18,7 @@ class WheelTransform2D:
     def __post_init__(self) -> None:
         for name in ("x", "y", "yaw", "radius"):
             value = getattr(self, name)
-            if (
-                isinstance(value, bool)
-                or not isinstance(value, (int, float))
-                or not math.isfinite(value)
-            ):
+            if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(value):
                 raise ValueError(f"wheel {name} must be a finite number")
         if self.radius <= 0:
             raise ValueError("wheel radius must be positive")

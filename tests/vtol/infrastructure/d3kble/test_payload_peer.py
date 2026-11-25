@@ -2,21 +2,17 @@ import asyncio
 
 from shared.contracts.geometry import Heading, Position, PositionEstimate
 from shared.contracts.messages import (
-    CommandReceipt,
     DLZState,
-    DockingSucceeded,
+    ParkingCompleted,
     PayloadPositionUpdated,
     PayloadSnapshot,
     PayloadStateUpdated,
     PayloadStatusReport,
-    PlaneHeadingUpdated,
-    ParkingCompleted,
 )
 from shared.contracts.payload_state import DockingLatchState, PayloadState, PayloadStatus
 from shared.infrastructure.d3kble.codec import (
     decode_message,
     encode_payload_event,
-    encode_status_report,
 )
 from shared.infrastructure.d3kble.router import D3kbleMessageRouter
 from tests.d3kble_fakes import FakeNode
@@ -71,10 +67,14 @@ def test_payload_peer_receives_reports_from_only_its_assigned_peer() -> None:
         await asyncio.sleep(0)
         state = PayloadState(PayloadStatus.PARKED, DockingLatchState.OPEN)
         node.comms.message_handlers[0](
-            type("Message", (), {
-                "peer_id": 27,
-                "payload": encode_payload_event(PayloadStateUpdated(state, sequence=9)),
-            })()
+            type(
+                "Message",
+                (),
+                {
+                    "peer_id": 27,
+                    "payload": encode_payload_event(PayloadStateUpdated(state, sequence=9)),
+                },
+            )()
         )
         assert await asyncio.wait_for(pending_state, timeout=1) == PayloadStateUpdated(state, 9)
         await events.aclose()
@@ -120,9 +120,7 @@ def test_payload_peer_receives_operation_reports() -> None:
         pending = asyncio.create_task(anext(events))
         await asyncio.sleep(0)
         event = ParkingCompleted("cmd-1", Position(0.1, 0.2, 0.0))
-        node.comms.message_handlers[0](
-            type("Message", (), {"peer_id": 27, "payload": encode_payload_event(event)})()
-        )
+        node.comms.message_handlers[0](type("Message", (), {"peer_id": 27, "payload": encode_payload_event(event)})())
         assert await asyncio.wait_for(pending, timeout=1) == event
         await events.aclose()
         peer.close()

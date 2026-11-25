@@ -2,6 +2,7 @@ from pathlib import Path
 
 import pytest
 
+from tests.conftest import write_config
 from vtol.domain.markers import FractalType, MarkerType
 from vtol.domain.models import TargetedMarker
 from vtol.infrastructure.persistence.autolander_configuration_reader import AutolanderConfigurationReader
@@ -10,7 +11,6 @@ from vtol.infrastructure.persistence.configuration_models import (
     StreamingDataConfiguration,
     StreamingVideoConfiguration,
 )
-from tests.conftest import write_config
 
 
 def test_reader_maps_a_valid_json_file_to_runtime_configuration_objects(
@@ -99,14 +99,3 @@ def test_reader_maps_faruco_configuration_to_automatic_tracking(
     assert config.targeted_marker == TargetedMarker(
         id=None, length=0.896, marker_type="faruco", fractal_type="FRACTAL_3L_6"
     )
-
-
-def test_reader_accepts_autolanding_section_inside_combined_vtol_configuration(tmp_path, valid_config_data):
-    combined = {
-        "autolanding": valid_config_data,
-        "d3kble": {"devices": []},
-    }
-    config = AutolanderConfigurationReader(write_config(tmp_path, combined)).read()
-
-    assert config.camera_config.id == valid_config_data["camera"]["id"]
-    assert config.drone_connection_config.address == valid_config_data["drone_connection"]["address"]

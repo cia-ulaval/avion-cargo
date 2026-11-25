@@ -7,9 +7,9 @@ from loguru import logger
 
 from payload.application.omni_wheel_controller import OmniWheelController
 from payload.domain.body_velocity import BodyVelocity
+from payload.domain.positioning.distance_sensor import DistanceSensor
 from payload.domain.positioning.events import DistanceFailure, DistanceSample
 from payload_manual.infrastructure.d3kble.manual_control_peer import D3kbleManualControlPeer
-from payload.domain.positioning.distance_sensor import DistanceSensor
 
 
 @dataclass(frozen=True, slots=True)
@@ -95,9 +95,7 @@ class ManualControlRuntime:
         self._next_stop_retry_at = 0.0
         return True
 
-    async def _report_status_safely(
-        self, session_id: str | None = None, sequence: int | None = None
-    ) -> None:
+    async def _report_status_safely(self, session_id: str | None = None, sequence: int | None = None) -> None:
         session_id = self._session_id if session_id is None else session_id
         sequence = self._last_sequence if sequence is None else sequence
         if session_id is None:
@@ -199,12 +197,12 @@ class ManualControlRuntime:
                 and now - self._arm_started_at > arm_startup_timeout_s
             )
             drive_watchdog_expired = (
-                self._armed
-                and self._last_command_at is not None
-                and now - self._last_command_at > timeout_s
+                self._armed and self._last_command_at is not None and now - self._last_command_at > timeout_s
             )
             if startup_expired or drive_watchdog_expired:
-                reason = "initial drive command did not arrive after arm" if startup_expired else "drive heartbeat expired"
+                reason = (
+                    "initial drive command did not arrive after arm" if startup_expired else "drive heartbeat expired"
+                )
                 logger.warning("manual-control watchdog expired ({}); stopping and disarming", reason)
                 self._armed = False
                 self._desired_velocity = BodyVelocity(0.0, 0.0, 0.0)

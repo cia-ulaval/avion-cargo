@@ -11,9 +11,9 @@ from shared.contracts.messages import (
     CommandReceipt,
     DLZState,
     DLZStateUpdated,
-    DockRequest,
     DockingAborted,
     DockingSucceeded,
+    DockRequest,
     FailureReason,
     ParkingAborted,
     ParkingCompleted,
@@ -48,10 +48,10 @@ class D3kblePayloadTooLarge(D3kbleProtocolError):
 def encode_message(message_type: str, data: dict[str, Any], *, kind: str = "message") -> dict[str, Any]:
     if not isinstance(message_type, str) or not message_type or not isinstance(data, dict):
         raise D3kbleProtocolError("message type and data are required")
-    
+
     if kind not in {"message", "request"}:
         raise D3kbleProtocolError("outgoing message kind must be 'message' or 'request'")
-    
+
     payload = {
         "protocol": PROTOCOL_NAME,
         "version": PROTOCOL_VERSION,
@@ -67,10 +67,10 @@ def decode_message(payload: Any) -> tuple[str, dict[str, Any]]:
 
     if record.get("protocol") != PROTOCOL_NAME:
         raise D3kbleProtocolError("unexpected application protocol")
-    
+
     if record.get("version") != PROTOCOL_VERSION:
         raise D3kbleProtocolError(f"unsupported protocol version: {record.get('version')!r}")
-    
+
     message_type = _string(record.get("type"), "message.type")
     data = _mapping(record.get("data"), "message.data")
     return message_type, data
@@ -81,9 +81,9 @@ def ensure_envelope_fits(payload: dict[str, Any], kind: str = "message") -> None
     Preflight an outgoing message/request against d3kble's envelope limit.
     """
     envelope = {
-        "v": 1, 
-        "id": "0" * 32, 
-        "kind": kind, 
+        "v": 1,
+        "id": "0" * 32,
+        "kind": kind,
         "payload": payload,
     }
     _ensure_encoded_size(envelope)
@@ -98,8 +98,8 @@ def ensure_response_fits(content: dict[str, Any]) -> None:
         "id": "0" * 32,
         "kind": "response",
         "payload": {
-            "status": "ok", 
-            "error": None, 
+            "status": "ok",
+            "error": None,
             "content": content,
         },
         "reply_to": "0" * 32,
@@ -134,7 +134,7 @@ def position_from_data(data: Any) -> Position:
 
 
 def heading_to_data(heading: Heading) -> dict[str, float]:
-    return { "angle_rad": _finite(heading.angle_rad, "heading.angle_rad") }
+    return {"angle_rad": _finite(heading.angle_rad, "heading.angle_rad")}
 
 
 def heading_from_data(data: Any) -> Heading:
@@ -144,18 +144,15 @@ def heading_from_data(data: Any) -> Heading:
 
 def estimate_to_data(estimate: PositionEstimate) -> dict[str, Any]:
     residual = estimate.residual_m
-    
+
     if residual is not None:
         residual = _finite(residual, "position_estimate.residual_m")
 
-    anchor_ids = [
-        _string(anchor_id, "position_estimate.anchor_id")
-        for anchor_id in estimate.anchor_ids
-    ]
+    anchor_ids = [_string(anchor_id, "position_estimate.anchor_id") for anchor_id in estimate.anchor_ids]
 
     if len(anchor_ids) != len(set(anchor_ids)):
         raise D3kbleProtocolError("position_estimate.anchor_ids must be unique")
-    
+
     return {
         "position": position_to_data(estimate.position),
         "residual_m": residual,
@@ -170,12 +167,12 @@ def estimate_from_data(data: Any) -> PositionEstimate:
 
     if residual is not None:
         residual = _finite(residual, "position_estimate.residual_m")
-    
+
     anchors = item.get("anchor_ids")
 
     if not isinstance(anchors, list) or any(not isinstance(anchor, str) or not anchor for anchor in anchors):
         raise D3kbleProtocolError("position_estimate.anchor_ids must be a list of non-empty strings")
-    
+
     return PositionEstimate(
         position=position_from_data(item.get("position")),
         residual_m=residual,
@@ -187,7 +184,7 @@ def estimate_from_data(data: Any) -> PositionEstimate:
 def state_to_data(state: PayloadState) -> dict[str, str]:
     if not isinstance(state.status, PayloadStatus) or not isinstance(state.latch, DockingLatchState):
         raise D3kbleProtocolError("payload state contains an unsupported status or latch value")
-    
+
     return {"status": state.status.name, "latch": state.latch.name}
 
 
@@ -234,7 +231,7 @@ def receipt_from_data(data: Any) -> CommandReceipt:
 
     if accepted and rejection is not None:
         raise D3kbleProtocolError("an accepted command cannot have a rejection reason")
-    
+
     return CommandReceipt(
         command_id=_string(item.get("command_id"), "command_receipt.command_id"),
         accepted=accepted,
@@ -281,9 +278,9 @@ def dlz_state_from_data(data: Any) -> DLZState:
 
     if not isinstance(payloads, list):
         raise D3kbleProtocolError("dlz_state.payloads must be a list")
-    
+
     snapshots = []
-    
+
     for raw in payloads:
         payload = _mapping(raw, "payload_snapshot")
         position = payload.get("position")
@@ -295,7 +292,7 @@ def dlz_state_from_data(data: Any) -> DLZState:
                 sequence=_integer(payload.get("sequence"), "payload_snapshot.sequence", minimum=0),
             )
         )
-    
+
     return DLZState(
         revision=_integer(item.get("revision"), "dlz_state.revision", minimum=0),
         payloads=tuple(snapshots),
@@ -311,17 +308,17 @@ def encode_plane_event(event: PlaneEvent) -> dict[str, Any]:
                 "sequence": _integer(event.sequence, "heading.sequence", minimum=0),
             },
         )
-    
+
     if isinstance(event, DLZStateUpdated):
-        raw_state = json.dumps(
-            dlz_state_to_data(event.state), separators=(",", ":"), ensure_ascii=False
-        ).encode("utf-8")
+        raw_state = json.dumps(dlz_state_to_data(event.state), separators=(",", ":"), ensure_ascii=False).encode(
+            "utf-8"
+        )
         compressed_state = base64.b64encode(zlib.compress(raw_state, level=6)).decode("ascii")
         return encode_message(
             "plane.dlz_state_updated",
             {"encoding": "zlib+json+base64", "state": compressed_state},
         )
-    
+
     raise D3kbleProtocolError(f"unsupported plane event: {type(event).__name__}")
 
 
@@ -333,16 +330,16 @@ def decode_plane_event(payload: Any) -> PlaneEvent:
             heading=heading_from_data(data.get("heading")),
             sequence=_integer(data.get("sequence"), "heading.sequence", minimum=0),
         )
-    
+
     if message_type == "plane.dlz_state_updated":
         if data.get("encoding") != "zlib+json+base64":
             raise D3kbleProtocolError("unsupported DLZ state encoding")
-        
+
         encoded = data.get("state")
 
         if not isinstance(encoded, str):
             raise D3kbleProtocolError("compressed DLZ state must be a base64 string")
-        
+
         try:
             compressed = base64.b64decode(encoded, validate=True)
             decompressor = zlib.decompressobj()
@@ -355,28 +352,28 @@ def decode_plane_event(payload: Any) -> PlaneEvent:
                 or not decompressor.eof
             ):
                 raise D3kbleProtocolError("decompressed DLZ state exceeds the 64 KiB limit")
-            
+
             state_data = json.loads(raw_state.decode("utf-8"))
         except D3kbleProtocolError:
             raise
         except (ValueError, UnicodeDecodeError, zlib.error) as exc:
             raise D3kbleProtocolError("invalid compressed DLZ state") from exc
-        
+
         return DLZStateUpdated(state=dlz_state_from_data(state_data))
-    
+
     raise D3kbleProtocolError(f"unsupported plane message type: {message_type}")
 
 
 def encode_payload_event(event: PayloadEvent) -> dict[str, Any]:
     if isinstance(event, PayloadPositionUpdated):
         return encode_message("payload.position_updated", {"estimate": estimate_to_data(event.estimate)})
-    
+
     if isinstance(event, PayloadStateUpdated):
         return encode_message(
             "payload.state_updated",
             {"state": state_to_data(event.state), "sequence": _integer(event.sequence, "state.sequence", minimum=0)},
         )
-    
+
     if isinstance(event, ParkingCompleted):
         return encode_message(
             "payload.parking_completed",
@@ -385,7 +382,7 @@ def encode_payload_event(event: PayloadEvent) -> dict[str, Any]:
                 "final_position": position_to_data(event.final_position),
             },
         )
-    
+
     if isinstance(event, ParkingAborted):
         return encode_message(
             "payload.parking_aborted",
@@ -394,13 +391,13 @@ def encode_payload_event(event: PayloadEvent) -> dict[str, Any]:
                 "reason": failure_to_data(event.reason),
             },
         )
-    
+
     if isinstance(event, DockingSucceeded):
         return encode_message(
             "payload.docking_succeeded",
             {"command_id": _string(event.command_id, "docking_succeeded.command_id")},
         )
-    
+
     if isinstance(event, DockingAborted):
         return encode_message(
             "payload.docking_aborted",
@@ -409,7 +406,7 @@ def encode_payload_event(event: PayloadEvent) -> dict[str, Any]:
                 "reason": failure_to_data(event.reason),
             },
         )
-    
+
     raise D3kbleProtocolError(f"unsupported payload event: {type(event).__name__}")
 
 
@@ -421,28 +418,28 @@ def decode_payload_event(payload: Any) -> PayloadEvent:
 
     if message_type == "payload.position_updated":
         return PayloadPositionUpdated(estimate=estimate_from_data(data.get("estimate")))
-    
+
     if message_type == "payload.state_updated":
         return PayloadStateUpdated(
             state=state_from_data(data.get("state")),
             sequence=_integer(data.get("sequence"), "state.sequence", minimum=0),
         )
-    
+
     if message_type == "payload.parking_completed":
         return ParkingCompleted(
             command_id=get_command_id(),
             final_position=position_from_data(data.get("final_position")),
         )
-    
+
     if message_type == "payload.parking_aborted":
         return ParkingAborted(command_id=get_command_id(), reason=failure_from_data(data.get("reason")))
-    
+
     if message_type == "payload.docking_succeeded":
         return DockingSucceeded(command_id=get_command_id())
-    
+
     if message_type == "payload.docking_aborted":
         return DockingAborted(command_id=get_command_id(), reason=failure_from_data(data.get("reason")))
-    
+
     raise D3kbleProtocolError(f"unsupported payload message type: {message_type}")
 
 
@@ -460,7 +457,7 @@ def encode_undock_request(command_id: str, target_position: Position) -> dict[st
     return encode_message(
         "plane.command.undock",
         {
-            "command_id": _string(command_id, "command_id"), 
+            "command_id": _string(command_id, "command_id"),
             "target_position": position_to_data(target_position),
         },
         kind="request",
@@ -473,13 +470,13 @@ def decode_command_request(payload: Any):
 
     if message_type == "plane.command.dock":
         return DockRequest(command_id=command_id)
-    
+
     if message_type == "plane.command.undock":
         return UndockRequest(
             command_id=command_id,
             target_position=position_from_data(data.get("target_position")),
         )
-    
+
     raise D3kbleProtocolError(f"unsupported command type: {message_type}")
 
 
@@ -491,10 +488,10 @@ def encode_command_receipt(receipt: CommandReceipt) -> dict[str, Any]:
 
 def decode_command_receipt(payload: Any) -> CommandReceipt:
     message_type, data = decode_message(payload)
-    
+
     if message_type != "payload.command_receipt":
         raise D3kbleProtocolError(f"expected payload.command_receipt, received {message_type}")
-    
+
     return receipt_from_data(data)
 
 
@@ -513,52 +510,52 @@ def decode_status_report(payload: Any) -> PayloadStatusReport:
 
     if message_type != "payload.status_report":
         raise D3kbleProtocolError(f"expected payload.status_report, received {message_type}")
-    
+
     return status_report_from_data(data)
 
 
 def _mapping(value: Any, name: str) -> dict[str, Any]:
     if not isinstance(value, dict):
         raise D3kbleProtocolError(f"{name} must be an object")
-    
+
     return value
 
 
 def _string(value: Any, name: str) -> str:
     if not isinstance(value, str) or not value:
         raise D3kbleProtocolError(f"{name} must be a non-empty string")
-    
+
     return value
 
 
 def _boolean(value: Any, name: str) -> bool:
     if not isinstance(value, bool):
         raise D3kbleProtocolError(f"{name} must be a boolean")
-    
+
     return value
 
 
 def _integer(value: Any, name: str, minimum: int | None = None) -> int:
     if isinstance(value, bool) or not isinstance(value, int):
         raise D3kbleProtocolError(f"{name} must be an integer")
-    
+
     if minimum is not None and value < minimum:
         raise D3kbleProtocolError(f"{name} must be >= {minimum}")
-    
+
     return value
 
 
 def _finite(value: Any, name: str) -> float:
     if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(value):
         raise D3kbleProtocolError(f"{name} must be a finite number")
-    
+
     return float(value)
 
 
 def _enum(enum_type, value: Any, name: str):
     if not isinstance(value, str):
         raise D3kbleProtocolError(f"{name} must be a string")
-    
+
     try:
         return enum_type[value]
     except KeyError as exc:

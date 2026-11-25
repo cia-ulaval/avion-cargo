@@ -7,10 +7,9 @@ from shared.contracts.messages import (
     DLZState,
     DLZStateUpdated,
     DockRequest,
-    FailureReason,
-    PlaneHeadingUpdated,
-    PayloadStatusRequested,
     PayloadStatusReport,
+    PayloadStatusRequested,
+    PlaneHeadingUpdated,
     UndockRequest,
 )
 from shared.contracts.payload_state import DockingLatchState, PayloadState, PayloadStatus
@@ -35,13 +34,17 @@ def test_plane_peer_receives_heading_and_dlz_updates() -> None:
         heading_task = asyncio.create_task(anext(events))
         await asyncio.sleep(0)
         node.comms.message_handlers[0](
-            type("Message", (), {
-                "peer_id": 12,
-                "payload": encode_message(
-                    "plane.heading_updated",
-                    {"heading": {"angle_rad": 1.1}, "sequence": 3},
-                ),
-            })()
+            type(
+                "Message",
+                (),
+                {
+                    "peer_id": 12,
+                    "payload": encode_message(
+                        "plane.heading_updated",
+                        {"heading": {"angle_rad": 1.1}, "sequence": 3},
+                    ),
+                },
+            )()
         )
         assert await asyncio.wait_for(heading_task, timeout=1) == PlaneHeadingUpdated(Heading(1.1), 3)
 
@@ -100,9 +103,7 @@ def test_plane_peer_rejects_command_when_application_does_not_acknowledge() -> N
         events = peer.events()
         event_task = asyncio.create_task(anext(events))
         await asyncio.sleep(0)
-        response = await node.comms.request_handlers[0](
-            FakeIncomingRequest(12, encode_dock_request("cmd-timeout"))
-        )
+        response = await node.comms.request_handlers[0](FakeIncomingRequest(12, encode_dock_request("cmd-timeout")))
         command = await asyncio.wait_for(event_task, timeout=1)
         receipt = decode_command_receipt(response)
         assert command == DockRequest("cmd-timeout")
@@ -197,9 +198,7 @@ def test_timed_out_command_is_not_delivered_to_a_later_event_consumer() -> None:
         peer = D3kblePlanePeer(node, router, plane_peer_id=12, command_ack_timeout=0.01)
         await peer.start()
 
-        response = await node.comms.request_handlers[0](
-            FakeIncomingRequest(12, encode_dock_request("cmd-no-consumer"))
-        )
+        response = await node.comms.request_handlers[0](FakeIncomingRequest(12, encode_dock_request("cmd-no-consumer")))
         receipt = decode_command_receipt(response)
         assert receipt.accepted is False
         assert receipt.rejection_reason.code == "application_ack_timeout"

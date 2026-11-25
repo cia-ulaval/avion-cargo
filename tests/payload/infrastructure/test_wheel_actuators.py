@@ -38,7 +38,9 @@ def test_capabilities_reject_invalid_maximum_speed():
 async def test_gazebo_actuator_converts_surface_speed_to_joint_angular_speed():
     published = []
     actuator = GazeboWheelActuator(
-        "/wheel/cmd_vel", 0.04, WheelActuatorCapabilities(0.5),
+        "/wheel/cmd_vel",
+        0.04,
+        WheelActuatorCapabilities(0.5),
         publisher=lambda topic, value: published.append((topic, value)),
     )
 
@@ -56,7 +58,9 @@ async def test_gazebo_actuator_converts_surface_speed_to_joint_angular_speed():
 @pytest.mark.asyncio
 async def test_gazebo_actuator_rejects_speed_outside_capabilities():
     actuator = GazeboWheelActuator(
-        "/wheel/cmd_vel", 0.04, WheelActuatorCapabilities(0.5),
+        "/wheel/cmd_vel",
+        0.04,
+        WheelActuatorCapabilities(0.5),
         publisher=lambda *_: None,
     )
     with pytest.raises(ValueError, match="outside actuator limits"):
@@ -73,7 +77,10 @@ async def test_mx1616_actuator_sets_direction_and_pwm_duty():
         return output
 
     actuator = MX1616WheelActuator(
-        17, 18, WheelActuatorCapabilities(0.4), output_factory=factory,
+        17,
+        18,
+        WheelActuatorCapabilities(0.4),
+        output_factory=factory,
     )
     await actuator.set_surface_velocity(0.2)
     assert (outputs[0].value, outputs[1].value) == (0.5, 0.0)
@@ -160,10 +167,7 @@ async def test_gazebo_actuators_reuse_persistent_transport_publishers(monkeypatc
     monkeypatch.setattr(wheel_actuators, "_gazebo_transport", None)
 
     topics = ("/wheel/0/cmd_vel", "/wheel/1/cmd_vel", "/wheel/2/cmd_vel")
-    actuators = [
-        GazeboWheelActuator(topic, 0.04, WheelActuatorCapabilities(0.5))
-        for topic in topics
-    ]
+    actuators = [GazeboWheelActuator(topic, 0.04, WheelActuatorCapabilities(0.5)) for topic in topics]
 
     await actuators[0].set_surface_velocity(0.2)
     await actuators[1].set_surface_velocity(-0.1)

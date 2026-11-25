@@ -6,6 +6,8 @@ import numpy as np
 import pytest
 
 import vtol.composition as composition
+from tests.conftest import write_config
+from tests.vtol.infrastructure.vision.test_opencv_gridboard_calibration_engine import make_board_frames
 from vtol.domain.camera import Camera
 from vtol.domain.drone import Drone
 from vtol.domain.models import CalibrationData, CalibrationReport, TargetedMarker
@@ -17,8 +19,6 @@ from vtol.infrastructure.persistence.calibration_repository import CalibrationRe
 from vtol.infrastructure.persistence.configuration_models import CameraConfiguration, DroneConnectionConfiguration
 from vtol.infrastructure.vision.opencv_aruco_detector import OpenCVArucoDetectorConfig
 from vtol.infrastructure.vision.opencv_gridboard_calibration_engine import GridBoardCalibrationConfig, GridBoardSpec
-from tests.conftest import write_config
-from tests.vtol.infrastructure.vision.test_opencv_gridboard_calibration_engine import make_board_frames
 
 
 @pytest.mark.parametrize("dictionary_id", [0, 16])

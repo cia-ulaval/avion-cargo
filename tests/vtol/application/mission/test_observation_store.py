@@ -1,5 +1,5 @@
-from shared.contracts.messages import PayloadPositionUpdated
 from shared.contracts.geometry import Position, PositionEstimate
+from shared.contracts.messages import PayloadPositionUpdated
 from vtol.application.mission.observation_store import MissionObservationStore
 from vtol.domain.drone import DroneMode, DroneStatus
 from vtol.domain.mission.execution_status import MissionExecutionStatus

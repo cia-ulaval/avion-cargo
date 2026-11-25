@@ -106,6 +106,7 @@ def test_payload_runtime_configuration_parses_independent_wheels(tmp_path):
                         "y": 0.2,
                         "yaw": 0.3,
                         "radius": 0.04,
+                        "max_surface_velocity": 0.5,
                         "driver": {"type": "gazebo", "topic": "/wheel/front_left"},
                     },
                     {
@@ -113,6 +114,7 @@ def test_payload_runtime_configuration_parses_independent_wheels(tmp_path):
                         "y": -0.04,
                         "yaw": -1.2,
                         "radius": 0.05,
+                        "max_surface_velocity": 0.5,
                         "driver": {"type": "gazebo", "topic": "/wheel/rear"},
                     },
                 ],
@@ -129,6 +131,7 @@ def test_payload_runtime_configuration_parses_independent_wheels(tmp_path):
     assert config.wheels[0].transform.y == pytest.approx(0.2)
     assert config.wheels[0].transform.yaw == pytest.approx(0.3)
     assert config.wheels[0].transform.radius == pytest.approx(0.04)
+    assert config.wheels[0].max_surface_velocity == pytest.approx(0.5)
     assert config.wheels[1].transform.yaw == pytest.approx(-1.2)
     assert config.wheels[1].transform.radius == pytest.approx(0.05)
 
@@ -167,16 +170,14 @@ def test_payload_runtime_configuration_parses_independent_wheels(tmp_path):
         ),
     ],
 )
-def test_payload_runtime_configuration_rejects_invalid_wheel_transforms(
-    tmp_path, wheels, message
-):
+def test_payload_runtime_configuration_rejects_invalid_wheel_transforms(tmp_path, wheels, message):
     path = tmp_path / "payload.json"
     if isinstance(wheels, list):
         wheels = [
             {
                 **wheel,
                 **(
-                    {"driver": {"type": "gazebo", "topic": f"/wheel/{index}"}}
+                    {"max_surface_velocity": 0.5, "driver": {"type": "gazebo", "topic": f"/wheel/{index}"}}
                     if {"x", "y", "yaw", "radius"}.issubset(wheel)
                     else {}
                 ),
@@ -237,9 +238,7 @@ def test_payload_runtime_configuration_parses_partial_uwb_overrides(tmp_path):
         ({"retries": 6}, "uwb.retries"),
     ],
 )
-def test_payload_runtime_configuration_validates_optional_uwb_overrides(
-    tmp_path, overrides, message
-):
+def test_payload_runtime_configuration_validates_optional_uwb_overrides(tmp_path, overrides, message):
     path = tmp_path / "payload.json"
     document = {
         "payload_id": "payload-a",
@@ -268,6 +267,7 @@ def test_payload_runtime_configuration_parses_motor_driver_types(tmp_path):
                         "y": 0.2,
                         "yaw": 0.3,
                         "radius": 0.04,
+                        "max_surface_velocity": 0.5,
                         "driver": {
                             "type": "gazebo",
                             "topic": "/model/payload/joint/wheel_0_joint/cmd_vel",
@@ -278,6 +278,7 @@ def test_payload_runtime_configuration_parses_motor_driver_types(tmp_path):
                         "y": 0.2,
                         "yaw": -0.3,
                         "radius": 0.04,
+                        "max_surface_velocity": 0.5,
                         "driver": {
                             "type": "mx1616",
                             "in1_pin": 17,
@@ -289,6 +290,7 @@ def test_payload_runtime_configuration_parses_motor_driver_types(tmp_path):
                         "y": -0.2,
                         "yaw": 1.5,
                         "radius": 0.04,
+                        "max_surface_velocity": 0.5,
                         "driver": {
                             "type": "mx1616",
                             "in1_pin": 19,
@@ -304,9 +306,7 @@ def test_payload_runtime_configuration_parses_motor_driver_types(tmp_path):
     config = PayloadRuntimeConfiguration.from_file(path)
 
     assert isinstance(config.wheels[0].driver, GazeboMotorDriverConfiguration)
-    assert config.wheels[0].driver.topic == (
-        "/model/payload/joint/wheel_0_joint/cmd_vel"
-    )
+    assert config.wheels[0].driver.topic == ("/model/payload/joint/wheel_0_joint/cmd_vel")
 
     assert isinstance(config.wheels[1].driver, MX1616MotorDriverConfiguration)
     assert (config.wheels[1].driver.in1_pin, config.wheels[1].driver.in2_pin) == (17, 18)
@@ -336,9 +336,7 @@ def test_payload_runtime_configuration_parses_motor_driver_types(tmp_path):
         ),
     ],
 )
-def test_payload_runtime_configuration_rejects_invalid_motor_drivers(
-    tmp_path, driver, message
-):
+def test_payload_runtime_configuration_rejects_invalid_motor_drivers(tmp_path, driver, message):
     path = tmp_path / "payload.json"
     path.write_text(
         json.dumps(
@@ -353,6 +351,7 @@ def test_payload_runtime_configuration_rejects_invalid_motor_drivers(
                         "y": 0.2,
                         "yaw": 0.3,
                         "radius": 0.04,
+                        "max_surface_velocity": 0.5,
                         **({"driver": driver} if driver is not _MISSING else {}),
                     }
                 ],
@@ -380,6 +379,7 @@ def test_payload_runtime_configuration_rejects_reused_gpio_pins(tmp_path):
                         "y": 0.2,
                         "yaw": 0.3,
                         "radius": 0.04,
+                        "max_surface_velocity": 0.5,
                         "driver": {
                             "type": "mx1616",
                             "in1_pin": 17,
@@ -391,6 +391,7 @@ def test_payload_runtime_configuration_rejects_reused_gpio_pins(tmp_path):
                         "y": 0.2,
                         "yaw": -0.3,
                         "radius": 0.04,
+                        "max_surface_velocity": 0.5,
                         "driver": {
                             "type": "mx1616",
                             "in1_pin": 18,

@@ -1,19 +1,21 @@
 from __future__ import annotations
 
 import asyncio
-import logging
 import uuid
 from collections.abc import AsyncIterator
 from typing import Any
+
+from d3kble import D3KNode
+from loguru import logger
 
 from shared.contracts.geometry import Heading, Position
 from shared.contracts.messages import (
     CommandReceipt,
     DLZState,
+    DLZStateUpdated,
     PayloadEvent,
     PayloadStatusReport,
     PlaneHeadingUpdated,
-    DLZStateUpdated,
 )
 from shared.infrastructure.d3kble.codec import (
     decode_command_receipt,
@@ -26,9 +28,7 @@ from shared.infrastructure.d3kble.codec import (
 )
 from shared.infrastructure.d3kble.errors import D3kbleCommunicationError
 from shared.infrastructure.d3kble.router import D3kbleMessageRouter, D3kbleRouteRegistration
-from d3kble import D3KNode
 from vtol.domain.payload_peer import PayloadPeer
-from loguru import logger
 
 _EVENTS_CLOSED = object()
 
@@ -49,10 +49,10 @@ class D3kblePayloadPeer(PayloadPeer):
     ):
         if not isinstance(payload_id, str) or not payload_id:
             raise ValueError("payload_id must be a non-empty string")
-        
+
         if isinstance(peer_id, bool) or not isinstance(peer_id, int) or not 1 <= peer_id <= 65534:
             raise ValueError("peer_id must be an integer in 1..65534")
-        
+
         if send_timeout <= 0:
             raise ValueError("send_timeout must be greater than zero")
 
@@ -78,11 +78,11 @@ class D3kblePayloadPeer(PayloadPeer):
     async def start(self) -> None:
         if self._closed:
             raise RuntimeError("peer adapter is closed")
-        
+
         if self._registration is not None:
             self._assert_loop()
             return
-        
+
         await self._router.start()
         self._loop = asyncio.get_running_loop()
         self._registration = self._router.register_peer(self._peer_id, message_handler=self._on_message)
@@ -92,7 +92,7 @@ class D3kblePayloadPeer(PayloadPeer):
 
         if self._events_active:
             raise RuntimeError("D3kblePayloadPeer supports one active events() consumer")
-        
+
         self._events_active = True
 
         try:
@@ -100,7 +100,7 @@ class D3kblePayloadPeer(PayloadPeer):
                 event = await self._events.get()
                 if event is _EVENTS_CLOSED:
                     return
-                
+
                 yield event
         finally:
             self._events_active = False
@@ -143,7 +143,9 @@ class D3kblePayloadPeer(PayloadPeer):
             error_message = f"{operation} request to payload {self._payload_id} failed: {exc}"
             raise D3kbleCommunicationError(error_message) from exc
         if response.status != "ok":
-            error_message = f"{operation} request to payload {self._payload_id} returned an error response: {response.error}"
+            error_message = (
+                f"{operation} request to payload {self._payload_id} returned an error response: {response.error}"
+            )
             raise D3kbleCommunicationError(error_message)
         return response.content
 
@@ -161,7 +163,7 @@ class D3kblePayloadPeer(PayloadPeer):
         except Exception:
             logger.exception("discarding invalid payload message from BLE peer %s", self._peer_id)
             return
-        
+
         loop = self._loop
 
         if loop is not None and not loop.is_closed() and not self._closed:
@@ -187,7 +189,7 @@ class D3kblePayloadPeer(PayloadPeer):
         if self._registration is not None:
             self._registration.close()
             self._registration = None
-        
+
         self._closed = True
 
         def finish_close() -> None:
@@ -196,22 +198,22 @@ class D3kblePayloadPeer(PayloadPeer):
                     self._events.get_nowait()
                 except asyncio.QueueEmpty:
                     break
-            
+
             self._events.put_nowait(_EVENTS_CLOSED)
 
         loop = self._loop
 
         if loop is None or loop.is_closed():
             return
-        
+
         try:
             running_loop = asyncio.get_running_loop()
         except RuntimeError:
             running_loop = None
-        
+
         if running_loop is loop:
             finish_close()
-        
+
         else:
             try:
                 loop.call_soon_threadsafe(finish_close)

@@ -1,6 +1,7 @@
 from vtol import composition
 from vtol.domain.camera_mount import CameraMount
 from vtol.domain.models import TargetedMarker
+from vtol.infrastructure.d3kble.configuration import VtolRuntimeConfiguration
 from vtol.infrastructure.persistence.configuration_models import (
     AutolanderConfiguration,
     CameraConfiguration,
@@ -10,7 +11,6 @@ from vtol.infrastructure.persistence.configuration_models import (
     StreamingVideoConfiguration,
 )
 from vtol.infrastructure.persistence.vtol_application_configuration import VtolApplicationConfiguration
-from vtol.infrastructure.d3kble.configuration import VtolRuntimeConfiguration
 
 
 class FakeD3kbleApplication:

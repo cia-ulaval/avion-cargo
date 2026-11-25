@@ -70,9 +70,7 @@ def build_manual_control_application(
     except RuntimeError:
         pass
     else:
-        raise RuntimeError(
-            "build_manual_control_application must be called outside a running event loop"
-        )
+        raise RuntimeError("build_manual_control_application must be called outside a running event loop")
 
     if (
         isinstance(controller_peer_id, bool)
@@ -87,9 +85,7 @@ def build_manual_control_application(
 
     if wheel_capabilities is None:
         if max_wheel_surface_velocity_m_s is None:
-            raise ValueError(
-                "max_wheel_surface_velocity_m_s is required when wheel_capabilities are omitted"
-            )
+            raise ValueError("max_wheel_surface_velocity_m_s is required when wheel_capabilities are omitted")
         default_capabilities = WheelActuatorCapabilities(max_wheel_surface_velocity_m_s)
         capabilities_by_wheel = (default_capabilities,) * len(config.wheels)
     else:
@@ -103,9 +99,7 @@ def build_manual_control_application(
         try:
             from d3kble import D3KNode
         except ImportError as exc:
-            raise RuntimeError(
-                "The d3kble package is required. Install the vehicle runtime dependencies."
-            ) from exc
+            raise RuntimeError("The d3kble package is required. Install the vehicle runtime dependencies.") from exc
         node_factory = D3KNode
 
     node = node_factory(config.uart_device, baudrate=config.baudrate)
@@ -179,6 +173,7 @@ def build_manual_control_application(
             except Exception:
                 logger.exception("Could not close manual-control D3K router after startup failure")
         if actuators:
+
             async def close_actuators() -> None:
                 await asyncio.gather(
                     *(actuator.close() for actuator in actuators),

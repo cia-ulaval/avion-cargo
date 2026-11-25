@@ -67,8 +67,7 @@ def test_scaled_wheel_velocities_are_clamped_after_float_rounding():
 
     assert velocities == pytest.approx((0.12, -0.12, 0.06))
     assert all(
-        abs(value) <= actuator.capabilities.max_surface_velocity
-        for value, actuator in zip(velocities, actuators)
+        abs(value) <= actuator.capabilities.max_surface_velocity for value, actuator in zip(velocities, actuators)
     )
 
 
@@ -107,7 +106,6 @@ async def test_controller_does_not_republish_an_unchanged_setpoint():
     assert [len(actuator.commands) for actuator in actuators] == [1, 1, 1]
     await controller.close()
     assert all(actuator.closed for actuator in actuators)
-
 
 
 @pytest.mark.asyncio
@@ -152,9 +150,7 @@ async def test_translation_can_compensate_for_an_over_limit_rotation_component()
     actuators = [FakeActuator(0.1) for _ in range(3)]
     controller = OmniWheelController(wheels, actuators)
 
-    linear, angular = controller._calculate_surface_velocity_components(
-        BodyVelocity(0.1, 0.0, 1.0)
-    )
+    linear, angular = controller._calculate_surface_velocity_components(BodyVelocity(0.1, 0.0, 1.0))
     limited = await controller.set_body_velocity(BodyVelocity(0.1, 0.0, 1.0))
 
     assert linear == pytest.approx((-0.1, 0.1, 0.1))
@@ -166,7 +162,9 @@ def test_reversing_positive_rolling_direction_reverses_motor_command():
     forward = WheelTransform2D(0.0, 0.0, 0.0, 0.04)
     reversed_wheel = WheelTransform2D(0.0, 0.0, math.pi, 0.04)
     forward_controller = OmniWheelController((forward, forward, forward), [FakeActuator() for _ in range(3)])
-    reversed_controller = OmniWheelController((reversed_wheel, reversed_wheel, reversed_wheel), [FakeActuator() for _ in range(3)])
+    reversed_controller = OmniWheelController(
+        (reversed_wheel, reversed_wheel, reversed_wheel), [FakeActuator() for _ in range(3)]
+    )
 
     forward_speed = forward_controller.calculate_surface_velocities(BodyVelocity(0.1, 0.0, 0.0))
     reversed_speed = reversed_controller.calculate_surface_velocities(BodyVelocity(0.1, 0.0, 0.0))

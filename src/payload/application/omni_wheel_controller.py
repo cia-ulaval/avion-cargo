@@ -42,22 +42,14 @@ class OmniWheelController:
         for wheel in self._wheels:
             rolling_x = math.cos(wheel.yaw)
             rolling_y = math.sin(wheel.yaw)
-            linear_values.append(
-                rolling_x * velocity.vx_m_s + rolling_y * velocity.vy_m_s
-            )
-            angular_values.append(
-                velocity.yaw_rate_rad_s
-                * (-rolling_x * wheel.y + rolling_y * wheel.x)
-            )
+            linear_values.append(rolling_x * velocity.vx_m_s + rolling_y * velocity.vy_m_s)
+            angular_values.append(velocity.yaw_rate_rad_s * (-rolling_x * wheel.y + rolling_y * wheel.x))
         return tuple(linear_values), tuple(angular_values)
 
     def calculate_surface_velocities(self, velocity: BodyVelocity) -> tuple[float, ...]:
         """Return signed wheel surface speeds in m/s for a body velocity."""
         linear, angular = self._calculate_surface_velocity_components(velocity)
-        return tuple(
-            linear_value + angular_value
-            for linear_value, angular_value in zip(linear, angular)
-        )
+        return tuple(linear_value + angular_value for linear_value, angular_value in zip(linear, angular))
 
     def _translation_scale_interval(
         self,
@@ -67,9 +59,7 @@ class OmniWheelController:
     ) -> tuple[float, float] | None:
         """Return feasible translation-scale bounds for a fixed yaw scale."""
         lower, upper = 0.0, 1.0
-        for linear, angular, actuator in zip(
-            linear_values, angular_values, self._actuators
-        ):
+        for linear, angular, actuator in zip(linear_values, angular_values, self._actuators):
             maximum = actuator.capabilities.max_surface_velocity
             angular = angular * angular_scale
 
@@ -93,17 +83,12 @@ class OmniWheelController:
         angular_values: tuple[float, ...],
     ) -> tuple[float, ...]:
         """Maximize yaw first, then maximize the translation scale."""
-        if (
-            len(linear_values) != len(self._actuators)
-            or len(angular_values) != len(self._actuators)
-        ):
+        if len(linear_values) != len(self._actuators) or len(angular_values) != len(self._actuators):
             raise ValueError("wheel velocity components and actuator counts must match")
 
         # First try to retain the full requested angular velocity.
         angular_scale = 1.0
-        interval = self._translation_scale_interval(
-            linear_values, angular_values, angular_scale
-        )
+        interval = self._translation_scale_interval(linear_values, angular_values, angular_scale)
 
         # If no translation scale can make full yaw feasible, find the largest
         # feasible yaw scale. Feasibility is monotonic because (alpha, beta)=(0,0)
@@ -112,16 +97,12 @@ class OmniWheelController:
             low, high = 0.0, 1.0
             for _ in range(60):
                 candidate = (low + high) / 2.0
-                if self._translation_scale_interval(
-                    linear_values, angular_values, candidate
-                ) is None:
+                if self._translation_scale_interval(linear_values, angular_values, candidate) is None:
                     high = candidate
                 else:
                     low = candidate
             angular_scale = low
-            interval = self._translation_scale_interval(
-                linear_values, angular_values, angular_scale
-            )
+            interval = self._translation_scale_interval(linear_values, angular_values, angular_scale)
 
         if interval is None:
             raise RuntimeError("unable to find feasible wheel velocity scales")
@@ -129,10 +110,7 @@ class OmniWheelController:
         # With the maximum feasible yaw scale fixed, use as much translation
         # as possible while preserving the requested translation direction.
         translation_scale = interval[1]
-        maximums = tuple(
-            actuator.capabilities.max_surface_velocity
-            for actuator in self._actuators
-        )
+        maximums = tuple(actuator.capabilities.max_surface_velocity for actuator in self._actuators)
         return tuple(
             max(
                 -maximum,
@@ -141,9 +119,7 @@ class OmniWheelController:
                     translation * translation_scale + rotation * angular_scale,
                 ),
             )
-            for translation, rotation, maximum in zip(
-                linear_values, angular_values, maximums
-            )
+            for translation, rotation, maximum in zip(linear_values, angular_values, maximums)
         )
 
     async def set_body_velocity(self, velocity: BodyVelocity) -> tuple[float, ...]:
@@ -157,10 +133,7 @@ class OmniWheelController:
             if limited == self._last_surface_velocities:
                 return limited
             results = await asyncio.gather(
-                *(
-                    actuator.set_surface_velocity(value)
-                    for actuator, value in zip(self._actuators, limited)
-                ),
+                *(actuator.set_surface_velocity(value) for actuator, value in zip(self._actuators, limited)),
                 return_exceptions=True,
             )
             errors = [result for result in results if isinstance(result, BaseException)]
