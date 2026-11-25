@@ -21,6 +21,7 @@ class D3kbleRouteRegistration:
     """
     Handle used to remove one peer's handlers from a shared router.
     """
+
     def __init__(self, router: "D3kbleMessageRouter", peer_id: int, token: object):
         self._router = router
         self._peer_id = peer_id
@@ -37,6 +38,7 @@ class D3kbleMessageRouter:
     """
     Route incoming d3kble messages and requests by remote BLE peer ID.
     """
+
     def __init__(self, node: D3KNode):
         self._node = node
         self._routes: dict[int, _PeerRoute] = {}
@@ -53,13 +55,13 @@ class D3kbleMessageRouter:
         with self._lock:
             if self._closed:
                 raise RuntimeError("a closed D3kbleMessageRouter cannot be restarted")
-            
+
             if self._started:
                 if self._loop is not loop:
                     raise RuntimeError("D3kbleMessageRouter is already bound to another event loop")
-                
+
                 return
-            
+
             self._node.comms.bind_asyncio_loop(loop)
             self._node.comms.on_message(self._route_message)
             self._node.comms.on_request(self._route_request)
@@ -73,27 +75,27 @@ class D3kbleMessageRouter:
         message_handler=None,
         request_handler=None,
     ) -> D3kbleRouteRegistration:
-        
+
         if isinstance(peer_id, bool) or not isinstance(peer_id, int) or not 1 <= peer_id <= 65534:
             raise ValueError("peer_id must be an integer in 1..65534")
-        
+
         if message_handler is None and request_handler is None:
             raise ValueError("at least one handler must be supplied")
-        
+
         token = object()
-        
+
         with self._lock:
             if self._closed:
                 raise RuntimeError("router is closed")
-            
+
             if not self._started:
                 raise RuntimeError("start the router before registering peer routes")
-            
+
             if peer_id in self._routes:
                 raise ValueError(f"a route for BLE peer {peer_id} is already registered")
-            
+
             self._routes[peer_id] = _PeerRoute(message_handler, request_handler, token)
-        
+
         return D3kbleRouteRegistration(self, peer_id, token)
 
     def _unregister(self, peer_id: int, token: object) -> None:
@@ -124,12 +126,12 @@ class D3kbleMessageRouter:
         if handler is None:
             request.fail(f"no request handler registered for BLE peer {request.peer_id}")
             return None
-        
+
         result = handler(request)
 
         if inspect.isawaitable(result):
             return await result
-        
+
         return result
 
     def close(self) -> None:

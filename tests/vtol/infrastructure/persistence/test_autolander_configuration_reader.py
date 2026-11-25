@@ -2,6 +2,7 @@ from pathlib import Path
 
 import pytest
 
+from tests.conftest import write_config
 from vtol.domain.markers import FractalType, MarkerType
 from vtol.domain.models import TargetedMarker
 from vtol.infrastructure.persistence.autolander_configuration_reader import AutolanderConfigurationReader
@@ -10,7 +11,6 @@ from vtol.infrastructure.persistence.configuration_models import (
     StreamingDataConfiguration,
     StreamingVideoConfiguration,
 )
-from tests.conftest import write_config
 from vtol.utils.validators.validation_error import ValidationError
 
 

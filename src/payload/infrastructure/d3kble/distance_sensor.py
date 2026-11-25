@@ -8,12 +8,11 @@ from collections.abc import AsyncIterator, Mapping
 from typing import Any
 
 from d3kble import D3KNode
+from loguru import logger
 
 from payload.domain.positioning.distance_sensor import DistanceSensor
 from payload.domain.positioning.events import DistanceEvent, DistanceFailure, DistanceSample
 from shared.contracts.messages import FailureReason
-from d3kble import D3KNode
-from loguru import logger
 
 
 class D3kbleDistanceSensor(DistanceSensor):
@@ -33,8 +32,10 @@ class D3kbleDistanceSensor(DistanceSensor):
     ):
         if not anchor_id_by_target_id:
             raise ValueError("at least one UWB target-to-anchor mapping is required")
-        if any(isinstance(target, bool) or not isinstance(target, int) or not 0 <= target <= 65535
-               for target in anchor_id_by_target_id):
+        if any(
+            isinstance(target, bool) or not isinstance(target, int) or not 0 <= target <= 65535
+            for target in anchor_id_by_target_id
+        ):
             raise ValueError("UWB target IDs must be integers in 0..65535")
         if any(not isinstance(anchor, str) or not anchor for anchor in anchor_id_by_target_id.values()):
             raise ValueError("anchor IDs must be non-empty strings")

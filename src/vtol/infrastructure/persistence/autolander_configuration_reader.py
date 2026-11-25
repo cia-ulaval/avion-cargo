@@ -32,7 +32,7 @@ class AutolanderConfigurationReader:
         """
         document = self._read_json(self.config_path)
         raw = document.get("autolanding", document)
-        
+
         if not isinstance(raw, dict):
             raise ValueError("'autolanding' configuration must be a JSON object")
 

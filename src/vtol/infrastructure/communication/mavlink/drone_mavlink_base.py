@@ -9,7 +9,7 @@ from loguru import logger
 from pymavlink import mavutil
 from pymavlink.dialects.v20 import ardupilotmega as mavlink2
 
-from vtol.domain.drone import Drone, DroneMode, DroneStatus, LandedState, VtolState, HoldPosition
+from vtol.domain.drone import Drone, DroneMode, DroneStatus, HoldPosition, LandedState, VtolState
 from vtol.domain.mission.execution_status import MissionExecutionStatus
 from vtol.domain.models import Pose3D
 from vtol.domain.rigid_transform import RigidTransform

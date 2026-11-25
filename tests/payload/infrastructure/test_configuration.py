@@ -120,9 +120,7 @@ def test_payload_runtime_configuration_parses_partial_uwb_overrides(tmp_path):
         ({"retries": 6}, "uwb.retries"),
     ],
 )
-def test_payload_runtime_configuration_validates_optional_uwb_overrides(
-    tmp_path, overrides, message
-):
+def test_payload_runtime_configuration_validates_optional_uwb_overrides(tmp_path, overrides, message):
     path = tmp_path / "payload.json"
     document = {
         "payload_id": "payload-a",

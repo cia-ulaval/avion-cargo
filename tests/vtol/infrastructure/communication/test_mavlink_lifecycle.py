@@ -91,10 +91,7 @@ def test_connect_accepts_only_autopilot_and_initializes_status_from_first_heartb
     # No additional blocking read once the autopilot heartbeat is accepted.
     assert len(connection.receive_calls) == 2
     requests = [message for message in connection.outgoing if message.get_type() == "COMMAND_LONG"]
-    assert {
-        int(message.param1): int(message.param2)
-        for message in requests
-    } == {
+    assert {int(message.param1): int(message.param2) for message in requests} == {
         mavlink2.MAVLINK_MSG_ID_VFR_HUD: 200_000,
         mavlink2.MAVLINK_MSG_ID_SYS_STATUS: 1_000_000,
         mavlink2.MAVLINK_MSG_ID_GPS_RAW_INT: 500_000,
@@ -163,22 +160,14 @@ def test_optional_link_discovers_late_autopilot_and_requests_streams_once(link):
     assert all((message.target_system, message.target_component) == (7, 1) for message in requests)
     connection.incoming.extend([heartbeat(system=8, mode=4), heartbeat(system=7)])
     assert drone.get_status().mode is DroneMode.LAND
-    requests_before = [
-        message
-        for message in connection.outgoing
-        if message.get_type() == "COMMAND_LONG"
-    ]
+    requests_before = [message for message in connection.outgoing if message.get_type() == "COMMAND_LONG"]
     assert len(requests_before) == 6
 
     connection.incoming.extend([heartbeat(system=8, mode=4), heartbeat(system=7)])
 
     assert drone.get_status().mode is DroneMode.LAND
 
-    requests_after = [
-        message
-        for message in connection.outgoing
-        if message.get_type() == "COMMAND_LONG"
-    ]
+    requests_after = [message for message in connection.outgoing if message.get_type() == "COMMAND_LONG"]
     assert len(requests_after) == len(requests_before)
 
 

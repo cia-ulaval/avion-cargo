@@ -4,8 +4,8 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from enum import Enum
 
-from vtol.domain.models import Pose3D
 from vtol.domain.mission.execution_status import MissionExecutionStatus
+from vtol.domain.models import Pose3D
 from vtol.domain.rigid_transform import RigidTransform
 
 
@@ -205,7 +205,7 @@ class Drone(ABC):
     def get_mission_execution_status(self) -> MissionExecutionStatus:
         """Return the latest mission observation without polling the transport."""
         return MissionExecutionStatus()
-    
+
     @abstractmethod
     def send_landing_target(
         self,

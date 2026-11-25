@@ -67,10 +67,7 @@ class DiagnosticsConfiguration:
             if not isinstance(raw_peer_ids, list):
                 raise ValueError(f"{prefix}.peer_ids must be a list")
             if any(
-                isinstance(peer, bool)
-                or not isinstance(peer, int)
-                or not 1 <= peer <= 65534
-                for peer in raw_peer_ids
+                isinstance(peer, bool) or not isinstance(peer, int) or not 1 <= peer <= 65534 for peer in raw_peer_ids
             ):
                 raise ValueError(f"{prefix}.peer_ids must contain integers in 1..65534")
             if len(raw_peer_ids) != len(set(raw_peer_ids)):
@@ -135,11 +132,7 @@ class _RangingSummary:
 
     @property
     def has_errors(self) -> bool:
-        return bool(
-            self.failures_by_status
-            or self.invalid_measurements
-            or self.dropped_measurements
-        )
+        return bool(self.failures_by_status or self.invalid_measurements or self.dropped_measurements)
 
 
 class _RangingStatistics:
@@ -200,9 +193,7 @@ class _RangingStatistics:
             summary = _RangingSummary(
                 sample_count=count,
                 mean_distance_m=self._mean_distance_m if count else None,
-                stddev_distance_m=(
-                    math.sqrt(self._sum_squared_deviations / count) if count else None
-                ),
+                stddev_distance_m=(math.sqrt(self._sum_squared_deviations / count) if count else None),
                 min_distance_m=self._min_distance_m,
                 max_distance_m=self._max_distance_m,
                 failures_by_status=tuple(sorted(self._failures_by_status.items())),
@@ -228,9 +219,7 @@ class _RangingStatistics:
         def format_distance(value: float | None) -> str:
             return "n/a" if value is None else f"{value:.3f} m"
 
-        failures = ", ".join(
-            f"status {status}: {count}" for status, count in summary.failures_by_status
-        ) or "0"
+        failures = ", ".join(f"status {status}: {count}" for status, count in summary.failures_by_status) or "0"
         log = logger.warning if summary.has_errors else logger.info
         log(
             "D3K [{}] UWB peer {} over {:.1f}s: samples={}, mean={}, stddev={}, min={}, max={}, "
@@ -312,6 +301,7 @@ _ERROR_EVENTS = {
 
 def _attach_event_logging(node: Any, device_name: str) -> None:
     for event_name in _EVENT_NAMES:
+
         def report(value: Any, name: str = event_name) -> None:
             log = logger.warning if name in _ERROR_EVENTS else logger.info
             log("D3K [{}] {}: {}", device_name, name, value)
@@ -453,9 +443,7 @@ class _BleDiagnostics:
                 await router.start()
                 self._routers.append(router)
                 for peer_id in device.selected_peer_ids:
-                    self._registrations.append(
-                        router.register_peer(peer_id, request_handler=_handle_ping_request)
-                    )
+                    self._registrations.append(router.register_peer(peer_id, request_handler=_handle_ping_request))
 
             # Probe each physical link once, from the lower device ID. Both ends
             # must list the other endpoint so routing is configured in both directions.
@@ -474,9 +462,7 @@ class _BleDiagnostics:
                             peer_id,
                         )
                         continue
-                    task = asyncio.create_task(
-                        self._run_peer_loop(node, peer_id, device.name)
-                    )
+                    task = asyncio.create_task(self._run_peer_loop(node, peer_id, device.name))
                     self._tasks.add(task)
                     task.add_done_callback(self._tasks.discard)
 
@@ -585,14 +571,9 @@ def run_diagnostics(config: DiagnosticsConfiguration, stop_event: threading.Even
             node = D3KNode(device.uart_device, baudrate=device.baudrate)
             sessions.append((device, node, None))
             _attach_event_logging(node, device.name)
-            statistics_by_peer = {
-                peer_id: _RangingStatistics(peer_id)
-                for peer_id in device.selected_peer_ids
-            }
+            statistics_by_peer = {peer_id: _RangingStatistics(peer_id) for peer_id in device.selected_peer_ids}
             ranging_statistics[device.name] = statistics_by_peer
-            range_failure_handlers[device.name] = _attach_range_failure_collection(
-                node, statistics_by_peer
-            )
+            range_failure_handlers[device.name] = _attach_range_failure_collection(node, statistics_by_peer)
             subscription = node.uwb.measurements.subscribe(maxsize=256, overflow="drop_oldest")
             sessions[-1] = (device, node, subscription)
             dropped_counts[device.name] = 0

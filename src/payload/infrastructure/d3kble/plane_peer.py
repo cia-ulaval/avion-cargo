@@ -4,6 +4,9 @@ import asyncio
 from collections.abc import AsyncIterator
 from typing import Any
 
+from d3kble import D3KNode, IncomingRequest
+from loguru import logger
+
 from payload.domain.docking.plane_peer import PlanePeer
 from shared.contracts.geometry import PositionEstimate
 from shared.contracts.messages import (
@@ -29,8 +32,6 @@ from shared.infrastructure.d3kble.codec import (
 )
 from shared.infrastructure.d3kble.errors import D3kbleCommunicationError
 from shared.infrastructure.d3kble.router import D3kbleMessageRouter, D3kbleRouteRegistration
-from d3kble import D3KNode, IncomingRequest
-from loguru import logger
 
 _EVENTS_CLOSED = object()
 
@@ -50,11 +51,7 @@ class D3kblePlanePeer(PlanePeer):
         status_response_timeout: float = 0.6,
         send_timeout: float = 2.0,
     ):
-        if (
-            isinstance(plane_peer_id, bool)
-            or not isinstance(plane_peer_id, int)
-            or not 1 <= plane_peer_id <= 65534
-        ):
+        if isinstance(plane_peer_id, bool) or not isinstance(plane_peer_id, int) or not 1 <= plane_peer_id <= 65534:
             raise ValueError("plane_peer_id must be an integer in 1..65534")
         if command_ack_timeout <= 0:
             raise ValueError("command_ack_timeout must be greater than zero")
@@ -138,9 +135,7 @@ class D3kblePlanePeer(PlanePeer):
             raise ValueError("an accepted command cannot have a rejection reason")
         future.set_result(receipt)
 
-    async def respond_status_request(
-        self, request_id: str, report: PayloadStatusReport
-    ) -> None:
+    async def respond_status_request(self, request_id: str, report: PayloadStatusReport) -> None:
         await self.start()
         future = self._pending_status_requests.get(request_id)
         if future is None:
@@ -205,9 +200,7 @@ class D3kblePlanePeer(PlanePeer):
                 timeout=self._status_response_timeout,
             )
         except asyncio.TimeoutError as exc:
-            raise TimeoutError(
-                "payload application did not answer the status request before the deadline"
-            ) from exc
+            raise TimeoutError("payload application did not answer the status request before the deadline") from exc
         finally:
             if self._pending_status_requests.get(request_id) is future:
                 self._pending_status_requests.pop(request_id, None)
@@ -264,9 +257,7 @@ class D3kblePlanePeer(PlanePeer):
             self._pending_commands.clear()
             for request_id, future in tuple(self._pending_status_requests.items()):
                 if not future.done():
-                    future.set_exception(
-                        RuntimeError("D3kblePlanePeer closed before status response")
-                    )
+                    future.set_exception(RuntimeError("D3kblePlanePeer closed before status response"))
             self._pending_status_requests.clear()
             while not self._events.empty():
                 try:

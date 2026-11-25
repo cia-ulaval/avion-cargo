@@ -47,7 +47,7 @@ class PayloadRuntimeConfiguration:
     def from_file(cls, path: str | Path) -> PayloadRuntimeConfiguration:
         with Path(path).open("r", encoding="utf-8") as stream:
             raw = json.load(stream)
-            
+
         if not isinstance(raw, dict):
             raise ValueError("payload configuration must be a JSON object")
 
@@ -55,17 +55,17 @@ class PayloadRuntimeConfiguration:
 
         if not isinstance(uwb, dict):
             raise ValueError("payload configuration requires an 'uwb' object")
-        
+
         mapping = uwb.get("anchor_id_by_target_id")
 
         if not isinstance(mapping, dict) or not mapping:
             raise ValueError("uwb.anchor_id_by_target_id must be a non-empty object")
-        
+
         try:
             converted = [(int(target_id), anchor_id) for target_id, anchor_id in mapping.items()]
         except (TypeError, ValueError) as exc:
             raise ValueError("UWB target IDs in anchor_id_by_target_id must be integers") from exc
-        
+
         anchor_mapping = dict(converted)
 
         if len(anchor_mapping) != len(converted):
@@ -99,8 +99,7 @@ class PayloadRuntimeConfiguration:
         positive_number(self.ready_timeout_s, "ready_timeout_s")
 
         if self.uwb_role is not None and (
-            not isinstance(self.uwb_role, str)
-            or self.uwb_role not in {"idle", "initiator", "responder"}
+            not isinstance(self.uwb_role, str) or self.uwb_role not in {"idle", "initiator", "responder"}
         ):
             raise ValueError("uwb.role must be 'idle', 'initiator', 'responder', or null")
 
@@ -123,10 +122,10 @@ class PayloadRuntimeConfiguration:
 
         if not self.anchor_id_by_target_id:
             raise ValueError("at least one UWB target-to-anchor mapping is required")
-        
+
         if len(self.anchor_id_by_target_id) > 16:
             raise ValueError("at most 16 UWB targets can be configured")
-        
+
         for target_id, anchor_id in self.anchor_id_by_target_id.items():
             integer(target_id, "UWB target ID", minimum=1, maximum=65534)
             non_empty_string(anchor_id, "UWB anchor ID")

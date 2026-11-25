@@ -30,13 +30,13 @@ class PayloadRegistry(Protocol):
 
     def get_nearby_payloads(self) -> tuple[PayloadSnapshot, ...]:
         """
-        Return payloads which are nearby and reachable. 
+        Return payloads which are nearby and reachable.
         """
         ...
 
     def get_docked_payload(self) -> PayloadSnapshot | None:
         """
-        Return the payload that is currently docked onto the vtol. 
+        Return the payload that is currently docked onto the vtol.
         """
         ...
 

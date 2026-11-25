@@ -182,7 +182,6 @@ def build_landing_service(config: AutolanderConfiguration, use_simulated_cam: bo
     )
 
 
-
 @dataclass
 class VtolApplication:
     """Own the VTOL Pi's flight-controller, D3K and mission application runtime."""

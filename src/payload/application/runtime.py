@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+
 from loguru import logger
 
 from payload.domain.docking.plane_peer import PlanePeer
@@ -8,12 +9,12 @@ from payload.domain.positioning.distance_sensor import DistanceSensor
 from payload.domain.positioning.events import DistanceFailure, DistanceSample
 from shared.contracts.messages import (
     CommandReceipt,
+    DLZStateUpdated,
     DockRequest,
     FailureReason,
-    PayloadStatusRequested,
     PayloadStatusReport,
+    PayloadStatusRequested,
     PlaneHeadingUpdated,
-    DLZStateUpdated,
     UndockRequest,
 )
 from shared.contracts.payload_state import DockingLatchState, PayloadState, PayloadStatus
