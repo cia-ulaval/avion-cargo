@@ -9,7 +9,7 @@ from loguru import logger
 
 from payload.application.omni_wheel_controller import OmniWheelController
 from payload.domain.wheel_actuator import WheelActuator, WheelActuatorCapabilities
-from payload.infrastructure.configuration import PayloadRuntimeConfiguration
+from payload.infrastructure.configuration import ManualPayloadRuntimeConfiguration
 from payload.infrastructure.d3kble import D3kbleDistanceSensor
 from payload.infrastructure.wheel_actuators import create_wheel_actuator
 from payload_manual.application.runtime import ManualControlLimits, ManualControlRuntime
@@ -56,10 +56,8 @@ class ManualControlApplication:
 
 
 def build_manual_control_application(
-    config: PayloadRuntimeConfiguration,
+    config: ManualPayloadRuntimeConfiguration,
     *,
-    controller_peer_id: int,
-    max_wheel_surface_velocity_m_s: float | None = None,
     limits: ManualControlLimits | None = None,
     wheel_capabilities: Sequence[WheelActuatorCapabilities] | None = None,
     node_factory: Callable[..., Any] | None = None,
@@ -72,22 +70,21 @@ def build_manual_control_application(
     else:
         raise RuntimeError("build_manual_control_application must be called outside a running event loop")
 
+    controller_peer_id = config.controller_peer_id
     if (
         isinstance(controller_peer_id, bool)
         or not isinstance(controller_peer_id, int)
         or not 1 <= controller_peer_id <= 65534
     ):
         raise ValueError("controller_peer_id must be an integer in 1..65534")
-    if controller_peer_id == config.plane_peer_id:
-        raise ValueError("manual controller peer ID must differ from the plane peer ID")
     if len(config.wheels) < 3:
         raise ValueError("at least three wheels must be configured for manual control")
 
     if wheel_capabilities is None:
-        if max_wheel_surface_velocity_m_s is None:
-            raise ValueError("max_wheel_surface_velocity_m_s is required when wheel_capabilities are omitted")
-        default_capabilities = WheelActuatorCapabilities(max_wheel_surface_velocity_m_s)
-        capabilities_by_wheel = (default_capabilities,) * len(config.wheels)
+        capabilities_by_wheel = tuple(
+            WheelActuatorCapabilities(wheel.max_surface_velocity)
+            for wheel in config.wheels
+        )
     else:
         capabilities_by_wheel = tuple(wheel_capabilities)
         if len(capabilities_by_wheel) != len(config.wheels):

@@ -1,7 +1,7 @@
 {
   "payload_id": "payload-manual-simulator",
   "uart_device": "/tmp/payload-anchor",
-  "controller_peer_id": 3,
+  "controller_peer_id": 2,
   "uwb": {
     "anchor_id_by_target_id": {
       "2": "manual-controller-d3k-node"
