@@ -67,10 +67,7 @@ class DiagnosticsConfiguration:
             if not isinstance(raw_peer_ids, list):
                 raise ValueError(f"{prefix}.peer_ids must be a list")
             if any(
-                isinstance(peer, bool)
-                or not isinstance(peer, int)
-                or not 1 <= peer <= 65534
-                for peer in raw_peer_ids
+                isinstance(peer, bool) or not isinstance(peer, int) or not 1 <= peer <= 65534 for peer in raw_peer_ids
             ):
                 raise ValueError(f"{prefix}.peer_ids must contain integers in 1..65534")
             if len(raw_peer_ids) != len(set(raw_peer_ids)):
@@ -135,11 +132,7 @@ class _RangingSummary:
 
     @property
     def has_errors(self) -> bool:
-        return bool(
-            self.failures_by_status
-            or self.invalid_measurements
-            or self.dropped_measurements
-        )
+        return bool(self.failures_by_status or self.invalid_measurements or self.dropped_measurements)
 
 
 class _RangingStatistics:
@@ -200,9 +193,7 @@ class _RangingStatistics:
             summary = _RangingSummary(
                 sample_count=count,
                 mean_distance_m=self._mean_distance_m if count else None,
-                stddev_distance_m=(
-                    math.sqrt(self._sum_squared_deviations / count) if count else None
-                ),
+                stddev_distance_m=(math.sqrt(self._sum_squared_deviations / count) if count else None),
                 min_distance_m=self._min_distance_m,
                 max_distance_m=self._max_distance_m,
                 failures_by_status=tuple(sorted(self._failures_by_status.items())),
@@ -228,9 +219,7 @@ class _RangingStatistics:
         def format_distance(value: float | None) -> str:
             return "n/a" if value is None else f"{value:.3f} m"
 
-        failures = ", ".join(
-            f"status {status}: {count}" for status, count in summary.failures_by_status
-        ) or "0"
+        failures = ", ".join(f"status {status}: {count}" for status, count in summary.failures_by_status) or "0"
         log = logger.warning if summary.has_errors else logger.info
         log(
             "D3K [{}] UWB peer {} over {:.1f}s: samples={}, mean={}, stddev={}, min={}, max={}, "

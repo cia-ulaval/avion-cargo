@@ -3,8 +3,8 @@ from dataclasses import dataclass
 
 import numpy as np
 
-from domain.errors import InvalidPoseError
-from domain.models import Pose3D
+from vtol.domain.errors import InvalidPoseError
+from vtol.domain.models import Pose3D
 
 
 @dataclass(frozen=True, slots=True)
@@ -49,6 +49,34 @@ class RigidTransform:
     @property
     def position(self) -> Pose3D:
         return Pose3D(*(row[3] for row in self.matrix[:3]))
+
+    def quaternion_wxyz(self) -> tuple[float, float, float, float]:
+        r = self.as_matrix()[:3, :3]
+        # Select the largest component to remain stable around 180-degree rotations.
+        candidates = np.array(
+            [
+                1 + np.trace(r),
+                1 + 2 * r[0, 0] - np.trace(r),
+                1 + 2 * r[1, 1] - np.trace(r),
+                1 + 2 * r[2, 2] - np.trace(r),
+            ]
+        )
+        index = int(np.argmax(candidates))
+        component = math.sqrt(max(0, candidates[index])) / 2
+        q = np.zeros(4)
+        q[index] = component
+        scale = 4 * component
+        if index == 0:
+            q[1:] = [r[2, 1] - r[1, 2], r[0, 2] - r[2, 0], r[1, 0] - r[0, 1]]
+            q[1:] /= scale
+        else:
+            i = index - 1
+            j, k = (i + 1) % 3, (i + 2) % 3
+            q[0] = (r[k, j] - r[j, k]) / scale
+            q[j + 1] = (r[j, i] + r[i, j]) / scale
+            q[k + 1] = (r[k, i] + r[i, k]) / scale
+        q /= np.linalg.norm(q)
+        return tuple(float(value) for value in q)
 
     def compose(self, source_transform: "RigidTransform") -> "RigidTransform":
         return RigidTransform(self.as_matrix() @ source_transform.as_matrix())

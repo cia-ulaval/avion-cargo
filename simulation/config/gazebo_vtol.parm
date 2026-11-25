@@ -59,6 +59,7 @@ PLND_ENABLED         1
 PLND_TYPE            1
 PLND_YAW_ALIGN       0
 PLND_ALT_MAX         8
+PLND_XY_DIST_MAX     2.5
 PLND_STRICT          0
 PLND_RET_BEHAVE      0
 PLND_RET_MAX         0
@@ -66,6 +67,7 @@ PLND_ALT_MIN         1
 PLND_OPTIONS         0
 RC7_OPTION           39
 SCR_ENABLE           1
+QYAW_ENABLE          1
 
 # --- VTOL rate/angle control (Q_A_) ---
 Q_A_ACCEL_P_MAX        40000
@@ -200,8 +202,8 @@ Q_FWD_THR_USE          0
 Q_FW_LND_APR_RAD       0
 Q_GUIDED_MODE          1
 Q_LAND_ALTCHG          0.2
-Q_LAND_FINAL_ALT       3
-Q_LAND_FINAL_SPD       0.5
+Q_LAND_FINAL_ALT       8
+Q_LAND_FINAL_SPD       0.3
 Q_LAND_ICE_CUT         1
 Q_LOIT_ACC_MAX         250
 Q_LOIT_ANG_MAX         25
@@ -241,7 +243,7 @@ Q_WP_JERK              1
 Q_WP_RADIUS            200
 Q_WP_RFND_USE          1
 Q_WP_SPEED             500
-Q_WP_SPEED_DN          150
+Q_WP_SPD_DN            1.5
 Q_WP_SPEED_UP          250
 Q_WP_TER_MARGIN        10
 Q_WVANE_ENABLE         0

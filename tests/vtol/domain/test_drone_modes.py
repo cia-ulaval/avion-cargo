@@ -1,6 +1,7 @@
+import time
+
 from vtol.domain.drone import DroneMode, LandedState, VtolState
 from vtol.domain.mission.execution_status import MissionExecutionStatus
-import time
 
 
 def test_quadplane_modes_are_recognized_and_other_modes_remain_unknown():

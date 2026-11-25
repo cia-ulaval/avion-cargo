@@ -1,5 +1,4 @@
 import math
-from dataclasses import replace
 
 import cv2
 import numpy as np
@@ -8,7 +7,6 @@ import pytest
 from vtol.domain.camera_mount import CameraMount
 from vtol.domain.errors import InvalidPoseError
 from vtol.domain.rigid_transform import RigidTransform
-from vtol.domain.yaw_alignment import YawAlignmentConfig, marker_heading_error_rad
 
 
 def test_composition_moves_an_offset_marker_point_and_preserves_its_orientation():
@@ -29,54 +27,21 @@ def test_axis_angle_conversion_matches_opencv(rvec):
     np.testing.assert_allclose(transform.as_matrix()[:3, :3], cv2.Rodrigues(np.float64(rvec))[0], atol=1e-9)
 
 
+@pytest.mark.parametrize("axis", [[1, 0, 0], [0, 1, 0], [0, 0, 1], [1, -2, 3]])
+@pytest.mark.parametrize("angle", [0, 1e-10, math.pi - 1e-9, math.pi, math.pi + 1e-9])
+def test_quaternion_rotates_points_like_opencv_including_half_turns(axis, angle):
+    vector = np.array(axis, dtype=float)
+    rvec = vector / np.linalg.norm(vector) * angle
+    transform = RigidTransform.from_vectors(rvec, [0, 0, 5])
+    w, *xyz = transform.quaternion_wxyz()
+    xyz = np.array(xyz)
+    point = np.array([0.3, -0.7, 1.2])
+    rotated = point + 2 * np.cross(xyz, np.cross(xyz, point) + w * point)
+    np.testing.assert_allclose(rotated, cv2.Rodrigues(rvec)[0] @ point, atol=1e-9)
+    assert w * w + xyz @ xyz == pytest.approx(1)
+
+
 @pytest.mark.parametrize("matrix", [np.eye(3), np.diag([-1, 1, 1, 1]), np.diag([2, 1, 1, 1]), np.ones((4, 4))])
 def test_invalid_rigid_transforms_are_rejected(matrix):
     with pytest.raises(InvalidPoseError):
         RigidTransform(matrix)
-
-
-def test_heading_error_compensates_body_tilt_and_wraps_across_north(sample_drone_status):
-    roll, pitch, yaw = np.radians([20, -15, 170])
-    rx = cv2.Rodrigues(np.float64([roll, 0, 0]))[0]
-    ry = cv2.Rodrigues(np.float64([0, pitch, 0]))[0]
-    rz = cv2.Rodrigues(np.float64([0, 0, yaw]))[0]
-    marker_in_ned = cv2.Rodrigues(np.float64([0, 0, math.radians(-170)]))[0]
-    matrix = np.eye(4)
-    matrix[:3, :3] = (rz @ ry @ rx).T @ marker_in_ned
-    status = replace(sample_drone_status(), roll_rad=roll, pitch_rad=pitch, yaw_rad=yaw)
-    assert math.degrees(marker_heading_error_rad(RigidTransform(matrix), status)) == pytest.approx(20)
-
-
-def test_vertical_marker_axis_has_no_heading(sample_drone_status):
-    transform = RigidTransform.from_vectors([0, math.pi / 2, 0], [0, 0, 3])
-    status = replace(sample_drone_status(), roll_rad=0, pitch_rad=0, yaw_rad=0)
-    with pytest.raises(ValueError, match="horizontal"):
-        marker_heading_error_rad(transform, status)
-
-
-@pytest.mark.parametrize(
-    "values",
-    [
-        {"trigger_deg": 2},
-        {"gain_per_rad": float("nan")},
-        {"max_age_s": 0},
-        {"target_loss_grace_s": 0},
-        {"target_loss_grace_s": float("inf")},
-        {"enabled": "true"},
-        {"max_yaw_input": 2},
-        {"detection_stable_time_s": 0},
-        {"detection_loss_timeout_s": float("inf")},
-        {"attempt_timeout_s": -1},
-        {"max_attempts": 0},
-        {"max_attempts": -1},
-        {"max_attempts": 1.5},
-        {"max_attempts": True},
-        {"max_attempts": "3"},
-        {"retry_descent_m": -1},
-        {"retry_descent_m": float("nan")},
-        {"retry_descent_m": True},
-    ],
-)
-def test_invalid_alignment_settings_are_rejected(values):
-    with pytest.raises(ValueError):
-        YawAlignmentConfig(**values)

@@ -17,7 +17,6 @@ class MissionObservationStore:
     def __init__(self, *, payload_event_history: int = 32):
         if payload_event_history <= 0:
             raise ValueError("payload_event_history must be greater than zero")
-        
         self._lock = Lock()
         self._drone_status: DroneStatus | None = None
         self._mission_execution_status = MissionExecutionStatus()
@@ -35,7 +34,6 @@ class MissionObservationStore:
     def record_payload_event(self, payload_id: str, event: PayloadEvent) -> None:
         if not payload_id:
             raise ValueError("payload_id must be a non-empty string")
-        
         with self._lock:
             self._payload_observations.append(PayloadObservation(payload_id, event, time.monotonic()))
 

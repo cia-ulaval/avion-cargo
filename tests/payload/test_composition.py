@@ -47,13 +47,21 @@ class FakeUwb:
         self.roles = []
         self.targets = []
         self.schedules = []
-        self.measurements = type("Measurements", (), {
-            "subscribe": lambda _self, **kwargs: type("Subscription", (), {
-                "get": lambda _subscription, timeout=None: None,
-                "dropped_count": 0,
-            })(),
-            "unsubscribe": lambda _self, _subscription: None,
-        })()
+        self.measurements = type(
+            "Measurements",
+            (),
+            {
+                "subscribe": lambda _self, **kwargs: type(
+                    "Subscription",
+                    (),
+                    {
+                        "get": lambda _subscription, timeout=None: None,
+                        "dropped_count": 0,
+                    },
+                )(),
+                "unsubscribe": lambda _self, _subscription: None,
+            },
+        )()
 
     def set_role(self, role):
         self.roles.append(role)

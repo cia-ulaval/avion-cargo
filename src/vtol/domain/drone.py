@@ -4,8 +4,9 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from enum import Enum
 
-from vtol.domain.models import Pose3D
 from vtol.domain.mission.execution_status import MissionExecutionStatus
+from vtol.domain.models import Pose3D
+from vtol.domain.rigid_transform import RigidTransform
 
 
 class DroneMode(str, Enum):
@@ -206,6 +207,13 @@ class Drone(ABC):
         return MissionExecutionStatus()
 
     @abstractmethod
-    def send_landing_target(self, position: Pose3D, target_size: tuple[float, float]):
-        """Send a LANDING_TARGET measurement; this message does not select a flight mode."""
+    def send_landing_target(
+        self,
+        position: Pose3D,
+        target_size: tuple[float, float],
+        *,
+        body_from_marker: RigidTransform | None = None,
+        captured_at_s: float | None = None,
+    ) -> None:
+        """Send a LANDING_TARGET measurement without changing flight mode."""
         raise NotImplementedError()

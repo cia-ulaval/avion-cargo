@@ -127,7 +127,8 @@ def make_device(
         uart_device=uart_device,
         baudrate=460800,
         ready_timeout_s=5.0,
-        uwb=uwb or UwbDeviceConfiguration(
+        uwb=uwb
+        or UwbDeviceConfiguration(
             enabled=True,
             role=role,
             target_ids=tuple(target_ids) if target_ids else None,

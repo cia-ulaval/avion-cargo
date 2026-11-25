@@ -26,7 +26,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
       libglib2.0-0 libgtk-3-0 libopencv-dev libsm6 libx11-6 libxext6 libxkbcommon-x11-0 \
       libxrender1 libqt5svg5 locales lsb-release make mesa-utils nano net-tools ninja-build pipx \
       pkg-config procps python3 python3-debugpy python3-dev python3-pip python3-venv \
-      rapidjson-dev sudo tzdata unzip vim wget x11-apps x11-utils x11-xserver-utils \
+      rapidjson-dev sudo tzdata unzip vim wget lua5.4 x11-apps x11-utils x11-xserver-utils \
       xauth xdg-utils \
       libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev \
       gstreamer1.0-plugins-bad gstreamer1.0-libav gstreamer1.0-gl \
@@ -50,7 +50,7 @@ ENV PATH="/home/dev/.local/bin:/home/dev/venv-ardupilot/bin:${PATH}"
 RUN set -eux; \
     ARDUPILOT_REF="$(cat /tmp/versions/ardupilot.version)"; \
     test -n "${ARDUPILOT_REF}"; \
-    git clone --filter=blob:none --no-checkout https://github.com/ArduPilot/ardupilot.git /home/dev/ardupilot; \
+    git clone --filter=blob:none --no-checkout https://github.com/bertrand-awz/ardupilot.git /home/dev/ardupilot; \
     git -C /home/dev/ardupilot checkout --detach "${ARDUPILOT_REF}"; \
     git -C /home/dev/ardupilot submodule update --init --recursive; \
     cd /home/dev/ardupilot; \
@@ -152,7 +152,7 @@ cd "$ARDUPILOT_ROOT"
 VEHICLE="${AVION_SITL_VEHICLE:-ArduCopter}"
 FRAME="${AVION_SITL_FRAME:-JSON}"
 MODEL="${AVION_SITL_MODEL:-}"
-PARAM_FILE="${AVION_SITL_PARAM_FILE-/workspace/avion-cargo/simulation/config/gazebo_iris_gimbal.parm}"
+PARAM_FILE="${AVION_SITL_PARAM_FILE-/workspace/avion-cargo/simulation/config/gazebo_iris.parm}"
 
 if [[ "$VEHICLE" == ArduPlane ]]; then
   source_script="$PWD/libraries/AP_Scripting/applets/plane_precland.lua"
@@ -180,6 +180,36 @@ if [[ "$VEHICLE" == ArduPlane ]]; then
   echo "QuadPlane precision landing script ready: $target_script"
 fi
 
+if [[ "$VEHICLE" == ArduPlane ]]; then
+  for applet in plane_precland qland_yaw_alignment; do
+    description="precision landing"
+    [[ "$applet" != qland_yaw_alignment ]] || description="QLAND yaw alignment"
+    source_script="$PWD/libraries/AP_Scripting/applets/$applet.lua"
+    target_script="$PWD/scripts/$applet.lua"
+    if [[ ! -f "$source_script" || ! -r "$source_script" || ! -s "$source_script" ]]; then
+      echo "Cannot start ArduPlane: $description applet missing or unreadable: $source_script" >&2
+      echo "Check the patched ArduPilot revision in simulation/versions.txt, then rebuild the Docker image." >&2
+      exit 1
+    fi
+
+    mkdir -p scripts
+    if [[ -e "$target_script" ]]; then
+      if ! cmp -s -- "$source_script" "$target_script"; then
+        echo "Cannot start ArduPlane: $target_script differs from the bundled $description applet." >&2
+        echo "Inspect and move the custom script before retrying; it has not been overwritten." >&2
+        exit 1
+      fi
+    else
+      ln -sfn -- "../libraries/AP_Scripting/applets/$applet.lua" "$target_script"
+    fi
+    if ! cmp -s -- "$source_script" "$target_script"; then
+      echo "Cannot start ArduPlane: $description applet installation failed: $target_script" >&2
+      exit 1
+    fi
+    echo "QuadPlane $description script ready: $target_script"
+  done
+fi
+
 args=(-D -v "$VEHICLE" -f "$FRAME")
 if [[ -n "$MODEL" ]]; then
   args+=(--model "$MODEL")
@@ -205,7 +235,7 @@ export GZ_CONFIG_PATH="${GZ_CONFIG_PATH:-/usr/share/gz}"
 export GZ_SIM_SYSTEM_PLUGIN_PATH="/home/dev/d3k-gazebo-install/lib:/home/dev/ardupilot_gazebo/build${GZ_SIM_SYSTEM_PLUGIN_PATH:+:${GZ_SIM_SYSTEM_PLUGIN_PATH}}"
 export GZ_SIM_RESOURCE_PATH="/workspace/avion-cargo/simulation/models:/workspace/avion-cargo/simulation/worlds:/home/dev/ardupilot_gazebo/models:/home/dev/ardupilot_gazebo/worlds${GZ_SIM_RESOURCE_PATH:+:${GZ_SIM_RESOURCE_PATH}}"
 
-WORLD="${AVION_WORLD:-/workspace/avion-cargo/simulation/worlds/iris_runway_faruco.sdf}"
+WORLD="${AVION_WORLD:-/workspace/avion-cargo/simulation/worlds/runway_iris_faruco.sdf}"
 
 exec gz sim -v4 -r "$WORLD"
 SCRIPT

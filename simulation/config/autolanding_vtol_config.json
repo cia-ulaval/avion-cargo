@@ -24,28 +24,11 @@
       "fps": 15
     }
   },
-  "yaw_alignment": {
-    "enabled": true,
-    "marker_forward_deg": 0.0,
-    "tolerance_deg": 3.0,
-    "stable_time_s": 1.0,
-    "detection_stable_time_s": 1.0,
-    "detection_loss_timeout_s": 1.5,
-    "max_attempts": 3,
-    "retry_descent_m": 2.0,
-    "min_height_m": 4.0,
-    "attempt_timeout_s": 30.0,
-    "cooldown_s": 1.0,
-    "hold_stable_time_s": 0.5,
-    "hold_horizontal_tolerance_m": 0.5,
-    "hold_altitude_tolerance_m": 0.3,
-    "hold_speed_mps": 0.3
-  },
   "drone_connection": {
     "use_serial": false,
     "address": "127.0.0.1",
     "port": 14550,
     "baud_rate": 921600,
-    "timeout": 30.0
+    "fail_on_timeout": false
   }
 }

@@ -3,9 +3,7 @@ import asyncio
 from payload.application.runtime import PayloadApplicationRuntime
 from shared.contracts.geometry import Position
 from shared.contracts.messages import (
-    CommandReceipt,
     DockRequest,
-    FailureReason,
     PayloadStatusRequested,
     UndockRequest,
 )

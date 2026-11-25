@@ -7,7 +7,6 @@ from shared.contracts.messages import (
     DLZState,
     DLZStateUpdated,
     DockRequest,
-    FailureReason,
     PlaneHeadingUpdated,
     PayloadStatusRequested,
     PayloadStatusReport,

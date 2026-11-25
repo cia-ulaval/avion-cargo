@@ -5,7 +5,6 @@ from typing import Any, Optional
 from vtol.domain.camera_mount import CameraMount
 from vtol.domain.markers import FractalType, MarkerType
 from vtol.domain.models import TargetedMarker
-from vtol.domain.yaw_alignment import YawAlignmentConfig
 from vtol.infrastructure.persistence.configuration_models import (
     AutolanderConfiguration,
     CameraConfiguration,
@@ -33,7 +32,6 @@ class AutolanderConfigurationReader:
         """
         document = self._read_json(self.config_path)
         raw = document.get("autolanding", document)
-        
         if not isinstance(raw, dict):
             raise ValueError("'autolanding' configuration must be a JSON object")
 
@@ -47,7 +45,6 @@ class AutolanderConfigurationReader:
             camera_config=camera_cfg,
             streaming_config=streaming_cfg,
             drone_connection_config=drone_cfg,
-            yaw_alignment=YawAlignmentConfig(**raw.get("yaw_alignment", {})),
         )
 
     # --------- internals ---------
