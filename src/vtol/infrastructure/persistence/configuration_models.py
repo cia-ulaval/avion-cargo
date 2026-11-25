@@ -1,0 +1,54 @@
+from dataclasses import dataclass
+from pathlib import Path
+from typing import Optional
+
+from vtol.domain.camera_mount import CameraMount
+from vtol.domain.models import TargetedMarker
+
+
+@dataclass(frozen=True, slots=True)
+class CameraConfiguration:
+    id: int
+    use_picamera: bool
+    fps: int
+    width: Optional[int] = 640
+    height: Optional[int] = 480
+    calibration_filepath: Optional[Path] = None
+    simulation_topic_name: Optional[str] = None
+    mount: CameraMount = CameraMount()
+
+
+@dataclass(frozen=True, slots=True)
+class StreamingDataConfiguration:
+    dps: int
+
+
+@dataclass(frozen=True, slots=True)
+class StreamingVideoConfiguration:
+    fps: int
+
+
+@dataclass(frozen=True, slots=True)
+class StreamingConfiguration:
+    port: int
+    data: StreamingDataConfiguration
+    video: StreamingVideoConfiguration
+    host: str = "127.0.0.1"
+
+
+@dataclass(frozen=True, slots=True)
+class DroneConnectionConfiguration:
+    use_serial: bool
+    address: str
+    port: Optional[int]
+    baud_rate: int
+    timeout: float = 10.0
+    fail_on_timeout: bool = True
+
+
+@dataclass(slots=True, frozen=True)
+class AutolanderConfiguration:
+    targeted_marker: TargetedMarker
+    camera_config: CameraConfiguration
+    streaming_config: StreamingConfiguration
+    drone_connection_config: DroneConnectionConfiguration

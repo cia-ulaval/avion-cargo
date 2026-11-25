@@ -15,7 +15,7 @@ sudo apt install ros-jazzy-ros-gz-image
 poetry install --with faruco
 ```
 
-La commande `image_bridge` est décrite dans la [documentation de ros_gz_image](https://docs.ros.org/en/jazzy/p/ros_gz_image/). Les révisions de référence sont conservées dans [versions.txt](versions.txt). Docker clone et compile le [dépôt ArduPilot patché](https://github.com/bertrand-awz/ardupilot), avec son API de lacet QLAND, et utilise la révision fixée du plugin ArduPilot Gazebo.
+La commande `image_bridge` est décrite dans la [documentation de ros_gz_image](https://docs.ros.org/en/jazzy/p/ros_gz_image/). Les révisions présentes lors de la copie sont conservées dans les fichiers `versions/*.version` et `versions/*.distribution`. Utilisez ces révisions d'ArduPilot et du plugin pour retrouver la même base de simulation. Docker clone et compile le [dépôt ArduPilot patché](https://github.com/bertrand-awz/ardupilot), avec son API de lacet QLAND, et utilise la révision fixée du plugin ArduPilot Gazebo.
 
 Les modèles standards `runway`, `iris_with_gimbal` et `iris_with_standoffs` restent fournis par le plugin ArduPilot. Le dossier `models/gimbal_small_3d` contient la caméra modifiée et doit être recherché avant les modèles standards.
 
@@ -23,13 +23,12 @@ Les modèles standards `runway`, `iris_with_gimbal` et `iris_with_standoffs` res
 
 | Fichier | Utilisation |
 | --- | --- |
-| [worlds/iris_runway_faruco.sdf](worlds/iris_runway_faruco.sdf) | Monde Iris avec une cible FArUco au sol ; son nom interne reste `iris_runway`. |
-| [worlds/tricopter_full_mission.sdf](worlds/tricopter_full_mission.sdf) | Monde tricopter avec la même cible FArUco de 8 pieds. |
+| [worlds/runway_iris_faruco.sdf](worlds/runway_iris_faruco.sdf) | Monde Iris avec une cible FArUco au sol ; son nom interne reste `iris_runway`. |
 | [worlds/markers/faruco.png](worlds/markers/faruco.png) | Texture fractale à cinq niveaux, référencée par un chemin relatif. |
 | [models/gimbal_small_3d/model.sdf](models/gimbal_small_3d/model.sdf) | Caméra de 640 × 480 pixels, cadence demandée de 30 Hz et réglages optiques de l'essai. |
-| [config/gazebo-iris-gimbal.parm](config/gazebo-iris-gimbal.parm) | Paramètres du véhicule et de la nacelle pour SITL. |
-| [config/autolanding_config.json](config/autolanding_config.json) | Configuration Iris : topic caméra, cible FArUco de 2,4384 m et port MAVLink 14550. |
-| [config/autolanding_config_tricopter_vtol.json](config/autolanding_config_tricopter_vtol.json) | Configuration tricopter : caméra vers le bas et publication de la pose complète de la cible FArUco. |
+| [config/gazebo_iris.parm](config/gazebo_iris.parm) | Paramètres du véhicule et de la nacelle pour SITL. |
+| [config/autolanding_iris_config.json](config/autolanding_iris_config.json) | Configuration d'Autolander pour le iris. |
+| [config/autolanding_vtol_config.json](config/autolanding_vtol_config.json) | Configuration d'Autolander pour le vtol. |
 | [calibration/pi_camera_calibration.yaml](calibration/pi_camera_calibration.yaml) | Calibration référencée lors de l'essai, conservée avec ses valeurs d'origine. |
 
 Les sources et attributions des fichiers sont indiquées dans [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
@@ -38,12 +37,12 @@ La texture de 1440 pixels contient un marqueur extérieur de 1248 pixels et une 
 blanche de 96 pixels de chaque côté. Les surfaces Gazebo mesurent donc 2,8135384615 m
 de côté, afin que le marqueur lui-même mesure exactement 2,4384 m, comme `targeted_marker.length`.
 Le niveau fractal est choisi automatiquement par le détecteur selon la portion visible.
-L'ancien monde `iris_runway_aruco.sdf` reste disponible pour des essais ArUco avec une configuration adaptée.
+L'ancien monde `runway_iris_aruco.sdf` reste disponible pour des essais ArUco avec une configuration adaptée.
 
 ## Tricopter QuadPlane avec Docker
 
 Docker clone `https://github.com/bertrand-awz/ardupilot.git` à la révision
-`ardupilot=` de [versions.txt](versions.txt), qui contient l'API de lacet et
+`ardupilot=` de [versions/ardupilot.version](versions/ardupilot.version), qui contient l'API de lacet et
 l'applet `qland_yaw_alignment.lua`. Aucune copie locale d'ArduPilot n'est requise.
 Depuis la racine d'Autolander, activez le scénario tricopter puis lancez la simulation :
 
@@ -102,7 +101,7 @@ initialisé par le fichier de valeurs par défaut de SITL sur cette révision.
 `QYAW_MIN_HGT=4` l'arrête sous quatre mètres au-dessus de la cible.
 Le Dockerfile compile le firmware et inclut les applets depuis le dépôt patché.
 Pour intégrer une modification du Lua ou des sources ArduPilot, la pousser dans
-ce dépôt, actualiser le commit `ardupilot=` de [versions.txt](versions.txt),
+ce dépôt, actualiser le commit `ardupilot=` de [versions/ardupilot.version](versions/ardupilot.version),
 puis exécuter `up --build --force-recreate -d dev`.
 Les paramètres, le protocole et l'installation sur un FC sont décrits dans le
 [guide d'alignement Lua](https://github.com/cia-ulaval/avion-cargo/wiki/Alignement-du-lacet-QLAND).
@@ -173,7 +172,7 @@ AUTOLANDER_ROOT="$PWD"
 source "$HOME/venv-ardupilot/bin/activate"
 cd "$HOME/ardupilot"
 sim_vehicle.py -D -v ArduCopter -f JSON \
-  --add-param-file="$AUTOLANDER_ROOT/simulation/config/gazebo-iris-gimbal.parm"
+  --add-param-file="$AUTOLANDER_ROOT/simulation/config/gazebo_iris.parm"
 ```
 
 Cette commande reprend celle de l'essai. Le message `no config for frame (JSON)` peut apparaître avec cette révision ; le fichier de paramètres est fourni explicitement. SITL attend les échanges avec Gazebo. Attendez le heartbeat dans MAVProxy et laissez ce terminal ouvert. MAVProxy transmet sa sortie à `127.0.0.1:14550`, comme attendu dans le JSON. Réservez ce port à Autolander si vous ajoutez une station sol.
@@ -186,7 +185,7 @@ Chargez ROS 2 avec `source /opt/ros/jazzy/setup.zsh` sous Zsh, ou `source /opt/r
 ARDUPILOT_GAZEBO_DIR="$HOME/gz_ws/src/ardupilot_gazebo"
 export GZ_SIM_SYSTEM_PLUGIN_PATH="$ARDUPILOT_GAZEBO_DIR/build${GZ_SIM_SYSTEM_PLUGIN_PATH:+:$GZ_SIM_SYSTEM_PLUGIN_PATH}"
 export GZ_SIM_RESOURCE_PATH="$PWD/simulation/models:$PWD/simulation/worlds:$ARDUPILOT_GAZEBO_DIR/models:$ARDUPILOT_GAZEBO_DIR/worlds${GZ_SIM_RESOURCE_PATH:+:$GZ_SIM_RESOURCE_PATH}"
-gz sim -v4 -r simulation/worlds/iris_runway_faruco.sdf
+gz sim -v4 -r simulation/worlds/runway_iris_faruco.sdf
 ```
 
 Si vous avez suivi l'installation du wiki dans `~/ardupilot_gazebo`, utilisez `ARDUPILOT_GAZEBO_DIR="$HOME/ardupilot_gazebo"`. Gardez les deux dossiers du scénario en tête de `GZ_SIM_RESOURCE_PATH` : Gazebo doit charger la caméra fournie ici. La simulation doit rester en lecture pour publier les images. Le topic attendu est `/world/iris_runway/model/iris_with_gimbal/model/gimbal/link/pitch_link/sensor/camera/image`.

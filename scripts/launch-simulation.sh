@@ -39,7 +39,9 @@ CONTAINER_LOG_DIR="/workspace/avion-cargo/logs/simulation/$TIMESTAMP"
 CONTAINER_STATUS_DIR="$CONTAINER_LOG_DIR/.status"
 mkdir -p "$STATUS_DIR"
 
-SERVICES=(avion-gazebo avion-image-bridge avion-autolander)
+SERVICES=()
+FOREGROUND_SERVICE=""
+STARTUP_DELAY="1"
 SERVICE_PGIDS=()
 CONTAINER_LOCK_HELD=0
 STOPPING=0
@@ -272,31 +274,114 @@ monitor_services() {
   done
 }
 
-if [[ -z "$(docker compose ps --status running -q dev)" ]]; then
-  echo "Dev container is not running; starting it..."
-  docker compose up -d dev
-fi
+echo "Ensuring the dev container matches the active Compose configuration..."
 if [[ -z "$(docker compose ps --status running -q dev)" ]]; then
   echo "Error: dev container is not running." >&2
   docker compose logs --tail=100 dev >&2 || true
   exit 1
 fi
 
+SIM_SERVICES_RAW="$(docker compose exec -T dev printenv AVION_SIM_SERVICES 2>/dev/null || true)"
+FOREGROUND_SERVICE="$(docker compose exec -T dev printenv AVION_SIM_FOREGROUND_SERVICE 2>/dev/null || true)"
+STARTUP_DELAY="$(docker compose exec -T dev printenv AVION_SIM_STARTUP_DELAY 2>/dev/null || printf '1')"
+
+if [[ -z "${SIM_SERVICES_RAW//[[:space:]]/}" ]]; then
+  echo "AVION_SIM_SERVICES is not set. Select the simulation entry points in its Compose file." >&2
+  exit 1
+fi
+read -r -a SERVICES <<< "$SIM_SERVICES_RAW"
+if ((${#SERVICES[@]} == 0)); then
+  echo "AVION_SIM_SERVICES must contain at least one entry point." >&2
+  exit 1
+fi
+if [[ ! "$STARTUP_DELAY" =~ ^[0-9]+([.][0-9]+)?$ ]]; then
+  echo "AVION_SIM_STARTUP_DELAY must be a non-negative number." >&2
+  exit 1
+fi
+
+declare -A SELECTED_ENTRIES=()
+for entry in "${SERVICES[@]}"; do
+  if [[ ! "$entry" =~ ^avion-[a-z0-9-]+$ ]]; then
+    echo "Invalid simulation entry point name: $entry" >&2
+    exit 1
+  fi
+  if [[ -n "${SELECTED_ENTRIES[$entry]:-}" ]]; then
+    echo "Simulation entry point selected more than once: $entry" >&2
+    exit 1
+  fi
+  SELECTED_ENTRIES[$entry]=1
+done
+
+if [[ -n "$FOREGROUND_SERVICE" ]]; then
+  if [[ ! "$FOREGROUND_SERVICE" =~ ^avion-[a-z0-9-]+$ ]]; then
+    echo "Invalid foreground simulation entry point name: $FOREGROUND_SERVICE" >&2
+    exit 1
+  fi
+  if [[ -n "${SELECTED_ENTRIES[$FOREGROUND_SERVICE]:-}" ]]; then
+    echo "Foreground entry point must not also appear in AVION_SIM_SERVICES: $FOREGROUND_SERVICE" >&2
+    exit 1
+  fi
+  SELECTED_ENTRIES[$FOREGROUND_SERVICE]=1
+fi
+
+VALIDATE_ENTRIES=("${SERVICES[@]}")
+if [[ -n "$FOREGROUND_SERVICE" ]]; then
+  VALIDATE_ENTRIES+=("$FOREGROUND_SERVICE")
+fi
+docker compose exec -T dev bash -s -- "${VALIDATE_ENTRIES[@]}" <<'REMOTE_VALIDATE'
+set -Eeuo pipefail
+require_file() {
+  local variable="$1" default="${2:-}" value
+  value="${!variable:-$default}"
+  if [[ -z "$value" || ! -f "$value" ]]; then
+    echo "$variable must point to an existing file (got: '$value')." >&2
+    exit 2
+  fi
+}
+for entry in "$@"; do
+  if [[ ! -x "/usr/local/bin/$entry" ]]; then
+    echo "Selected simulation entry point is not installed: /usr/local/bin/$entry" >&2
+    exit 127
+  fi
+  case "$entry" in
+    avion-gazebo)
+      require_file AVION_WORLD /workspace/avion-cargo/simulation/worlds/runway_iris_aruco.sdf
+      ;;
+    avion-autolander)
+      require_file AVION_AUTOLANDER_CONFIG /workspace/avion-cargo/simulation/config/autolanding_config.json
+      ;;
+    avion-vtol) require_file AVION_VTOL_CONFIG ;;
+    avion-payload) require_file AVION_PAYLOAD_CONFIG ;;
+    avion-d3k-diagnostics) require_file AVION_D3K_DIAGNOSTICS_CONFIG ;;
+    avion-sitl)
+      if [[ -n "${AVION_SITL_PARAM_FILE:-}" ]]; then
+        require_file AVION_SITL_PARAM_FILE
+      fi
+      ;;
+  esac
+done
+REMOTE_VALIDATE
+
 start_container_lock
 
-echo "Starting supporting simulation processes in the background (logs forwarded to files)."
+echo "Starting selected simulation entry points in the background (logs forwarded to files)."
 echo "Logs: $LOG_DIR"
 for service in "${SERVICES[@]}"; do
   launch_service "$service"
-  sleep "${AVION_SIM_STARTUP_DELAY:-1}"
+  sleep "$STARTUP_DELAY"
 done
 
 echo
-echo "Supporting simulation services have been launched."
+echo "Selected simulation services have been launched."
 echo "Per-service logs are under: $LOG_DIR"
-echo "Starting avion-sitl interactively; press Ctrl+C to stop SITL and the supporting services."
 
 monitor_services &
 MONITOR_PID=$!
 
-docker compose exec -it dev /usr/local/bin/avion-sitl
+if [[ -n "$FOREGROUND_SERVICE" ]]; then
+  echo "Starting $FOREGROUND_SERVICE interactively; press Ctrl+C to stop it and the supporting services."
+  docker compose exec -it dev "/usr/local/bin/$FOREGROUND_SERVICE"
+else
+  echo "Simulation is running; press Ctrl+C to stop the selected services."
+  while true; do sleep 1; done
+fi

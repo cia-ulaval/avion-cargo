@@ -1,7 +1,0 @@
-# Patched ArduPilot revision cloned from https://github.com/bertrand-awz/ardupilot.git.
-ardupilot=ea5efe6deffeaaba16c5251a31ac8929d774dda3
-ardupilot_gazebo=65937b77aace16735df6f192badb0e6b4eddd056
-autolander=317360feaff482a8d89e2756af4f2289ce0e50f7
-ubuntu=24.04
-ros_distro=jazzy
-gazebo_distribution=harmonic

@@ -1,4 +1,0 @@
-services:
-  dev:
-    environment:
-      AVION_WORLD: /workspace/avion-cargo/simulation/worlds/payload_standalone.sdf

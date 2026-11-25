@@ -27,7 +27,7 @@ Il diffuse également la vidéo et la télémétrie dans un navigateur.
 Le [contrôleur Lua d’alignement QuadPlane](https://github.com/cia-ulaval/avion-cargo/wiki/Alignement-du-lacet-QLAND) corrige le lacet sur le FC
 pendant la descente en `QLAND`. Le script et l'API de lacet sont maintenus ensemble
 dans le [dépôt ArduPilot patché](https://github.com/bertrand-awz/ardupilot), que Docker clone
-à la révision fixée dans [simulation/versions.txt](simulation/versions.txt) avant compilation.
+à la révision fixée dans [simulation/versions/ardupilot.version](simulation/versions/ardupilot.version) avant compilation.
 Le superviseur de lacet Python a été supprimé.
 
 ## Documentation

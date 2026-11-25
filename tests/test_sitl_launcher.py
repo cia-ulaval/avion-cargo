@@ -154,7 +154,7 @@ def test_default_parameters_resolve_from_the_workspace(sitl):
 
     assert result.returncode == 0, result.stderr
     assert sitl.invocation.read_text().splitlines()[-1] == (
-        "--add-param-file=/workspace/avion-cargo/simulation/config/gazebo-iris-gimbal.parm"
+        "--add-param-file=/workspace/avion-cargo/simulation/config/gazebo_iris.parm"
     )
 
 

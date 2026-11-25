@@ -33,24 +33,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && locale-gen en_US.UTF-8 \
     && rm -rf /var/lib/apt/lists/*
 
-RUN ROS_APT_SOURCE_VERSION="$(curl -fsSL https://api.github.com/repos/ros-infrastructure/ros-apt-source/releases/latest | python3 -c 'import json,sys; print(json.load(sys.stdin)["tag_name"])')" \
-    && curl -fL --retry 4 --retry-delay 2 \
-       -o /tmp/ros2-apt-source.deb \
-       "https://github.com/ros-infrastructure/ros-apt-source/releases/download/${ROS_APT_SOURCE_VERSION}/ros2-apt-source_${ROS_APT_SOURCE_VERSION}.noble_all.deb" \
-    && dpkg -i /tmp/ros2-apt-source.deb \
-    && rm -f /tmp/ros2-apt-source.deb
-
-RUN curl -fL --retry 4 --retry-delay 2 \
-      https://packages.osrfoundation.org/gazebo.gpg \
-      -o /usr/share/keyrings/pkgs-osrf-archive-keyring.gpg \
-    && echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/pkgs-osrf-archive-keyring.gpg] https://packages.osrfoundation.org/gazebo/ubuntu-stable noble main" \
-       > /etc/apt/sources.list.d/gazebo-stable.list \
-    && apt-get update \
-    && apt-get install -y --no-install-recommends \
-       ros-jazzy-ros-base ros-jazzy-ros-gz-bridge ros-jazzy-ros-gz-image \
-       gz-harmonic libgz-sim8-dev \
-    && rm -rf /var/lib/apt/lists/*
-
 RUN if id ubuntu >/dev/null 2>&1; then userdel -r ubuntu; fi \
     && if getent group ubuntu >/dev/null 2>&1; then groupdel ubuntu; fi \
     && groupadd --gid 1000 dev \
@@ -60,15 +42,13 @@ RUN if id ubuntu >/dev/null 2>&1; then userdel -r ubuntu; fi \
     && mkdir -p /workspace/avion-cargo/.venv /home/dev/.cache/pypoetry/artifacts \
     && chown -R dev:dev /workspace /home/dev
 
-COPY simulation/versions.txt /tmp/versions.txt
+COPY simulation/versions/ardupilot.version /tmp/versions/ardupilot.version
 
 USER dev
 WORKDIR /home/dev
 ENV PATH="/home/dev/.local/bin:/home/dev/venv-ardupilot/bin:${PATH}"
-RUN pipx install 'poetry>=2.1.3'
-
 RUN set -eux; \
-    ARDUPILOT_REF="$(sed -n 's/^ardupilot=//p' /tmp/versions.txt)"; \
+    ARDUPILOT_REF="$(cat /tmp/versions/ardupilot.version)"; \
     test -n "${ARDUPILOT_REF}"; \
     git clone --filter=blob:none --no-checkout https://github.com/bertrand-awz/ardupilot.git /home/dev/ardupilot; \
     git -C /home/dev/ardupilot checkout --detach "${ARDUPILOT_REF}"; \
@@ -84,8 +64,32 @@ RUN set -eux; \
       /home/dev/ardupilot/scripts/plane_precland.lua; \
     test -s /home/dev/ardupilot/scripts/plane_precland.lua
 
+USER root
+
+RUN ROS_APT_SOURCE_VERSION="$(curl -fsSL https://api.github.com/repos/ros-infrastructure/ros-apt-source/releases/latest | python3 -c 'import json,sys; print(json.load(sys.stdin)["tag_name"])')" \
+    && curl -fL --retry 4 --retry-delay 2 \
+       -o /tmp/ros2-apt-source.deb \
+       "https://github.com/ros-infrastructure/ros-apt-source/releases/download/${ROS_APT_SOURCE_VERSION}/ros2-apt-source_${ROS_APT_SOURCE_VERSION}.noble_all.deb" \
+    && dpkg -i /tmp/ros2-apt-source.deb \
+    && rm -f /tmp/ros2-apt-source.deb
+
+RUN curl -fL --retry 4 --retry-delay 2 \
+      https://packages.osrfoundation.org/gazebo.gpg \
+      -o /usr/share/keyrings/pkgs-osrf-archive-keyring.gpg \
+    && echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/pkgs-osrf-archive-keyring.gpg] https://packages.osrfoundation.org/gazebo/ubuntu-stable noble main" \
+       > /etc/apt/sources.list.d/gazebo-stable.list \
+    && apt-get update \
+    && apt-get install -y --no-install-recommends \
+       ros-jazzy-ros-base ros-jazzy-ros-gz-bridge ros-jazzy-ros-gz-image \
+       gz-harmonic libgz-sim8-dev libgz-plugin2-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+USER dev
+
+COPY simulation/versions/ardupilot_gazebo_plugin.version /tmp/versions/ardupilot_gazebo_plugin.version
+
 RUN set -eux; \
-    ARDUPILOT_GAZEBO_REF="$(sed -n 's/^ardupilot_gazebo=//p' /tmp/versions.txt)"; \
+    ARDUPILOT_GAZEBO_REF="$(cat /tmp/versions/ardupilot_gazebo_plugin.version)"; \
     test -n "${ARDUPILOT_GAZEBO_REF}"; \
     git clone --filter=blob:none --no-checkout https://github.com/ArduPilot/ardupilot_gazebo.git /home/dev/ardupilot_gazebo; \
     git -C /home/dev/ardupilot_gazebo checkout --detach "${ARDUPILOT_GAZEBO_REF}"; \
@@ -95,9 +99,29 @@ RUN set -eux; \
     cmake -S . -B build -DCMAKE_BUILD_TYPE=RelWithDebInfo; \
     cmake --build build -j2
 
+COPY simulation/versions/d3kble_gazebo_plugin.version /tmp/versions/d3kble_gazebo_plugin.version
+
+RUN set -eux; \
+    D3K_SIMULATOR_REF="$(cat /tmp/versions/d3kble_gazebo_plugin.version)"; \
+    test -n "${D3K_SIMULATOR_REF}"; \
+    mkdir -p /home/dev/dwm3000-esp32-interface; \
+    curl -fL --retry 4 --retry-delay 2 \
+      "https://codeload.github.com/PladsElsker/dwm3000-esp32-interface/tar.gz/${D3K_SIMULATOR_REF}" \
+      -o /tmp/dwm3000-esp32-interface.tar.gz; \
+    tar -xzf /tmp/dwm3000-esp32-interface.tar.gz \
+      --strip-components=1 -C /home/dev/dwm3000-esp32-interface; \
+    rm /tmp/dwm3000-esp32-interface.tar.gz; \
+    cmake -S /home/dev/dwm3000-esp32-interface/simulation/gazebo \
+      -B /home/dev/d3k-gazebo-build \
+      -DCMAKE_BUILD_TYPE=RelWithDebInfo \
+      -DCMAKE_INSTALL_PREFIX=/home/dev/d3k-gazebo-install; \
+    cmake --build /home/dev/d3k-gazebo-build --parallel 2; \
+    ctest --test-dir /home/dev/d3k-gazebo-build --output-on-failure; \
+    cmake --install /home/dev/d3k-gazebo-build
+
 RUN printf '%s\n' \
       'source /opt/ros/jazzy/setup.bash' \
-      'export GZ_SIM_SYSTEM_PLUGIN_PATH="/home/dev/ardupilot_gazebo/build${GZ_SIM_SYSTEM_PLUGIN_PATH:+:${GZ_SIM_SYSTEM_PLUGIN_PATH}}"' \
+      'export GZ_SIM_SYSTEM_PLUGIN_PATH="/home/dev/d3k-gazebo-install/lib:/home/dev/ardupilot_gazebo/build${GZ_SIM_SYSTEM_PLUGIN_PATH:+:${GZ_SIM_SYSTEM_PLUGIN_PATH}}"' \
       'export GZ_SIM_RESOURCE_PATH="/workspace/avion-cargo/simulation/models:/workspace/avion-cargo/simulation/worlds:/home/dev/ardupilot_gazebo/models:/home/dev/ardupilot_gazebo/worlds${GZ_SIM_RESOURCE_PATH:+:${GZ_SIM_RESOURCE_PATH}}"' \
       'export PYTHONUNBUFFERED=1' \
       >> /home/dev/.bashrc
@@ -107,7 +131,7 @@ COPY --chown=root:root docker/container-start.sh /usr/local/bin/container-start.
 COPY --chown=root:root docker/fix-volume-permissions.sh /usr/local/bin/fix-volume-permissions.sh
 RUN sudo chmod 0755 /usr/local/bin/prepare-workspace.sh /usr/local/bin/container-start.sh /usr/local/bin/fix-volume-permissions.sh
 
-RUN pipx install --force 'poetry==2.4.3' \
+RUN pipx install 'poetry==2.4.3' \
     && poetry --version
 
 USER root
@@ -128,7 +152,33 @@ cd "$ARDUPILOT_ROOT"
 VEHICLE="${AVION_SITL_VEHICLE:-ArduCopter}"
 FRAME="${AVION_SITL_FRAME:-JSON}"
 MODEL="${AVION_SITL_MODEL:-}"
-PARAM_FILE="${AVION_SITL_PARAM_FILE-/workspace/avion-cargo/simulation/config/gazebo-iris-gimbal.parm}"
+PARAM_FILE="${AVION_SITL_PARAM_FILE-/workspace/avion-cargo/simulation/config/gazebo_iris.parm}"
+
+if [[ "$VEHICLE" == ArduPlane ]]; then
+  source_script="$PWD/libraries/AP_Scripting/applets/plane_precland.lua"
+  target_script="$PWD/scripts/plane_precland.lua"
+  if [[ ! -f "$source_script" || ! -r "$source_script" || ! -s "$source_script" ]]; then
+    echo "Cannot start ArduPlane: precision landing applet missing or unreadable: $source_script" >&2
+    echo "Restore the ArduPilot revision in simulation/versions.txt or rebuild the Docker image." >&2
+    exit 1
+  fi
+
+  mkdir -p scripts
+  if [[ -e "$target_script" ]]; then
+    if ! cmp -s -- "$source_script" "$target_script"; then
+      echo "Cannot start ArduPlane: $target_script differs from the bundled precision landing applet." >&2
+      echo "Inspect and move the custom script before retrying; it has not been overwritten." >&2
+      exit 1
+    fi
+  else
+    ln -sfn -- ../libraries/AP_Scripting/applets/plane_precland.lua "$target_script"
+  fi
+  if ! cmp -s -- "$source_script" "$target_script"; then
+    echo "Cannot start ArduPlane: precision landing applet installation failed: $target_script" >&2
+    exit 1
+  fi
+  echo "QuadPlane precision landing script ready: $target_script"
+fi
 
 if [[ "$VEHICLE" == ArduPlane ]]; then
   for applet in plane_precland qland_yaw_alignment; do
@@ -182,10 +232,10 @@ source /opt/ros/jazzy/setup.bash
 set -u
 
 export GZ_CONFIG_PATH="${GZ_CONFIG_PATH:-/usr/share/gz}"
-export GZ_SIM_SYSTEM_PLUGIN_PATH="/home/dev/ardupilot_gazebo/build${GZ_SIM_SYSTEM_PLUGIN_PATH:+:${GZ_SIM_SYSTEM_PLUGIN_PATH}}"
+export GZ_SIM_SYSTEM_PLUGIN_PATH="/home/dev/d3k-gazebo-install/lib:/home/dev/ardupilot_gazebo/build${GZ_SIM_SYSTEM_PLUGIN_PATH:+:${GZ_SIM_SYSTEM_PLUGIN_PATH}}"
 export GZ_SIM_RESOURCE_PATH="/workspace/avion-cargo/simulation/models:/workspace/avion-cargo/simulation/worlds:/home/dev/ardupilot_gazebo/models:/home/dev/ardupilot_gazebo/worlds${GZ_SIM_RESOURCE_PATH:+:${GZ_SIM_RESOURCE_PATH}}"
 
-WORLD="${AVION_WORLD:-/workspace/avion-cargo/simulation/worlds/iris_runway_faruco.sdf}"
+WORLD="${AVION_WORLD:-/workspace/avion-cargo/simulation/worlds/runway_iris_faruco.sdf}"
 
 exec gz sim -v4 -r "$WORLD"
 SCRIPT
@@ -237,9 +287,63 @@ set -euo pipefail
 exec socat TCP-LISTEN:8086,bind=0.0.0.0,reuseaddr,fork TCP:127.0.0.1:8085
 SCRIPT
 
+cat > /usr/local/bin/avion-vtol <<'SCRIPT'
+#!/usr/bin/env bash
+set -Eeuo pipefail
+cd /workspace/avion-cargo
+
+CONFIG="${AVION_VTOL_CONFIG:-}"
+if [[ -z "$CONFIG" ]]; then
+  echo "AVION_VTOL_CONFIG must be set by the active simulation Compose file." >&2
+  exit 2
+fi
+if [[ ! -f "$CONFIG" ]]; then
+  echo "VTOL configuration does not exist: $CONFIG" >&2
+  exit 2
+fi
+exec poetry run run_vtol --config "$CONFIG"
+SCRIPT
+
+cat > /usr/local/bin/avion-payload <<'SCRIPT'
+#!/usr/bin/env bash
+set -Eeuo pipefail
+cd /workspace/avion-cargo
+
+CONFIG="${AVION_PAYLOAD_CONFIG:-}"
+if [[ -z "$CONFIG" ]]; then
+  echo "AVION_PAYLOAD_CONFIG must be set by the active simulation Compose file." >&2
+  exit 2
+fi
+if [[ ! -f "$CONFIG" ]]; then
+  echo "Payload configuration does not exist: $CONFIG" >&2
+  exit 2
+fi
+exec poetry run run_payload --config "$CONFIG"
+SCRIPT
+
+cat > /usr/local/bin/avion-d3k-diagnostics <<'SCRIPT'
+#!/usr/bin/env bash
+set -Eeuo pipefail
+cd /workspace/avion-cargo
+
+CONFIG="${AVION_D3K_DIAGNOSTICS_CONFIG:-}"
+if [[ -z "$CONFIG" ]]; then
+  echo "AVION_D3K_DIAGNOSTICS_CONFIG must be set by the active simulation Compose file." >&2
+  exit 2
+fi
+if [[ ! -f "$CONFIG" ]]; then
+  echo "D3K diagnostics configuration does not exist: $CONFIG" >&2
+  exit 2
+fi
+export PYTHONPATH="/workspace/avion-cargo/src${PYTHONPATH:+:$PYTHONPATH}"
+exec poetry run run_d3k_diagnostics --config "$CONFIG"
+SCRIPT
+
 chmod 0755 /usr/local/bin/avion-sitl /usr/local/bin/avion-gazebo \
   /usr/local/bin/avion-image-bridge /usr/local/bin/avion-autolander \
-  /usr/local/bin/avion-entrypoint /usr/local/bin/avion-web-proxy
+  /usr/local/bin/avion-entrypoint /usr/local/bin/avion-web-proxy \
+  /usr/local/bin/avion-vtol /usr/local/bin/avion-payload \
+  /usr/local/bin/avion-d3k-diagnostics
 CREATE_LAUNCHERS
 
 USER dev

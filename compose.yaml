@@ -30,7 +30,7 @@ services:
       ROS_DOMAIN_ID: "42"
       ROS_LOCALHOST_ONLY: "1"
       PYTHONUNBUFFERED: "1"
-      AVION_WORLD: /workspace/avion-cargo/simulation/worlds/iris_runway_faruco.sdf
+      AVION_WORLD: /workspace/avion-cargo/simulation/worlds/runway_iris_faruco.sdf
       AVION_SITL_GCS_OUT: "tcpin:0.0.0.0:5761"
     ipc: host
     ports:
