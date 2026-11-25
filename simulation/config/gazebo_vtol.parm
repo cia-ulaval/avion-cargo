@@ -67,6 +67,7 @@ PLND_ALT_MIN         1
 PLND_OPTIONS         0
 RC7_OPTION           39
 SCR_ENABLE           1
+QYAW_ENABLE          1
 
 # --- VTOL rate/angle control (Q_A_) ---
 Q_A_ACCEL_P_MAX        40000

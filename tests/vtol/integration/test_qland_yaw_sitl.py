@@ -19,7 +19,7 @@ from vtol.infrastructure.communication.mavlink import DroneMavlinkUDPConnector, 
 @pytest.mark.parametrize("scenario", ["failsafes", "descent_profile"])
 def test_qland_yaw_control(tmp_path, scenario):
     ap = Path(os.environ["ARDUPILOT_SITL_ROOT"])
-    root = Path(__file__).resolve().parents[2]
+    root = Path(__file__).resolve().parents[3]
     instance, port = 41, 6170
     with socket.socket() as probe:
         assert probe.connect_ex(("127.0.0.1", port)) != 0, "SITL test port already in use"
@@ -31,7 +31,7 @@ def test_qland_yaw_control(tmp_path, scenario):
     flight_parameters = {"Q_LAND_FINAL_ALT": 6, "Q_LAND_FINAL_SPD": 0.5}
     if scenario == "descent_profile":
         names = {"Q_WP_SPD_DN", "Q_LAND_FINAL_ALT", "Q_LAND_FINAL_SPD", "PLND_XY_DIST_MAX"}
-        for line in (root / "simulation/config/tricopter-vtol.parm").read_text().splitlines():
+        for line in (root / "simulation/config/gazebo_vtol.parm").read_text().splitlines():
             fields = line.split()
             if fields and fields[0] in names:
                 flight_parameters[fields[0]] = float(fields[1])
