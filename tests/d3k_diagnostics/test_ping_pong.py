@@ -157,8 +157,6 @@ def test_exchange_uses_request_ticket_and_validates_correlated_pong():
 
 
 def test_multi_peer_service_uses_one_router_per_node_and_keeps_peers_independent(monkeypatch):
-    import threading
-
     _install_fake_router(monkeypatch)
     _FakeNode.by_id.clear()
     hub = _FakeNode(2, fail_peers=(18,))

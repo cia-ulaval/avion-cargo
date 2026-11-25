@@ -11,7 +11,6 @@ from vtol.infrastructure.persistence.configuration_models import (
     StreamingDataConfiguration,
     StreamingVideoConfiguration,
 )
-from vtol.utils.validators.validation_error import ValidationError
 
 
 def test_reader_maps_a_valid_json_file_to_runtime_configuration_objects(

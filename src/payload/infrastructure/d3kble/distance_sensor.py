@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import asyncio
-import logging
 import queue
 import threading
 from collections.abc import AsyncIterator, Mapping

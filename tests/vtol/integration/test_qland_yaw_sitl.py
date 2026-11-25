@@ -230,7 +230,7 @@ def test_qland_yaw_control(tmp_path, scenario):
             assert cutoff_checked
             print(
                 f"Nominal profile: {initial_height:.2f} m -> ground in {elapsed:.2f}s; "
-                f"{elapsed-slow_entry:.2f}s below 8 m; final-phase yaw aligned and released below 4 m",
+                f"{elapsed - slow_entry:.2f}s below 8 m; final-phase yaw aligned and released below 4 m",
                 flush=True,
             )
             return
