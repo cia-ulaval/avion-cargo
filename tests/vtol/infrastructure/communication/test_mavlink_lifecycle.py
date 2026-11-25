@@ -5,7 +5,7 @@ import pytest
 from pymavlink import mavutil
 from pymavlink.dialects.v20 import ardupilotmega as mavlink2
 
-from vtol.domain.drone import DroneMode
+from vtol.domain.drone import DroneMode, VtolState
 from vtol.domain.rigid_transform import RigidTransform
 from vtol.infrastructure.communication.mavlink import DroneMavlinkUDPConnector, MavlinkConnectionParams
 
@@ -100,6 +100,16 @@ def test_connect_accepts_only_autopilot_and_initializes_status_from_first_heartb
         mavlink2.MAVLINK_MSG_ID_EXTENDED_SYS_STATE: 500_000,
     }
     assert all((message.target_system, message.target_component) == (7, 1) for message in requests)
+
+
+def test_fixed_wing_heartbeat_maps_manual_mode_from_pymavlink(link):
+    drone, connection, _ = link
+    connection.incoming.append(heartbeat(mode=0, vehicle_type=mavlink2.MAV_TYPE_FIXED_WING))
+
+    drone.connect()
+
+    assert drone.status.mode_name == "MANUAL"
+    assert drone.status.mode is DroneMode.MANUAL
 
 
 def test_missing_heartbeat_times_out_and_closes_transport(link):
@@ -268,3 +278,64 @@ def test_measurements_do_not_issue_flight_commands_regardless_of_observed_mode(l
     assert {message.get_type() for message in connection.outgoing} == {"HEARTBEAT", "COMMAND_LONG", "LANDING_TARGET"}
     commands = [message.command for message in connection.outgoing if message.get_type() == "COMMAND_LONG"]
     assert commands and set(commands) == {mavlink2.MAV_CMD_SET_MESSAGE_INTERVAL}
+
+
+def test_mission_progress_and_landed_state_are_observed_separately(link):
+    from types import SimpleNamespace
+
+    from vtol.domain.drone import LandedState
+
+    drone, connection, _ = link
+    connection.incoming.append(heartbeat())
+    drone.connect()
+
+    drone._handle_message(SimpleNamespace(get_type=lambda: "MISSION_CURRENT", seq=12, mission_id=71))
+    status = drone.get_mission_execution_status()
+    assert status.current_item_seq == 12
+    assert status.last_reached_item_seq is None
+    assert status.mission_id == 71
+
+    drone._handle_message(SimpleNamespace(get_type=lambda: "MISSION_ITEM_REACHED", seq=11))
+    status = drone.get_mission_execution_status()
+    assert status.current_item_seq == 12
+    assert status.last_reached_item_seq == 11
+
+    drone._handle_message(SimpleNamespace(get_type=lambda: "MISSION_CURRENT", seq=0, mission_id=72))
+    status = drone.get_mission_execution_status()
+    assert status.current_item_seq == 0
+    assert status.last_reached_item_seq is None
+    assert status.mission_id == 72
+
+    drone._handle_message(SimpleNamespace(get_type=lambda: "EXTENDED_SYS_STATE", vtol_state=3, landed_state=1))
+    assert drone.status.landed_state is LandedState.ON_GROUND
+    assert drone.status.vtol_state is VtolState.MULTICOPTER
+
+
+def test_mission_observations_are_invalidated_when_heartbeat_expires(link):
+    from types import SimpleNamespace
+
+    drone, connection, clock = link
+    connection.incoming.append(heartbeat())
+    drone.connect()
+    drone._handle_message(SimpleNamespace(get_type=lambda: "MISSION_CURRENT", seq=8, mission_id=5))
+    drone._handle_message(SimpleNamespace(get_type=lambda: "EXTENDED_SYS_STATE", vtol_state=4, landed_state=2))
+    assert drone.get_mission_execution_status().current_item_seq == 8
+    assert drone.status.vtol_state is VtolState.FIXED_WING
+
+    clock.now += 4.0
+    assert not drone.get_status().connected
+    assert drone.get_mission_execution_status().current_item_seq is None
+    assert drone.status.vtol_state is VtolState.UNKNOWN
+
+
+def test_close_resets_mission_execution_status(link):
+    from types import SimpleNamespace
+
+    drone, connection, _ = link
+    connection.incoming.append(heartbeat())
+    drone.connect()
+    drone._handle_message(SimpleNamespace(get_type=lambda: "MISSION_CURRENT", seq=3, mission_id=4))
+    drone._handle_message(SimpleNamespace(get_type=lambda: "EXTENDED_SYS_STATE", vtol_state=3, landed_state=1))
+    drone.close()
+    assert drone.get_mission_execution_status().current_item_seq is None
+    assert drone.status.vtol_state is VtolState.UNKNOWN

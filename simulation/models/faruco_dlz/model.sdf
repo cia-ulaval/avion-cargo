@@ -1,0 +1,30 @@
+<?xml version="1.0" ?>
+<sdf version="1.9">
+  <model name="faruco_dlz">
+    <static>true</static>
+
+    <link name="faruco_dlz_link">
+      <visual name="faruco_dlz">
+        <geometry>
+          <mesh>
+            <uri>meshes/dlz.obj</uri>
+            <scale>100 100 100</scale>
+          </mesh>
+        </geometry>
+        <cast_shadows>false</cast_shadows>
+      </visual>
+    </link>
+
+    <link name="faruco_sticker_link">
+      <visual name="faruco_sticker">
+        <geometry>
+          <mesh>
+            <uri>meshes/faruco_sticker.obj</uri>
+            <scale>100 100 100</scale>
+          </mesh>
+        </geometry>
+        <cast_shadows>false</cast_shadows>
+      </visual>
+    </link>
+  </model>
+</sdf>

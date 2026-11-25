@@ -4,7 +4,7 @@ services:
       AVION_SIM_SERVICES: "avion-gazebo avion-image-bridge avion-vtol avion-payload"
       AVION_SIM_FOREGROUND_SERVICE: avion-sitl
       AVION_SIM_STARTUP_DELAY: "2"
-      AVION_WORLD: /workspace/avion-cargo/simulation/worlds/runway_vtol_payload_faruco.sdf
+      AVION_WORLD: /workspace/avion-cargo/simulation/worlds/paradise_vtol_payload_faruco.sdf
       AVION_SITL_VEHICLE: ArduPlane
       AVION_SITL_FRAME: quadplane-tilttrivec
       AVION_SITL_MODEL: JSON
