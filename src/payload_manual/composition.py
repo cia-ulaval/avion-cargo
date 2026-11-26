@@ -81,10 +81,7 @@ def build_manual_control_application(
         raise ValueError("at least three wheels must be configured for manual control")
 
     if wheel_capabilities is None:
-        capabilities_by_wheel = tuple(
-            WheelActuatorCapabilities(wheel.max_surface_velocity)
-            for wheel in config.wheels
-        )
+        capabilities_by_wheel = tuple(WheelActuatorCapabilities(wheel.max_surface_velocity) for wheel in config.wheels)
     else:
         capabilities_by_wheel = tuple(wheel_capabilities)
         if len(capabilities_by_wheel) != len(config.wheels):
