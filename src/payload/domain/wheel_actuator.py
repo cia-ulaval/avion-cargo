@@ -26,7 +26,9 @@ class WheelActuatorCapabilities:
 
 
 class WheelActuator(Protocol):
-    """Common asynchronous interface for simulated and physical wheel motors."""
+    """
+    Asynchronous setpoint interface for simulated and physical wheel motors.
+    """
 
     @property
     def capabilities(self) -> WheelActuatorCapabilities: ...

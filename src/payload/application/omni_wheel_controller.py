@@ -123,6 +123,7 @@ class OmniWheelController:
         )
 
     async def set_body_velocity(self, velocity: BodyVelocity) -> tuple[float, ...]:
+        """Apply a new setpoint; the actuators retain it until changed or stopped."""
         if self._closed:
             raise RuntimeError("wheel controller is closed")
         linear, angular = self._calculate_surface_velocity_components(velocity)

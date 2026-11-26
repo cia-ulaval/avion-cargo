@@ -26,22 +26,14 @@ from shared.application import run_application
     default=300,
     show_default=True,
 )
-@click.option(
-    "--control-rate-hz",
-    type=click.IntRange(1, 100),
-    default=50,
-    show_default=True,
-)
 @logger.catch(reraise=True)
 def main(
     config_path: Path,
     command_timeout_ms: int,
-    control_rate_hz: int,
 ) -> None:
     config = ManualPayloadRuntimeConfiguration.from_file(config_path)
     limits = ManualControlLimits(
         command_timeout_ms=command_timeout_ms,
-        control_rate_hz=control_rate_hz,
     )
     application = build_manual_control_application(
         config,
