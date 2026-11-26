@@ -78,6 +78,7 @@ def _parse_motor_driver_configuration(
     )
 
 
+<<<<<<< HEAD
 def _parse_shared_configuration(path: str | Path) -> tuple[dict[str, Any], dict[str, Any]]:
     """Parse fields shared by mission and manually controlled payloads."""
     with Path(path).open("r", encoding="utf-8") as stream:
@@ -168,9 +169,14 @@ class _PayloadRuntimeConfigurationValidation:
 
     __slots__ = ()
 
+=======
+@dataclass(frozen=True, slots=True)
+class PayloadRuntimeConfiguration:
+>>>>>>> 14feeaa3c5a8966dffb83669203a31b44bea51d8
     payload_id: str
     uart_device: str
     anchor_id_by_target_id: dict[int, str]
+<<<<<<< HEAD
     wheels: tuple[WheelConfiguration, ...]
     uwb_role: str | None
     uwb_target_ids_override: tuple[int, ...] | None
@@ -179,6 +185,16 @@ class _PayloadRuntimeConfigurationValidation:
     uwb_retries: int | None
     baudrate: int
     ready_timeout_s: float
+=======
+    wheels: tuple[WheelConfiguration, ...] = ()
+    uwb_role: str | None = None
+    uwb_target_ids_override: tuple[int, ...] | None = None
+    uwb_period_ms: int | None = None
+    uwb_timeout_ms: int | None = None
+    uwb_retries: int | None = None
+    baudrate: int = 460800
+    ready_timeout_s: float = 10.0
+>>>>>>> 14feeaa3c5a8966dffb83669203a31b44bea51d8
 
     @property
     def uwb_target_ids(self) -> tuple[int, ...]:
@@ -199,7 +215,100 @@ class _PayloadRuntimeConfigurationValidation:
                 desired[name] = value
         return desired
 
+<<<<<<< HEAD
     def _validate_common(self) -> None:
+=======
+    @classmethod
+    def from_file(cls, path: str | Path) -> PayloadRuntimeConfiguration:
+        with Path(path).open("r", encoding="utf-8") as stream:
+            raw = json.load(stream)
+
+        if not isinstance(raw, dict):
+            raise ValueError("payload configuration must be a JSON object")
+
+        raw_wheels = raw.get("wheels", [])
+        if not isinstance(raw_wheels, list):
+            raise ValueError("wheels must be a list")
+
+        wheels: list[WheelConfiguration] = []
+        for wheel_index, raw_wheel in enumerate(raw_wheels):
+            wheel_path = f"wheels[{wheel_index}]"
+            if not isinstance(raw_wheel, dict):
+                raise ValueError(f"{wheel_path} must be an object")
+
+            missing = {"x", "y", "yaw", "radius", "max_surface_velocity"} - raw_wheel.keys()
+            if missing:
+                missing_fields = ", ".join(sorted(missing))
+                raise ValueError(f"{wheel_path} is missing required field(s): {missing_fields}")
+
+            values: dict[str, float] = {}
+            for axis in ("x", "y", "yaw", "radius"):
+                value = raw_wheel[axis]
+                if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(value):
+                    raise ValueError(f"{wheel_path}.{axis} must be a finite number")
+                values[axis] = float(value)
+
+            positive_number(values["radius"], f"{wheel_path}.radius")
+            max_surface_velocity = raw_wheel["max_surface_velocity"]
+            positive_number(
+                max_surface_velocity,
+                f"{wheel_path}.max_surface_velocity",
+            )
+            max_surface_velocity = float(max_surface_velocity)
+            transform = WheelTransform2D(**values)
+
+            driver = _parse_motor_driver_configuration(wheel_path, raw_wheel.get("driver"))
+            wheels.append(
+                WheelConfiguration(
+                    transform=transform,
+                    driver=driver,
+                    max_surface_velocity=max_surface_velocity,
+                )
+            )
+
+        uwb = raw.get("uwb")
+
+        if not isinstance(uwb, dict):
+            raise ValueError("payload configuration requires an 'uwb' object")
+
+        mapping = uwb.get("anchor_id_by_target_id")
+
+        if not isinstance(mapping, dict) or not mapping:
+            raise ValueError("uwb.anchor_id_by_target_id must be a non-empty object")
+
+        try:
+            converted = [(int(target_id), anchor_id) for target_id, anchor_id in mapping.items()]
+        except (TypeError, ValueError) as exc:
+            raise ValueError("UWB target IDs in anchor_id_by_target_id must be integers") from exc
+
+        anchor_mapping = dict(converted)
+
+        if len(anchor_mapping) != len(converted):
+            raise ValueError("UWB target IDs must be unique after integer conversion")
+
+        raw_target_ids = uwb.get("target_ids")
+        if raw_target_ids is not None and not isinstance(raw_target_ids, list):
+            raise ValueError("uwb.target_ids must be a list")
+
+        config = cls(
+            payload_id=raw.get("payload_id"),
+            uart_device=raw.get("uart_device"),
+            plane_peer_id=raw.get("plane_peer_id"),
+            anchor_id_by_target_id=anchor_mapping,
+            wheels=tuple(wheels),
+            uwb_role=uwb.get("role"),
+            uwb_target_ids_override=(tuple(raw_target_ids) if raw_target_ids is not None else None),
+            uwb_period_ms=uwb.get("period_ms"),
+            uwb_timeout_ms=uwb.get("timeout_ms"),
+            uwb_retries=uwb.get("retries"),
+            baudrate=raw.get("baudrate", 460800),
+            ready_timeout_s=raw.get("ready_timeout_s", 10.0),
+        )
+        config.validate()
+        return config
+
+    def validate(self) -> None:
+>>>>>>> 14feeaa3c5a8966dffb83669203a31b44bea51d8
         non_empty_string(self.payload_id, "payload_id")
         non_empty_string(self.uart_device, "uart_device")
         integer(self.baudrate, "baudrate", minimum=1)

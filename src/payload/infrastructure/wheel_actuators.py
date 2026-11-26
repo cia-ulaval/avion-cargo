@@ -2,7 +2,10 @@ from __future__ import annotations
 
 import asyncio
 import math
+<<<<<<< HEAD
 import threading
+=======
+>>>>>>> 14feeaa3c5a8966dffb83669203a31b44bea51d8
 from collections.abc import Callable
 from typing import Any
 
@@ -28,6 +31,7 @@ def _validate_velocity(velocity_m_s: float, capabilities: WheelActuatorCapabilit
     return velocity
 
 
+<<<<<<< HEAD
 class _GazeboTransport:
     """Own one long-lived Gazebo Transport node and its wheel publishers."""
 
@@ -85,6 +89,11 @@ def _gazebo_transport_publisher(topic: str) -> Callable[[str, float], None]:
 class GazeboWheelActuator:
     """
     Publish angular-velocity commands through a persistent Gazebo Transport publisher.
+=======
+class GazeboWheelActuator:
+    """
+    Publish angular-velocity commands to a Gazebo JointController topic.
+>>>>>>> 14feeaa3c5a8966dffb83669203a31b44bea51d8
     """
 
     def __init__(
@@ -123,6 +132,28 @@ class GazeboWheelActuator:
         if asyncio.iscoroutine(result):
             await result
 
+<<<<<<< HEAD
+=======
+    @staticmethod
+    async def _publish_with_gz(topic: str, angular_velocity_rad_s: float) -> None:
+        process = await asyncio.create_subprocess_exec(
+            "gz",
+            "topic",
+            "-t",
+            topic,
+            "-m",
+            "gz.msgs.Double",
+            "-p",
+            f"data: {angular_velocity_rad_s:.12g}",
+            stdout=asyncio.subprocess.DEVNULL,
+            stderr=asyncio.subprocess.PIPE,
+        )
+        _, stderr = await process.communicate()
+        if process.returncode:
+            detail = stderr.decode(errors="replace").strip()
+            raise RuntimeError(f"Gazebo command publish failed ({process.returncode}): {detail}")
+
+>>>>>>> 14feeaa3c5a8966dffb83669203a31b44bea51d8
 
 class MX1616WheelActuator:
     """
