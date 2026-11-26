@@ -23,7 +23,7 @@ from vtol.infrastructure.persistence.vtol_application_configuration import VtolA
 def main(config_path: Path) -> None:
     config = VtolApplicationConfiguration.from_file(config_path)
     application = build_vtol_application(config)
-    
+
     try:
         logger.info(
             "VTOL application started with {} D3K device(s), {} payload peer(s), and MAVLink telemetry",

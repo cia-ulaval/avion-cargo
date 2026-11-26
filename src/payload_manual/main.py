@@ -6,10 +6,10 @@ from pathlib import Path
 import click
 from loguru import logger
 
-from payload_manual.infrastructure.configuration import ManualPayloadRuntimeConfiguration
-from shared.application import run_application
 from payload_manual.application.runtime import ManualControlLimits
 from payload_manual.composition import build_manual_control_application
+from payload_manual.infrastructure.configuration import ManualPayloadRuntimeConfiguration
+from shared.application import run_application
 
 
 @click.command(context_settings={"help_option_names": ["-h", "--help"]})
