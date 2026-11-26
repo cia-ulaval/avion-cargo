@@ -907,8 +907,8 @@ dev = ["pytest (>=7.4)"]
 [package.source]
 type = "git"
 url = "https://github.com/PladsElsker/dwm3000-esp32-interface.git"
-reference = "577438d772ac8472ed8a7d97cf5a08a2b2fc1e8d"
-resolved_reference = "577438d772ac8472ed8a7d97cf5a08a2b2fc1e8d"
+reference = "3d7f6943502dbaccb328e7f72aff3b08bda6f3fb"
+resolved_reference = "3d7f6943502dbaccb328e7f72aff3b08bda6f3fb"
 subdirectory = "d3kble-api"
 
 [[package]]
@@ -3524,4 +3524,4 @@ propcache = ">=0.2.1"
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.11,<3.14"
-content-hash = "6865aee383bf4e4a7064dc0329d5a377873d9bfedaa380950722a1ffeb585d5f"
+content-hash = "0f2f12def37059f18c6468e36d6a7865929532e4196712af931b1e85969255c3"
