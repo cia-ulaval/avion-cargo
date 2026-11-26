@@ -9,7 +9,7 @@ from loguru import logger
 
 from payload.application.omni_wheel_controller import OmniWheelController
 from payload.domain.wheel_actuator import WheelActuator, WheelActuatorCapabilities
-from payload.infrastructure.configuration import ManualPayloadRuntimeConfiguration
+from payload_manual.infrastructure.configuration import ManualPayloadRuntimeConfiguration
 from payload.infrastructure.d3kble import D3kbleDistanceSensor
 from payload.infrastructure.wheel_actuators import create_wheel_actuator
 from payload_manual.application.runtime import ManualControlLimits, ManualControlRuntime

@@ -78,8 +78,8 @@ def _parse_motor_driver_configuration(
     )
 
 
-def _parse_shared_configuration(path: str | Path) -> tuple[dict[str, Any], dict[str, Any]]:
-    """Parse fields shared by mission and manually controlled payloads."""
+def parse_payload_runtime_fields(path: str | Path) -> tuple[dict[str, Any], dict[str, Any]]:
+    """Parse common hardware and UWB settings from a payload configuration."""
     with Path(path).open("r", encoding="utf-8") as stream:
         raw = json.load(stream)
 
@@ -163,8 +163,8 @@ def _parse_shared_configuration(path: str | Path) -> tuple[dict[str, Any], dict[
     return raw, common_fields
 
 
-class _PayloadRuntimeConfigurationValidation:
-    """Shared validation and UWB helpers for the two payload config schemas."""
+class PayloadRuntimeConfigurationValidation:
+    """Provide common validation and UWB helpers for payload runtime configurations."""
 
     __slots__ = ()
 
@@ -199,7 +199,7 @@ class _PayloadRuntimeConfigurationValidation:
                 desired[name] = value
         return desired
 
-    def _validate_common(self) -> None:
+    def validate_common(self) -> None:
         non_empty_string(self.payload_id, "payload_id")
         non_empty_string(self.uart_device, "uart_device")
         integer(self.baudrate, "baudrate", minimum=1)
@@ -282,7 +282,7 @@ class _PayloadRuntimeConfigurationValidation:
 
 
 @dataclass(frozen=True, slots=True)
-class PayloadRuntimeConfiguration(_PayloadRuntimeConfigurationValidation):
+class PayloadRuntimeConfiguration(PayloadRuntimeConfigurationValidation):
     """Configuration for the mission-oriented payload, which talks to a plane."""
 
     payload_id: str
@@ -300,40 +300,11 @@ class PayloadRuntimeConfiguration(_PayloadRuntimeConfigurationValidation):
 
     @classmethod
     def from_file(cls, path: str | Path) -> PayloadRuntimeConfiguration:
-        raw, common_fields = _parse_shared_configuration(path)
+        raw, common_fields = parse_payload_runtime_fields(path)
         config = cls(**common_fields, plane_peer_id=raw.get("plane_peer_id"))
         config.validate()
         return config
 
     def validate(self) -> None:
-        self._validate_common()
+        self.validate_common()
         integer(self.plane_peer_id, "plane_peer_id", minimum=1, maximum=65534)
-
-
-@dataclass(frozen=True, slots=True)
-class ManualPayloadRuntimeConfiguration(_PayloadRuntimeConfigurationValidation):
-    """Configuration for a manually controlled payload, which talks to a controller."""
-
-    payload_id: str
-    uart_device: str
-    controller_peer_id: int
-    anchor_id_by_target_id: dict[int, str]
-    wheels: tuple[WheelConfiguration, ...] = ()
-    uwb_role: str | None = None
-    uwb_target_ids_override: tuple[int, ...] | None = None
-    uwb_period_ms: int | None = None
-    uwb_timeout_ms: int | None = None
-    uwb_retries: int | None = None
-    baudrate: int = 460800
-    ready_timeout_s: float = 10.0
-
-    @classmethod
-    def from_file(cls, path: str | Path) -> ManualPayloadRuntimeConfiguration:
-        raw, common_fields = _parse_shared_configuration(path)
-        config = cls(**common_fields, controller_peer_id=raw.get("controller_peer_id"))
-        config.validate()
-        return config
-
-    def validate(self) -> None:
-        self._validate_common()
-        integer(self.controller_peer_id, "controller_peer_id", minimum=1, maximum=65534)

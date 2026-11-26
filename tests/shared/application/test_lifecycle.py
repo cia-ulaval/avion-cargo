@@ -1,6 +1,6 @@
 import pytest
 
-from payload.main import run_payload_application
+from shared.application import run_application
 
 
 class FakeSyncApplication:
@@ -26,18 +26,18 @@ class FakeAsyncApplication:
 
 
 @pytest.mark.asyncio
-async def test_shared_entrypoint_closes_application_with_sync_close():
+async def test_application_runner_closes_application_with_sync_close():
     application = FakeSyncApplication()
 
-    await run_payload_application(application)
+    await run_application(application)
 
     assert application.closed
 
 
 @pytest.mark.asyncio
-async def test_shared_entrypoint_awaits_async_close():
+async def test_application_runner_awaits_async_close():
     application = FakeAsyncApplication()
 
-    await run_payload_application(application)
+    await run_application(application)
 
     assert application.closed

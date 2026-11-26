@@ -6,8 +6,8 @@ from pathlib import Path
 import click
 from loguru import logger
 
-from payload.infrastructure.configuration import ManualPayloadRuntimeConfiguration
-from payload.main import run_payload_application
+from payload_manual.infrastructure.configuration import ManualPayloadRuntimeConfiguration
+from shared.application import run_application
 from payload_manual.application.runtime import ManualControlLimits
 from payload_manual.composition import build_manual_control_application
 
@@ -53,7 +53,7 @@ def main(
             config.payload_id,
             config.controller_peer_id,
         )
-        asyncio.run(run_payload_application(application))
+        asyncio.run(run_application(application))
     except KeyboardInterrupt:
         logger.info("Manual-control application interrupted")
     logger.info("Manual-control application stopped")

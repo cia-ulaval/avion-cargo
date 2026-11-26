@@ -2,7 +2,7 @@ import json
 
 import pytest
 
-from payload.infrastructure.configuration import ManualPayloadRuntimeConfiguration
+from payload_manual.infrastructure.configuration import ManualPayloadRuntimeConfiguration
 
 
 def _manual_configuration(controller_peer_id=3):
