@@ -81,13 +81,23 @@
             <inertial>
                 <mass>0.001</mass>
                 <inertia>
-                    <ixx>1.6e-7</ixx><iyy>1.6e-7</iyy><izz>1.6e-7</izz>
-                    <ixy>0</ixy><ixz>0</ixz><iyz>0</iyz>
+                    <ixx>1.6e-7</ixx>
+                    <iyy>1.6e-7</iyy>
+                    <izz>1.6e-7</izz>
+                    <ixy>0</ixy>
+                    <ixz>0</ixz>
+                    <iyz>0</iyz>
                 </inertia>
             </inertial>
             <visual name="antenna_marker">
-                <geometry><sphere><radius>0.012</radius></sphere></geometry>
-                <material><diffuse>0.1 0.8 0.2 1</diffuse></material>
+                <geometry>
+                    <sphere>
+                        <radius>0.012</radius>
+                    </sphere>
+                </geometry>
+                <material>
+                    <diffuse>0.1 0.8 0.2 1</diffuse>
+                </material>
             </visual>
         </link>
         <link name="wheel_0">
