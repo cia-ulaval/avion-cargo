@@ -2,6 +2,7 @@ import json
 
 import pytest
 
+from payload.domain.motor_response import MotorResponse
 from payload.infrastructure.configuration import (
     GazeboMotorDriverConfiguration,
     MX1616MotorDriverConfiguration,
@@ -335,6 +336,30 @@ def test_payload_runtime_configuration_parses_motor_driver_types(tmp_path):
             {"type": "mx1616", "in1_pin": True, "in2_pin": 18},
             "driver.in1_pin must be an integer",
         ),
+        (
+            {"type": "mx1616", "in1_pin": 17, "in2_pin": 18, "dead_zone": 1.5},
+            r"driver: dead_zone must be a number in \[0, 1\)",
+        ),
+        (
+            {"type": "mx1616", "in1_pin": 17, "in2_pin": 18, "calibration": 0.5},
+            "driver.calibration must be a list",
+        ),
+        (
+            {"type": "mx1616", "in1_pin": 17, "in2_pin": 18, "calibration": [[0.5]]},
+            "driver: calibration points must be",
+        ),
+        (
+            {"type": "gazebo", "topic": "/t", "speed": 0.2},
+            "driver has unsupported field.*speed",
+        ),
+        (
+            {"type": "gazebo", "topic": "/t", "motor": 0.2},
+            "driver.motor must be an object",
+        ),
+        (
+            {"type": "gazebo", "topic": "/t", "motor": {"dead_zone": 2}},
+            r"driver.motor: dead_zone must be a number in \[0, 1\)",
+        ),
     ],
 )
 def test_payload_runtime_configuration_rejects_invalid_motor_drivers(tmp_path, driver, message):
@@ -410,3 +435,83 @@ def test_payload_runtime_configuration_rejects_reused_gpio_pins(tmp_path):
         match="GPIO pin 18 is assigned to more than one",
     ):
         PayloadRuntimeConfiguration.from_file(path)
+
+
+def test_payload_runtime_configuration_parses_motor_response(tmp_path):
+    path = tmp_path / "payload.json"
+    path.write_text(
+        json.dumps(
+            {
+                "payload_id": "payload-a",
+                "uart_device": "/dev/ttyAMA2",
+                "plane_peer_id": 10,
+                "uwb": {"anchor_id_by_target_id": {"200": "front-left"}},
+                "wheels": [
+                    {
+                        "x": 0.1,
+                        "y": 0.2,
+                        "yaw": 0.3,
+                        "radius": 0.04,
+                        "max_surface_velocity": 0.5,
+                        "driver": {
+                            "type": "mx1616",
+                            "in1_pin": 17,
+                            "in2_pin": 18,
+                            "dead_zone": 0.25,
+                            "calibration": [[0.5, 0.4], [0.8, 0.8]],
+                        },
+                    },
+                    {
+                        "x": -0.1,
+                        "y": 0.2,
+                        "yaw": -0.3,
+                        "radius": 0.04,
+                        "max_surface_velocity": 0.5,
+                        "driver": {"type": "mx1616", "in1_pin": 19, "in2_pin": 20},
+                    },
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    config = PayloadRuntimeConfiguration.from_file(path)
+
+    assert config.wheels[0].driver.response.dead_zone == 0.25
+    assert config.wheels[0].driver.response.calibration == ((0.5, 0.4), (0.8, 0.8))
+    assert config.wheels[1].driver.response == MotorResponse()
+
+
+def test_payload_runtime_configuration_parses_gazebo_motor_model(tmp_path):
+    path = tmp_path / "payload.json"
+    path.write_text(
+        json.dumps(
+            {
+                "payload_id": "payload-a",
+                "uart_device": "/dev/ttyAMA2",
+                "plane_peer_id": 10,
+                "uwb": {"anchor_id_by_target_id": {"200": "front-left"}},
+                "wheels": [
+                    {
+                        "x": 0.1,
+                        "y": 0.2,
+                        "yaw": 0.3,
+                        "radius": 0.04,
+                        "max_surface_velocity": 0.5,
+                        "driver": {
+                            "type": "gazebo",
+                            "topic": "/t",
+                            "dead_zone": 0.1,
+                            "motor": {"dead_zone": 0.3, "calibration": [[0.6, 0.5]]},
+                        },
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    driver = PayloadRuntimeConfiguration.from_file(path).wheels[0].driver
+
+    assert driver.response == MotorResponse(dead_zone=0.1)
+    assert driver.motor == MotorResponse(dead_zone=0.3, calibration=((0.6, 0.5),))

@@ -19,7 +19,8 @@
       "driver": {
         "type": "mx1616",
         "in1_pin": 17,
-        "in2_pin": 18
+        "in2_pin": 18,
+        "dead_zone": 0.2
       }
     },
     {
@@ -31,7 +32,8 @@
       "driver": {
         "type": "mx1616",
         "in1_pin": 22,
-        "in2_pin": 23
+        "in2_pin": 23,
+        "dead_zone": 0.2
       }
     },
     {
@@ -43,7 +45,8 @@
       "driver": {
         "type": "mx1616",
         "in1_pin": 24,
-        "in2_pin": 25
+        "in2_pin": 25,
+        "dead_zone": 0.2
       }
     }
   ]
