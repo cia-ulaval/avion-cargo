@@ -3,11 +3,10 @@
   "private": true,
   "version": "0.1.0",
   "type": "module",
-  "scripts": {
-    "dev": "vite --config vite.config.ts",
-    "build": "vue-tsc --noEmit --project tsconfig.json && vite build --config vite.config.ts",
-    "tauri": "tauri"
-  },
+  "workspaces": [
+    "../../payload_manual/ui",
+    "../../payload_manual_trilateration/ui"
+  ],
   "dependencies": {
     "@tauri-apps/api": "^2.0.0",
     "vue": "^3.5.0"

@@ -4,11 +4,8 @@ import { defineConfig } from "vite";
 import vue from "@vitejs/plugin-vue";
 
 const sharedUiRoot = fileURLToPath(new URL(".", import.meta.url));
-const appRootValue = process.env.AVION_UI_APP_DIR;
-if (!appRootValue) {
-  throw new Error("AVION_UI_APP_DIR must point to the selected entry point's ui directory.");
-}
-const appRoot = resolve(appRootValue);
+// npm executes workspace scripts from the selected UI package directory.
+const appRoot = resolve(process.cwd());
 
 export default defineConfig({
   root: appRoot,

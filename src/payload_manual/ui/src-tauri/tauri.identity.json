@@ -1,4 +1,8 @@
 {
+  "build": {
+    "beforeDevCommand": "npm --prefix ../../shared/ui --workspace payload-manual-ui run dev",
+    "beforeBuildCommand": "npm --prefix ../../shared/ui --workspace payload-manual-ui run build"
+  },
   "productName": "Payload Manual Control",
   "identifier": "ca.ulaval.cia.payload-manual-control",
   "app": {

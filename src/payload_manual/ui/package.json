@@ -1,0 +1,11 @@
+{
+  "name": "payload-manual-ui",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite --config ../../shared/ui/vite.config.ts",
+    "build": "vue-tsc --noEmit --project ../../shared/ui/tsconfig.json && vite build --config ../../shared/ui/vite.config.ts",
+    "tauri:dev": "tauri dev --config ../../shared/ui/src-tauri/tauri.base.conf.json --config src-tauri/tauri.identity.json"
+  }
+}
