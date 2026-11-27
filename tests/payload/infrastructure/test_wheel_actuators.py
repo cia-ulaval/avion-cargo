@@ -2,7 +2,7 @@ import asyncio
 
 import pytest
 
-from payload.domain.motor_response import MotorResponse
+from payload.domain.motor_response import SimpleDeadzoneMotorResponse
 from payload.domain.wheel_actuator import WheelActuatorCapabilities
 from payload.infrastructure.configuration import (
     GazeboMotorDriverConfiguration,
@@ -11,8 +11,6 @@ from payload.infrastructure.configuration import (
 from payload.infrastructure.wheel_actuators import (
     GazeboWheelActuator,
     MX1616WheelActuator,
-    SimulatedMotorWheelActuator,
-    WheelActuatorLinearizer,
     create_wheel_actuator,
 )
 
@@ -187,122 +185,109 @@ async def test_gazebo_actuators_reuse_persistent_transport_publishers(monkeypatc
     assert node.advertised[topics[2]].values == [pytest.approx(1.25)]
 
 
-class RecordingActuator:
-    """Stand-in for the actuator under a wrapper: it keeps the speeds it is given."""
+def test_mx1616_actuator_applies_its_linearizer_to_the_pwm_duty():
+    outputs = []
 
-    def __init__(self, max_speed=0.2):
-        self.capabilities = WheelActuatorCapabilities(max_speed)
-        self.speeds = []
-        self.calls = []
+    def factory(pin, **kwargs):
+        outputs.append(FakePWMOutput(pin, **kwargs))
+        return outputs[-1]
 
-    async def set_surface_velocity(self, velocity_m_s):
-        self.speeds.append(velocity_m_s)
-
-    async def stop(self):
-        self.calls.append("stop")
-
-    async def close(self):
-        self.calls.append("close")
-
-
-def test_linearizer_skips_the_dead_zone_and_keeps_the_direction():
-    inner = RecordingActuator(0.2)
-    linearizer = WheelActuatorLinearizer(inner, MotorResponse(dead_zone=0.2))
+    actuator = MX1616WheelActuator(
+        17,
+        18,
+        WheelActuatorCapabilities(0.4),
+        linearizer=SimpleDeadzoneMotorResponse(0.2),
+        output_factory=factory,
+    )
 
     async def scenario():
-        for velocity in (0.0, 0.1, -0.1, 0.2, -0.2):
-            await linearizer.set_surface_velocity(velocity)
+        await actuator.set_surface_velocity(0.004)  # a tiny speed already needs more than the dead zone
+        assert outputs[0].value > 0.2 and outputs[1].value == 0.0
+        await actuator.set_surface_velocity(-0.2)  # 50 % wanted -> 0.2 + 0.8 * 0.5
+        assert outputs[0].value == 0.0 and outputs[1].value == pytest.approx(0.6)
+        await actuator.set_surface_velocity(0.4)
+        assert outputs[0].value == 1.0
+        await actuator.set_surface_velocity(0.0)
+        assert (outputs[0].value, outputs[1].value) == (0.0, 0.0)
 
     asyncio.run(scenario())
-    # 50 % wanted -> 0.2 + 0.8 * 0.5 = 60 % of the maximum speed.
-    assert inner.speeds == [0.0, pytest.approx(0.12), pytest.approx(-0.12), 0.2, -0.2]
 
 
-def test_linearizer_rejects_speeds_outside_the_limits_and_forwards_the_rest():
-    inner = RecordingActuator(0.2)
-    linearizer = WheelActuatorLinearizer(inner, MotorResponse(dead_zone=0.2))
+def test_gazebo_actuator_applies_its_linearizer_and_keeps_the_direction():
+    published = []
+    actuator = GazeboWheelActuator(
+        "/wheel/cmd_vel",
+        0.04,
+        WheelActuatorCapabilities(0.5),
+        linearizer=SimpleDeadzoneMotorResponse(0.2),
+        publisher=lambda topic, value: published.append(value),
+    )
 
     async def scenario():
-        with pytest.raises(ValueError, match="outside actuator limits"):
-            await linearizer.set_surface_velocity(0.21)
-        await linearizer.stop()
-        await linearizer.close()
+        await actuator.set_surface_velocity(0.25)  # 50 % wanted -> 60 % of 0.5 m/s
+        await actuator.set_surface_velocity(-0.25)
+        await actuator.set_surface_velocity(0.0)
 
     asyncio.run(scenario())
-    assert inner.speeds == []
-    assert inner.calls == ["stop", "close"]
-    assert linearizer.capabilities is inner.capabilities
+    assert published == [pytest.approx(0.3 / 0.04), pytest.approx(-0.3 / 0.04), 0.0]
 
 
-def test_simulated_motor_does_not_move_inside_its_dead_zone():
-    inner = RecordingActuator(0.2)
-    motor = SimulatedMotorWheelActuator(inner, MotorResponse(dead_zone=0.3))
+def test_actuator_rejects_speed_outside_limits_before_linearizing():
+    class FailingLinearizer:
+        def inverse_response(self, speed_fraction):
+            raise AssertionError("must not be called")
 
-    async def scenario():
-        await motor.set_surface_velocity(0.04)  # 20 % duty, under the 30 % dead zone
-        await motor.set_surface_velocity(-0.1)  # 50 % duty -> (0.5 - 0.3) / 0.7 of the speed
-        await motor.set_surface_velocity(0.2)
-
-    asyncio.run(scenario())
-    assert inner.speeds == [0.0, pytest.approx(-0.2 * 0.2 / 0.7), 0.2]
-
-
-def test_linearizer_and_simulated_motor_give_back_the_wanted_speed():
-    response = MotorResponse(dead_zone=0.25, calibration=((0.6, 0.4),))
-    inner = RecordingActuator(0.2)
-    chain = WheelActuatorLinearizer(SimulatedMotorWheelActuator(inner, response), response)
-
-    async def scenario():
-        for velocity in (0.002, 0.05, -0.1, 0.2):
-            await chain.set_surface_velocity(velocity)
-
-    asyncio.run(scenario())
-    assert inner.speeds == [pytest.approx(v) for v in (0.002, 0.05, -0.1, 0.2)]
+    actuator = GazeboWheelActuator(
+        "/wheel/cmd_vel",
+        0.04,
+        WheelActuatorCapabilities(0.5),
+        linearizer=FailingLinearizer(),
+        publisher=lambda *_: None,
+    )
+    with pytest.raises(ValueError, match="outside actuator limits"):
+        asyncio.run(actuator.set_surface_velocity(0.6))
 
 
-def test_uncompensated_simulated_motor_loses_small_speeds():
-    inner = RecordingActuator(0.2)
-    chain = SimulatedMotorWheelActuator(inner, MotorResponse(dead_zone=0.3))
-    asyncio.run(chain.set_surface_velocity(0.04))
-    assert inner.speeds == [0.0]
-
-
-def test_factory_builds_the_chain_for_each_driver(monkeypatch):
+def test_factory_gives_the_linearizer_to_the_actuator(monkeypatch):
     from payload.infrastructure import wheel_actuators
 
-    monkeypatch.setattr(wheel_actuators, "_gazebo_transport_publisher", lambda topic: lambda t, v: None)
+    published = []
+    monkeypatch.setattr(
+        wheel_actuators,
+        "_gazebo_transport_publisher",
+        lambda _topic: (lambda _topic, value: published.append(value)),
+    )
     capabilities = WheelActuatorCapabilities(0.2)
-    response = MotorResponse(dead_zone=0.2)
-    pins = lambda pin, **kwargs: FakePWMOutput(pin, **kwargs)  # noqa: E731
+    linearizer = SimpleDeadzoneMotorResponse(0.2)
+    outputs = []
 
-    plain = create_wheel_actuator(GazeboMotorDriverConfiguration("gazebo", "/t"), 0.019, capabilities)
-    assert isinstance(plain, GazeboWheelActuator)
+    def factory(pin, **kwargs):
+        outputs.append(FakePWMOutput(pin, **kwargs))
+        return outputs[-1]
 
-    simulated = create_wheel_actuator(
-        GazeboMotorDriverConfiguration("gazebo", "/t", response=response), 0.019, capabilities
+    gazebo = create_wheel_actuator(
+        GazeboMotorDriverConfiguration("gazebo", "/t"), 0.04, capabilities, linearizer=linearizer
     )
-    assert isinstance(simulated, WheelActuatorLinearizer)
-    assert isinstance(simulated._actuator, SimulatedMotorWheelActuator)
-    assert isinstance(simulated._actuator._actuator, GazeboWheelActuator)
-
-    uncompensated = create_wheel_actuator(
-        GazeboMotorDriverConfiguration("gazebo", "/t", motor=response), 0.019, capabilities
+    mx1616 = create_wheel_actuator(
+        MX1616MotorDriverConfiguration("mx1616", 17, 18),
+        0.04,
+        capabilities,
+        linearizer=linearizer,
+        output_factory=factory,
     )
-    assert isinstance(uncompensated, SimulatedMotorWheelActuator)
 
-    robot_plain = create_wheel_actuator(
-        MX1616MotorDriverConfiguration("mx1616", 17, 18), 0.019, capabilities, output_factory=pins
-    )
-    assert isinstance(robot_plain, MX1616WheelActuator)
+    async def scenario():
+        await gazebo.set_surface_velocity(0.1)
+        await mx1616.set_surface_velocity(0.1)
 
-    robot = create_wheel_actuator(
-        MX1616MotorDriverConfiguration("mx1616", 17, 18, response), 0.019, capabilities, output_factory=pins
-    )
-    assert isinstance(robot, WheelActuatorLinearizer)
-    assert isinstance(robot._actuator, MX1616WheelActuator)
+    asyncio.run(scenario())
+    assert isinstance(gazebo, GazeboWheelActuator)
+    assert isinstance(mx1616, MX1616WheelActuator)
+    assert published == [pytest.approx(0.12 / 0.04)]
+    assert outputs[0].value == pytest.approx(0.6)
 
 
-def test_linearized_mx1616_applies_the_dead_zone_to_the_pwm():
+def test_actuators_without_linearizer_stay_linear():
     outputs = []
 
     def factory(pin, **kwargs):
@@ -310,18 +295,10 @@ def test_linearized_mx1616_applies_the_dead_zone_to_the_pwm():
         return outputs[-1]
 
     actuator = create_wheel_actuator(
-        MX1616MotorDriverConfiguration("mx1616", 17, 18, MotorResponse(dead_zone=0.2)),
-        0.019,
+        MX1616MotorDriverConfiguration("mx1616", 17, 18),
+        0.04,
         WheelActuatorCapabilities(0.4),
         output_factory=factory,
     )
-
-    async def scenario():
-        await actuator.set_surface_velocity(0.004)
-        assert outputs[0].value > 0.2 and outputs[1].value == 0.0
-        await actuator.set_surface_velocity(-0.2)
-        assert outputs[0].value == 0.0 and outputs[1].value == pytest.approx(0.6)
-        await actuator.set_surface_velocity(0.4)
-        assert outputs[0].value == 1.0
-
-    asyncio.run(scenario())
+    asyncio.run(actuator.set_surface_velocity(0.1))
+    assert outputs[0].value == 0.25

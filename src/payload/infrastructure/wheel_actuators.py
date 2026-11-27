@@ -6,7 +6,7 @@ import threading
 from collections.abc import Callable
 from typing import Any
 
-from payload.domain.motor_response import MotorResponse
+from payload.domain.motor_response import LinearMotorResponse, MotorResponse
 from payload.domain.wheel_actuator import WheelActuator, WheelActuatorCapabilities
 from payload.infrastructure.configuration import (
     GazeboMotorDriverConfiguration,
@@ -27,6 +27,15 @@ def _validate_velocity(velocity_m_s: float, capabilities: WheelActuatorCapabilit
             f"[{capabilities.min_surface_velocity}, {capabilities.max_surface_velocity}] m/s"
         )
     return velocity
+
+
+def _motor_command(
+    velocity: float,
+    capabilities: WheelActuatorCapabilities,
+    response: MotorResponse,
+) -> float:
+    """Return the motor command in [0, 1] (a PWM duty) that reaches a validated surface velocity."""
+    return response.inverse_response(abs(velocity) / capabilities.max_surface_velocity)
 
 
 class _GazeboTransport:
@@ -94,6 +103,7 @@ class GazeboWheelActuator:
         radius_m: float,
         capabilities: WheelActuatorCapabilities,
         *,
+        linearizer: MotorResponse | None = None,
         publisher: Callable[[str, float], Any] | None = None,
     ) -> None:
         if not topic.strip():
@@ -103,6 +113,7 @@ class GazeboWheelActuator:
         self._topic = topic
         self._radius_m = radius_m
         self._capabilities = capabilities
+        self._linearizer = linearizer if linearizer is not None else LinearMotorResponse()
         self._publisher = publisher or _gazebo_transport_publisher(topic)
 
     @property
@@ -111,7 +122,9 @@ class GazeboWheelActuator:
 
     async def set_surface_velocity(self, velocity_m_s: float) -> None:
         velocity = _validate_velocity(velocity_m_s, self._capabilities)
-        await self._publish(self._topic, velocity / self._radius_m)
+        command = _motor_command(velocity, self._capabilities, self._linearizer)
+        surface_velocity = math.copysign(command * self._capabilities.max_surface_velocity, velocity)
+        await self._publish(self._topic, surface_velocity / self._radius_m)
 
     async def stop(self) -> None:
         await self._publish(self._topic, 0.0)
@@ -136,6 +149,7 @@ class MX1616WheelActuator:
         in2_pin: int,
         capabilities: WheelActuatorCapabilities,
         *,
+        linearizer: MotorResponse | None = None,
         pwm_frequency_hz: int = 1000,
         output_factory: Callable[..., Any] | None = None,
     ) -> None:
@@ -150,6 +164,7 @@ class MX1616WheelActuator:
                 raise RuntimeError("gpiozero is required for MX1616 motor control") from exc
             output_factory = PWMOutputDevice
         self._capabilities = capabilities
+        self._linearizer = linearizer if linearizer is not None else LinearMotorResponse()
         self._in1 = output_factory(in1_pin, frequency=pwm_frequency_hz, initial_value=0)
         try:
             self._in2 = output_factory(in2_pin, frequency=pwm_frequency_hz, initial_value=0)
@@ -163,7 +178,7 @@ class MX1616WheelActuator:
 
     async def set_surface_velocity(self, velocity_m_s: float) -> None:
         velocity = _validate_velocity(velocity_m_s, self._capabilities)
-        duty = abs(velocity) / self._capabilities.max_surface_velocity
+        duty = _motor_command(velocity, self._capabilities, self._linearizer)
         if velocity > 0:
             self._in1.value = duty
             self._in2.value = 0.0
@@ -186,92 +201,28 @@ class MX1616WheelActuator:
             self._in2.close()
 
 
-class WheelActuatorLinearizer:
-    """
-    Compensate a motor's dead zone and non-linear response around any wheel actuator.
-
-    The wanted surface speed is turned into the speed the wrapped actuator must be
-    asked for so that the wheel really reaches the wanted one. The wrapped actuator
-    maps a speed to a PWM duty in a straight line (duty = speed / max speed), so the
-    corrected speed is simply ``max speed * duty``.
-    """
-
-    def __init__(self, actuator: WheelActuator, response: MotorResponse) -> None:
-        self._actuator = actuator
-        self._response = response
-
-    @property
-    def capabilities(self) -> WheelActuatorCapabilities:
-        return self._actuator.capabilities
-
-    async def set_surface_velocity(self, velocity_m_s: float) -> None:
-        capabilities = self._actuator.capabilities
-        velocity = _validate_velocity(velocity_m_s, capabilities)
-        duty = self._response.duty_for(abs(velocity) / capabilities.max_surface_velocity)
-        await self._actuator.set_surface_velocity(math.copysign(duty * capabilities.max_surface_velocity, velocity))
-
-    async def stop(self) -> None:
-        await self._actuator.stop()
-
-    async def close(self) -> None:
-        await self._actuator.close()
-
-
-class SimulatedMotorWheelActuator:
-    """
-    Make a simulated wheel behave like the real motor (dead zone, non-linear speed).
-
-    It receives what a real motor would receive, a PWM duty expressed as a speed
-    (``max speed * duty``), and passes on the speed the motor would really reach.
-    Place it between ``WheelActuatorLinearizer`` and the simulated actuator.
-    """
-
-    def __init__(self, actuator: WheelActuator, motor: MotorResponse) -> None:
-        self._actuator = actuator
-        self._motor = motor
-
-    @property
-    def capabilities(self) -> WheelActuatorCapabilities:
-        return self._actuator.capabilities
-
-    async def set_surface_velocity(self, velocity_m_s: float) -> None:
-        capabilities = self._actuator.capabilities
-        velocity = _validate_velocity(velocity_m_s, capabilities)
-        reached = self._motor.speed_fraction_for(abs(velocity) / capabilities.max_surface_velocity)
-        await self._actuator.set_surface_velocity(math.copysign(reached * capabilities.max_surface_velocity, velocity))
-
-    async def stop(self) -> None:
-        await self._actuator.stop()
-
-    async def close(self) -> None:
-        await self._actuator.close()
-
-
 def create_wheel_actuator(
     driver: MotorDriverConfiguration,
     radius_m: float,
     capabilities: WheelActuatorCapabilities,
     *,
+    linearizer: MotorResponse | None = None,
     output_factory: Callable[..., Any] | None = None,
 ) -> WheelActuator:
     """
-    Construct the actuator selected by a wheel's driver config.
+    Construct the actuator adapter selected by a wheel's driver config.
 
-    Chain on the robot:      linearizer -> MX1616 -> real motor.
-    Chain in the simulation: linearizer -> simulated motor -> Gazebo.
-    Layers that would do nothing (no dead zone, no calibration) are left out.
+    The linearizer is given to the actuator, which applies it to every command.
+    Without one, the motor is assumed to be linear.
     """
-    identity = MotorResponse()
     if isinstance(driver, GazeboMotorDriverConfiguration):
-        actuator: WheelActuator = GazeboWheelActuator(driver.topic, radius_m, capabilities)
-        motor = driver.motor if driver.motor is not None else driver.response
-        if motor != identity:
-            actuator = SimulatedMotorWheelActuator(actuator, motor)
-    elif isinstance(driver, MX1616MotorDriverConfiguration):
-        actuator = MX1616WheelActuator(driver.in1_pin, driver.in2_pin, capabilities, output_factory=output_factory)
-    else:
-        raise TypeError(f"Unsupported motor driver configuration: {type(driver).__name__}")
-
-    if driver.response != identity:
-        actuator = WheelActuatorLinearizer(actuator, driver.response)
-    return actuator
+        return GazeboWheelActuator(driver.topic, radius_m, capabilities, linearizer=linearizer)
+    if isinstance(driver, MX1616MotorDriverConfiguration):
+        return MX1616WheelActuator(
+            driver.in1_pin,
+            driver.in2_pin,
+            capabilities,
+            linearizer=linearizer,
+            output_factory=output_factory,
+        )
+    raise TypeError(f"Unsupported motor driver configuration: {type(driver).__name__}")

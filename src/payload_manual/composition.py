@@ -129,6 +129,7 @@ def build_manual_control_application(
                     wheel.driver,
                     wheel.transform.radius,
                     capabilities,
+                    linearizer=wheel.linearization,
                 )
             )
 

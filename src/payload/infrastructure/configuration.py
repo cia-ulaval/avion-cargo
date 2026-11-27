@@ -6,7 +6,12 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Literal
 
-from payload.domain.motor_response import MotorResponse
+from payload.domain.motor_response import (
+    LinearMotorResponse,
+    MonotonousAffineSegmentsMotorResponse,
+    MotorResponse,
+    SimpleDeadzoneMotorResponse,
+)
 from payload.domain.wheel_geometry import WheelTransform2D
 from shared.infrastructure.configuration import integer, non_empty_string, positive_number
 
@@ -15,8 +20,6 @@ from shared.infrastructure.configuration import integer, non_empty_string, posit
 class GazeboMotorDriverConfiguration:
     type: Literal["gazebo"]
     topic: str
-    response: MotorResponse = MotorResponse()
-    motor: MotorResponse | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -24,7 +27,6 @@ class MX1616MotorDriverConfiguration:
     type: Literal["mx1616"]
     in1_pin: int
     in2_pin: int
-    response: MotorResponse = MotorResponse()
 
 
 MotorDriverConfiguration = GazeboMotorDriverConfiguration | MX1616MotorDriverConfiguration
@@ -35,17 +37,44 @@ class WheelConfiguration:
     transform: WheelTransform2D
     driver: MotorDriverConfiguration
     max_surface_velocity: float
+    linearization: MotorResponse = LinearMotorResponse()
 
 
-def _parse_motor_response(field_name: str, raw: dict[str, Any]) -> MotorResponse:
-    """Read optional ``dead_zone`` and ``calibration`` fields of a driver or motor object."""
-    raw_calibration = raw.get("calibration", [])
-    if not isinstance(raw_calibration, list):
-        raise ValueError(f"{field_name}.calibration must be a list of [duty, speed_fraction] pairs")
+def _parse_linearization(wheel_path: str, raw: Any) -> MotorResponse:
+    """Read the optional ``linearization`` object of a wheel; a missing one means a linear motor."""
+    field_name = f"{wheel_path}.linearization"
+    if raw is None:
+        return LinearMotorResponse()
+    if not isinstance(raw, dict):
+        raise ValueError(f"{field_name} must be an object")
+
+    fields_by_type = {
+        "linear": set(),
+        "simple_deadzone": {"dead_zone"},
+        "monotonous_affine_segments": {"points"},
+    }
+    linearization_type = raw.get("type")
+    if not isinstance(linearization_type, str) or linearization_type not in fields_by_type:
+        raise ValueError(f"{field_name}.type must be one of: {', '.join(sorted(fields_by_type))}")
+
+    expected_fields = fields_by_type[linearization_type]
+    missing = expected_fields - raw.keys()
+    if missing:
+        raise ValueError(f"{field_name} is missing required field(s): {', '.join(sorted(missing))}")
+    unexpected = raw.keys() - expected_fields - {"type"}
+    if unexpected:
+        raise ValueError(f"{field_name} has unsupported field(s): {', '.join(sorted(unexpected))}")
+
+    if linearization_type == "monotonous_affine_segments" and not isinstance(raw["points"], list):
+        raise ValueError(f"{field_name}.points must be a list of [duty, speed_fraction] pairs")
+
     try:
-        return MotorResponse(
-            dead_zone=raw.get("dead_zone", 0.0),
-            calibration=tuple(tuple(point) if isinstance(point, list) else point for point in raw_calibration),
+        if linearization_type == "linear":
+            return LinearMotorResponse()
+        if linearization_type == "simple_deadzone":
+            return SimpleDeadzoneMotorResponse(raw["dead_zone"])
+        return MonotonousAffineSegmentsMotorResponse(
+            tuple(tuple(point) if isinstance(point, list) else point for point in raw["points"])
         )
     except (TypeError, ValueError) as exc:
         raise ValueError(f"{field_name}: {exc}") from exc
@@ -64,10 +93,6 @@ def _parse_motor_driver_configuration(
         "gazebo": {"topic"},
         "mx1616": {"in1_pin", "in2_pin"},
     }
-    optional_fields_by_type = {
-        "gazebo": {"dead_zone", "calibration", "motor"},
-        "mx1616": {"dead_zone", "calibration"},
-    }
     if not isinstance(driver_type, str) or driver_type not in fields_by_type:
         raise ValueError(f"{field_name}.type must be one of: gazebo, mx1616")
 
@@ -77,7 +102,7 @@ def _parse_motor_driver_configuration(
         missing_fields = ", ".join(sorted(missing))
         raise ValueError(f"{field_name} is missing required field(s): {missing_fields}")
 
-    unexpected = raw.keys() - expected_fields - optional_fields_by_type[driver_type] - {"type"}
+    unexpected = raw.keys() - expected_fields - {"type"}
     if unexpected:
         unexpected_fields = ", ".join(sorted(unexpected))
         raise ValueError(f"{field_name} has unsupported field(s): {unexpected_fields}")
@@ -85,15 +110,7 @@ def _parse_motor_driver_configuration(
     if driver_type == "gazebo":
         topic = raw["topic"]
         non_empty_string(topic, f"{field_name}.topic")
-        raw_motor = raw.get("motor")
-        if raw_motor is not None and not isinstance(raw_motor, dict):
-            raise ValueError(f"{field_name}.motor must be an object")
-        return GazeboMotorDriverConfiguration(
-            type="gazebo",
-            topic=topic,
-            response=_parse_motor_response(field_name, raw),
-            motor=None if raw_motor is None else _parse_motor_response(f"{field_name}.motor", raw_motor),
-        )
+        return GazeboMotorDriverConfiguration(type="gazebo", topic=topic)
 
     pins = {name: raw[name] for name in sorted(expected_fields)}
     for name, pin in pins.items():
@@ -101,13 +118,10 @@ def _parse_motor_driver_configuration(
     if len(set(pins.values())) != len(pins):
         raise ValueError(f"{field_name} GPIO pins must be distinct")
 
-    response = _parse_motor_response(field_name, raw)
-
     return MX1616MotorDriverConfiguration(
         type="mx1616",
         in1_pin=raw["in1_pin"],
         in2_pin=raw["in2_pin"],
-        response=response,
     )
 
 
@@ -151,11 +165,13 @@ def parse_payload_runtime_fields(path: str | Path) -> tuple[dict[str, Any], dict
         transform = WheelTransform2D(**values)
 
         driver = _parse_motor_driver_configuration(wheel_path, raw_wheel.get("driver"))
+        linearization = _parse_linearization(wheel_path, raw_wheel.get("linearization"))
         wheels.append(
             WheelConfiguration(
                 transform=transform,
                 driver=driver,
                 max_surface_velocity=max_surface_velocity,
+                linearization=linearization,
             )
         )
 
@@ -259,6 +275,9 @@ class PayloadRuntimeConfigurationValidation:
                 wheel.max_surface_velocity,
                 f"{wheel_path}.max_surface_velocity",
             )
+
+            if not callable(getattr(wheel.linearization, "inverse_response", None)):
+                raise ValueError(f"{wheel_path}.linearization must implement inverse_response")
 
             driver = wheel.driver
             if isinstance(driver, GazeboMotorDriverConfiguration):
