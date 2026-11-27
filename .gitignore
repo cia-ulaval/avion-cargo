@@ -140,3 +140,4 @@ temp/
 **/node_modules/
 **/target/
 **/src-tauri/gen/
+**/.vite/

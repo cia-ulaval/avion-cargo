@@ -1,0 +1,23 @@
+#!/usr/bin/env bash
+set -Eeuo pipefail
+cd /workspace/avion-cargo
+
+CONFIG="${AVION_MANUAL_PAYLOAD_CONFIG:-}"
+UART_DEVICE="${AVION_MANUAL_PAYLOAD_UART_DEVICE:-}"
+if [[ -z "$CONFIG" || ! -f "$CONFIG" ]]; then
+  echo "AVION_MANUAL_PAYLOAD_CONFIG must point to an existing manual payload JSON configuration." >&2
+  exit 2
+fi
+if [[ -n "$UART_DEVICE" ]]; then
+  echo "Waiting for payload D3K PTY: $UART_DEVICE"
+  for _ in {1..60}; do
+    [[ -e "$UART_DEVICE" ]] && break
+    sleep 1
+  done
+  if [[ ! -e "$UART_DEVICE" ]]; then
+    echo "Payload D3K PTY did not appear: $UART_DEVICE" >&2
+    exit 1
+  fi
+fi
+exec poetry run run_payload_manual \
+  --config "$CONFIG"

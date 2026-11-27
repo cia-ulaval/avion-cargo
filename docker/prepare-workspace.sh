@@ -33,4 +33,5 @@ PY
 
 poetry run precision_landing --help >/dev/null
 poetry run calibrate_camera --help >/dev/null
+poetry run manual_payload_trilateration --help >/dev/null
 echo "Workspace ready at $ROOT (Python $(poetry run python --version 2>&1))."

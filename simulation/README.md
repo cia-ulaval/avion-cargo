@@ -39,6 +39,21 @@ de côté, afin que le marqueur lui-même mesure exactement 2,4384 m, comme `tar
 Le niveau fractal est choisi automatiquement par le détecteur selon la portion visible.
 L'ancien monde `runway_iris_aruco.sdf` reste disponible pour des essais ArUco avec une configuration adaptée.
 
+## Essai manuel du payload avec trilatération
+
+Cet essai utilise une application indépendante de `payload_manual`, avec son propre
+point d’entrée Python, sa propre interface Tauri/Vue et son monde Gazebo à trois ancres.
+Pour lancer le scénario depuis la racine du dépôt :
+
+```bash
+docker compose -f compose.yaml -f compose-payload-manual-trilateration.yaml up --build --force-recreate -d dev
+COMPOSE_FILE=compose.yaml:compose-payload-manual-trilateration.yaml bash scripts/launch-simulation.sh
+```
+
+La configuration utilisée est `simulation/config/manual_payload_trilateration_config.json`.
+Le scénario legacy reste accessible par `compose-payload-manual.yaml` et utilise toujours
+le paquet `payload_manual` et son interface d’origine.
+
 ## Tricopter QuadPlane avec Docker
 
 Docker clone `https://github.com/bertrand-awz/ardupilot.git` à la révision
@@ -56,15 +71,15 @@ La préparation Docker installe le groupe optionnel `faruco`. Pour un conteneur 
 dont les dépendances ont déjà été préparées, exécutez `docker compose exec dev poetry install --with dev,faruco`.
 Après un changement de cible ou de dimensions, relancez Gazebo et Autolander pour charger
 à la fois le monde et les paramètres de détection.
-Le [Dockerfile](../Dockerfile) définit directement le script `/usr/local/bin/avion-sitl`
-dans son bloc `CREATE_LAUNCHERS`, comme les autres lanceurs du conteneur.
-Le lancement complet et le raccourci `avion-sitl` exécutent cette même version,
-figée lors de la construction de l'image. Les paramètres de simulation sont lus
-dans le dépôt monté sous `/workspace/avion-cargo`.
+Les lanceurs du conteneur sont maintenus dans [docker/launchers](../docker/launchers).
+Le script [docker/install-launchers.sh](../docker/install-launchers.sh) crée leurs liens dans `/usr/local/bin` lors de la construction de l’image.
+Les lanceurs sont exécutés depuis le dépôt monté sous `/workspace/avion-cargo`;
+leurs modifications sont donc prises en compte sans reconstruire l'image. Les paramètres
+de simulation sont lus depuis ce même dépôt.
 
-Après une modification du lanceur ou du Dockerfile, arrêtez la simulation puis
-reconstruisez et recréez le conteneur avec la commande ci-dessus. Si seules les
-variables d'environnement ou les publications de ports de Compose ont changé,
+Après une modification du Dockerfile, arrêtez la simulation puis reconstruisez et
+recréez le conteneur avec la commande ci-dessus. Si seules les sources des lanceurs,
+les variables d'environnement ou les publications de ports de Compose ont changé,
 utilisez `docker compose -f compose.yaml -f compose-full-sim.yaml up --force-recreate -d dev`,
 avec les mêmes fichiers Compose X11/NVIDIA éventuels. Un simple `restart` n'applique
 pas ces changements. Voir les [options de `docker compose up`](https://docs.docker.com/reference/cli/docker/compose/up/).

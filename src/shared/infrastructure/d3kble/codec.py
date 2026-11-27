@@ -153,12 +153,29 @@ def estimate_to_data(estimate: PositionEstimate) -> dict[str, Any]:
     if len(anchor_ids) != len(set(anchor_ids)):
         raise D3kbleProtocolError("position_estimate.anchor_ids must be unique")
 
-    return {
+    result = {
         "position": position_to_data(estimate.position),
         "residual_m": residual,
         "anchor_ids": anchor_ids,
         "sequence": _integer(estimate.sequence, "position_estimate.sequence", minimum=0),
     }
+    if estimate.device_monotonic_us is not None:
+        result["device_monotonic_us"] = _integer(
+            estimate.device_monotonic_us, "position_estimate.device_monotonic_us", minimum=0
+        )
+    if estimate.epoch_us is not None:
+        result["epoch_us"] = _integer(estimate.epoch_us, "position_estimate.epoch_us", minimum=0)
+    if estimate.received_at is not None:
+        result["received_at"] = _finite(estimate.received_at, "position_estimate.received_at")
+    if estimate.covariance_xy_m2 is not None:
+        if len(estimate.covariance_xy_m2) != 3:
+            raise D3kbleProtocolError("position_estimate.covariance_xy_m2 must contain three values")
+        result["covariance_xy_m2"] = [
+            _finite(value, "position_estimate.covariance_xy_m2") for value in estimate.covariance_xy_m2
+        ]
+    if estimate.quality != "unknown":
+        result["quality"] = _string(estimate.quality, "position_estimate.quality")
+    return result
 
 
 def estimate_from_data(data: Any) -> PositionEstimate:
@@ -172,12 +189,36 @@ def estimate_from_data(data: Any) -> PositionEstimate:
 
     if not isinstance(anchors, list) or any(not isinstance(anchor, str) or not anchor for anchor in anchors):
         raise D3kbleProtocolError("position_estimate.anchor_ids must be a list of non-empty strings")
+    covariance = item.get("covariance_xy_m2")
+    if covariance is not None and (not isinstance(covariance, list) or len(covariance) != 3):
+        raise D3kbleProtocolError("position_estimate.covariance_xy_m2 must be a three-value list")
 
     return PositionEstimate(
         position=position_from_data(item.get("position")),
         residual_m=residual,
         anchor_ids=tuple(anchors),
         sequence=_integer(item.get("sequence"), "position_estimate.sequence", minimum=0),
+        device_monotonic_us=(
+            _integer(item.get("device_monotonic_us"), "position_estimate.device_monotonic_us", minimum=0)
+            if item.get("device_monotonic_us") is not None
+            else None
+        ),
+        epoch_us=(
+            _integer(item.get("epoch_us"), "position_estimate.epoch_us", minimum=0)
+            if item.get("epoch_us") is not None
+            else None
+        ),
+        received_at=(
+            _finite(item.get("received_at"), "position_estimate.received_at")
+            if item.get("received_at") is not None
+            else None
+        ),
+        covariance_xy_m2=(
+            tuple(_finite(value, "position_estimate.covariance_xy_m2") for value in item["covariance_xy_m2"])
+            if covariance is not None
+            else None
+        ),
+        quality=_string(item.get("quality", "unknown"), "position_estimate.quality"),
     )
 
 

@@ -1,0 +1,8 @@
+services:
+  dev:
+    environment:
+      AVION_WORLD: /workspace/avion-cargo/simulation/worlds/payload_manual_trilateration.sdf
+      AVION_SIM_SERVICES: "avion-gazebo avion-payload-manual-trilateration avion-payload-manual-trilateration-ui"
+      AVION_SIM_STARTUP_DELAY: "3"
+      AVION_PAYLOAD_MANUAL_TRILATERATION_CONFIG: /workspace/avion-cargo/simulation/config/manual_payload_trilateration_config.json
+      AVION_PAYLOAD_MANUAL_TRILATERATION_UART_DEVICE: /tmp/payload-anchor

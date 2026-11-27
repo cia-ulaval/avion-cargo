@@ -6,7 +6,7 @@ from types import SimpleNamespace
 import pytest
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
-DOCKERFILE = REPO_ROOT / "Dockerfile"
+SITL_LAUNCHER = REPO_ROOT / "docker" / "launchers" / "avion-sitl"
 
 
 @pytest.fixture
@@ -24,12 +24,10 @@ def sitl(tmp_path):
     simulator.chmod(0o755)
 
     env = {key: value for key, value in os.environ.items() if not key.startswith("AVION_")}
-    _, start, remainder = DOCKERFILE.read_text().partition("cat > /usr/local/bin/avion-sitl <<'SCRIPT'\n")
-    script, end, _ = remainder.partition("\nSCRIPT\n")
-    assert start and end, "Dockerfile must define the avion-sitl launcher"
+    assert SITL_LAUNCHER.is_file(), "docker/launchers must contain the avion-sitl launcher"
     launcher = tmp_path / "image/usr/local/bin/avion-sitl"
     launcher.parent.mkdir(parents=True)
-    launcher.write_text(script + "\n")
+    launcher.write_text(SITL_LAUNCHER.read_text())
     launcher.chmod(0o755)
 
     env.update(

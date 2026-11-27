@@ -14,5 +14,10 @@
     "noUnusedLocals": false,
     "noUnusedParameters": false
   },
-  "include": ["src/**/*.ts", "src/**/*.vue", "src-tauri/src/**/*.rs"]
+  "include": [
+    "../../payload_manual/ui/src/**/*.ts",
+    "../../payload_manual/ui/src/**/*.vue",
+    "../../payload_manual_trilateration/ui/src/**/*.ts",
+    "../../payload_manual_trilateration/ui/src/**/*.vue"
+  ]
 }

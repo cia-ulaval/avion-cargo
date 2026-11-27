@@ -149,3 +149,19 @@ def test_typical_dlz_snapshot_with_four_payloads_fits_ble_envelope(estimate: Pos
     message = encode_plane_event(DLZStateUpdated(dlz))
 
     assert decode_plane_event(message) == DLZStateUpdated(dlz)
+
+
+def test_position_estimate_optional_timing_and_uncertainty_metadata_round_trip() -> None:
+    estimate_with_metadata = PositionEstimate(
+        position=Position(0.25, -0.12, 0.04),
+        residual_m=0.012,
+        anchor_ids=("anchor-a", "anchor-b", "anchor-c"),
+        sequence=17,
+        device_monotonic_us=123456,
+        epoch_us=0,
+        received_at=42.5,
+        covariance_xy_m2=(0.0004, 0.0001, 0.0009),
+        quality="good",
+    )
+    event = PayloadPositionUpdated(estimate_with_metadata)
+    assert decode_payload_event(encode_payload_event(event)) == event

@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+set -Eeuo pipefail
+SCRIPT_DIR=/workspace/avion-cargo/docker
+if [[ -d "$SCRIPT_DIR" ]]; then
+  while IFS= read -r -d '' script; do
+    chmod 0755 "$script"
+  done < <(find "$SCRIPT_DIR" -maxdepth 1 -type f -name '*.sh' -print0)
+fi
+if [[ $# -eq 0 ]]; then
+  set -- /usr/local/bin/container-start.sh
+fi
+exec "$@"

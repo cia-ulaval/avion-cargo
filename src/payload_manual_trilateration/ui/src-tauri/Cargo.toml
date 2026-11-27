@@ -1,0 +1,25 @@
+[package]
+name = "payload-manual-trilateration-controller"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+description = "D3K BLE manual controller with trilateration telemetry"
+build = "build.rs"
+workspace = "../../../shared/ui/src-tauri"
+
+[lib]
+name = "payload_manual_trilateration_controller_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[features]
+default = []
+custom-protocol = ["tauri/custom-protocol"]
+
+[build-dependencies]
+tauri-build.workspace = true
+
+[dependencies]
+tauri.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+serialport.workspace = true

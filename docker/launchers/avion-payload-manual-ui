@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+set -Eeuo pipefail
+ROOT="${AVION_CARGO_ROOT:-/workspace/avion-cargo}"
+exec npm --prefix "$ROOT/src/shared/ui" --workspace payload-manual-ui run tauri:dev

@@ -1,22 +1,11 @@
 {
-  "name": "payload-manual-controller",
+  "name": "payload-manual-ui",
   "private": true,
   "version": "0.1.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
-    "build": "vue-tsc --noEmit && vite build",
-    "tauri": "tauri"
-  },
-  "dependencies": {
-    "@tauri-apps/api": "^2.0.0",
-    "vue": "^3.5.0"
-  },
-  "devDependencies": {
-    "@tauri-apps/cli": "^2.0.0",
-    "@vitejs/plugin-vue": "^5.2.0",
-    "typescript": "~5.7.2",
-    "vite": "^6.0.0",
-    "vue-tsc": "^2.2.0"
+    "dev": "vite --config ../../shared/ui/vite.config.ts",
+    "build": "vue-tsc --noEmit --project ../../shared/ui/tsconfig.json && vite build --config ../../shared/ui/vite.config.ts",
+    "tauri:dev": "tauri dev --config ../../shared/ui/src-tauri/tauri.base.conf.json --config src-tauri/tauri.identity.json"
   }
 }

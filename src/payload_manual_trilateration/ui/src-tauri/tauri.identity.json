@@ -1,0 +1,21 @@
+{
+  "build": {
+    "beforeDevCommand": "npm --prefix ../../shared/ui --workspace payload-manual-trilateration-ui run dev",
+    "beforeBuildCommand": "npm --prefix ../../shared/ui --workspace payload-manual-trilateration-ui run build"
+  },
+  "productName": "Payload Manual Trilateration",
+  "identifier": "ca.ulaval.cia.payload-manual-trilateration",
+  "app": {
+    "windows": [
+      {
+        "label": "main",
+        "title": "Payload Manual Trilateration",
+        "width": 900,
+        "height": 700,
+        "minWidth": 760,
+        "minHeight": 600,
+        "resizable": true
+      }
+    ]
+  }
+}
