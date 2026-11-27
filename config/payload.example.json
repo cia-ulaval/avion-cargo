@@ -20,6 +20,10 @@
         "type": "mx1616",
         "in1_pin": 17,
         "in2_pin": 18
+      },
+      "linearization": {
+        "type": "simple_deadzone",
+        "dead_zone": 0.2
       }
     },
     {
@@ -32,6 +36,10 @@
         "type": "mx1616",
         "in1_pin": 22,
         "in2_pin": 23
+      },
+      "linearization": {
+        "type": "simple_deadzone",
+        "dead_zone": 0.2
       }
     },
     {
@@ -44,6 +52,10 @@
         "type": "mx1616",
         "in1_pin": 24,
         "in2_pin": 25
+      },
+      "linearization": {
+        "type": "simple_deadzone",
+        "dead_zone": 0.2
       }
     }
   ]

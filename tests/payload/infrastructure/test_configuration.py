@@ -2,6 +2,11 @@ import json
 
 import pytest
 
+from payload.domain.motor_response import (
+    LinearMotorResponse,
+    MonotonousAffineSegmentsMotorResponse,
+    SimpleDeadzoneMotorResponse,
+)
 from payload.infrastructure.configuration import (
     GazeboMotorDriverConfiguration,
     MX1616MotorDriverConfiguration,
@@ -410,3 +415,106 @@ def test_payload_runtime_configuration_rejects_reused_gpio_pins(tmp_path):
         match="GPIO pin 18 is assigned to more than one",
     ):
         PayloadRuntimeConfiguration.from_file(path)
+
+
+def _write_payload_with_linearizations(tmp_path, linearizations):
+    wheels = []
+    for index, linearization in enumerate(linearizations):
+        wheel = {
+            "x": 0.1,
+            "y": 0.2,
+            "yaw": 0.3,
+            "radius": 0.04,
+            "max_surface_velocity": 0.5,
+            "driver": {"type": "mx1616", "in1_pin": 17 + 2 * index, "in2_pin": 18 + 2 * index},
+        }
+        if linearization is not None:
+            wheel["linearization"] = linearization
+        wheels.append(wheel)
+    path = tmp_path / "payload.json"
+    path.write_text(
+        json.dumps(
+            {
+                "payload_id": "payload-a",
+                "uart_device": "/dev/ttyAMA2",
+                "plane_peer_id": 10,
+                "uwb": {"anchor_id_by_target_id": {"200": "front-left"}},
+                "wheels": wheels,
+            }
+        ),
+        encoding="utf-8",
+    )
+    return path
+
+
+def test_payload_runtime_configuration_parses_wheel_linearizations(tmp_path):
+    path = _write_payload_with_linearizations(
+        tmp_path,
+        [
+            None,
+            {"type": "linear"},
+            {"type": "simple_deadzone", "dead_zone": 0.25},
+            {"type": "monotonous_affine_segments", "points": [[0.2, 0.0], [0.5, 0.4]]},
+        ],
+    )
+
+    wheels = PayloadRuntimeConfiguration.from_file(path).wheels
+
+    assert wheels[0].linearization == LinearMotorResponse()
+    assert wheels[1].linearization == LinearMotorResponse()
+    assert wheels[2].linearization == SimpleDeadzoneMotorResponse(0.25)
+    assert wheels[3].linearization == MonotonousAffineSegmentsMotorResponse(((0.2, 0.0), (0.5, 0.4)))
+
+
+@pytest.mark.parametrize(
+    "linearization, message",
+    [
+        ("simple_deadzone", r"wheels\[0\].linearization must be an object"),
+        ({}, "linearization.type must be one of: linear, monotonous_affine_segments, simple_deadzone"),
+        ({"type": "magic"}, "linearization.type must be one of"),
+        ({"type": "simple_deadzone"}, "linearization is missing required field.*dead_zone"),
+        ({"type": "simple_deadzone", "dead_zone": 0.2, "extra": 1}, "linearization has unsupported field.*extra"),
+        ({"type": "linear", "dead_zone": 0.2}, "linearization has unsupported field.*dead_zone"),
+        (
+            {"type": "simple_deadzone", "dead_zone": 1.5},
+            r"linearization: dead_zone must be a number in \[0, 1\)",
+        ),
+        ({"type": "monotonous_affine_segments"}, "linearization is missing required field.*points"),
+        ({"type": "monotonous_affine_segments", "points": 0.5}, "linearization.points must be a list"),
+        (
+            {"type": "monotonous_affine_segments", "points": [[0.5]]},
+            "linearization: points must be \\(duty, speed_fraction\\) pairs",
+        ),
+        (
+            {"type": "monotonous_affine_segments", "points": [[0.5, 0.2], [0.4, 0.3]]},
+            "linearization: point duties must strictly increase",
+        ),
+    ],
+)
+def test_payload_runtime_configuration_rejects_invalid_linearizations(tmp_path, linearization, message):
+    path = _write_payload_with_linearizations(tmp_path, [linearization])
+
+    with pytest.raises(ValueError, match=message):
+        PayloadRuntimeConfiguration.from_file(path)
+
+
+def test_payload_runtime_configuration_rejects_a_linearization_without_inverse_response(tmp_path):
+    path = _write_payload_with_linearizations(tmp_path, [None])
+    config = PayloadRuntimeConfiguration.from_file(path)
+    wheel = WheelConfiguration(
+        transform=config.wheels[0].transform,
+        driver=config.wheels[0].driver,
+        max_surface_velocity=0.5,
+        linearization=object(),
+    )
+
+    config = PayloadRuntimeConfiguration(
+        payload_id="payload-a",
+        uart_device="/dev/ttyAMA2",
+        plane_peer_id=10,
+        anchor_id_by_target_id={200: "front-left"},
+        wheels=(wheel,),
+    )
+
+    with pytest.raises(ValueError, match="linearization must implement inverse_response"):
+        config.validate_common()
