@@ -1,0 +1,17 @@
+{
+  "productName": "Payload Manual Trilateration",
+  "identifier": "ca.ulaval.cia.payload-manual-trilateration",
+  "app": {
+    "windows": [
+      {
+        "label": "main",
+        "title": "Payload Manual Trilateration",
+        "width": 900,
+        "height": 700,
+        "minWidth": 760,
+        "minHeight": 600,
+        "resizable": true
+      }
+    ]
+  }
+}

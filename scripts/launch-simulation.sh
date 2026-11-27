@@ -355,14 +355,14 @@ for entry in "$@"; do
     avion-payload-manual) require_file AVION_MANUAL_PAYLOAD_CONFIG ;;
     avion-payload-manual-trilateration) require_file AVION_PAYLOAD_MANUAL_TRILATERATION_CONFIG ;;
     avion-payload-manual-ui)
-      if [[ ! -f /workspace/avion-cargo/src/payload_manual/ui/package.json ]]; then
-        echo "Payload manual UI package.json is missing." >&2
+      if [[ ! -f /workspace/avion-cargo/src/shared/ui/package.json || ! -f /workspace/avion-cargo/src/payload_manual/ui/src-tauri/tauri.identity.json ]]; then
+        echo "Shared UI scaffold or payload manual UI configuration is missing." >&2
         exit 2
       fi
       ;;
     avion-payload-manual-trilateration-ui)
-      if [[ ! -f /workspace/avion-cargo/src/payload_manual_trilateration/ui/package.json ]]; then
-        echo "Payload manual trilateration UI package.json is missing." >&2
+      if [[ ! -f /workspace/avion-cargo/src/shared/ui/package.json || ! -f /workspace/avion-cargo/src/payload_manual_trilateration/ui/src-tauri/tauri.identity.json ]]; then
+        echo "Shared UI scaffold or payload manual trilateration UI configuration is missing." >&2
         exit 2
       fi
       ;;

@@ -139,3 +139,5 @@ temp/
 # Tauri / frontend generated files
 **/node_modules/
 **/target/
+**/src-tauri/gen/
+**/src-tauri/tauri.conf.json
