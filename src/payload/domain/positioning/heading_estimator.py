@@ -16,12 +16,8 @@ class HeadingEstimate:
 
 
 class TranslationHeadingEstimator:
-    """Infer payload yaw from body-frame commands and observed tag displacement.
-
-    The caller supplies every fresh position estimate as it is produced by an
-    individual range event. No synchronized anchor sweep is required. Heading
-    candidates are accepted only after stable translation over a sufficient
-    time/displacement window, then circularly filtered to reject position noise.
+    """
+    Infer payload yaw from body-frame commands and observed tag displacement.
     """
 
     def __init__(
@@ -29,7 +25,7 @@ class TranslationHeadingEstimator:
         *,
         minimum_displacement_m: float = 0.08,
         maximum_yaw_rate_rad_s: float = 0.45,
-        smoothing: float = 0.25,
+        smoothing: float = 0.5,
         minimum_interval_s: float = 0.20,
         maximum_interval_s: float = 1.0,
         consistency_threshold: float = 0.70,

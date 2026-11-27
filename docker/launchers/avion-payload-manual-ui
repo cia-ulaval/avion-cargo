@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+set -Eeuo pipefail
+cd /workspace/avion-cargo/src/payload_manual/ui
+
+if [[ ! -x node_modules/.bin/tauri ]]; then
+  echo "Installing the Payload Manual Control UI dependencies..."
+  npm install --no-audit --no-fund
+fi
+
+exec npm run tauri -- dev

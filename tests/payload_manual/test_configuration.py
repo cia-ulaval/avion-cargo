@@ -74,26 +74,3 @@ def test_manual_payload_configuration_requires_controller_peer_id(tmp_path):
 
     with pytest.raises(ValueError):
         ManualPayloadRuntimeConfiguration.from_file(path)
-
-
-def test_manual_payload_configuration_parses_positioning_geometry(tmp_path):
-    document = _manual_configuration()
-    document["positioning"] = {
-        "anchors": {
-            "a": {"x": 0.0, "y": 0.0, "z": 0.1},
-            "b": {"x": 1.0, "y": 0.0, "z": 0.1},
-            "c": {"x": 0.5, "y": 1.0, "z": 0.1},
-        },
-        "tag_height_m": 0.04,
-        "range_std_m": 0.015,
-        "payload_to_tag_xy_m": [0.02, -0.01],
-    }
-    path = tmp_path / "manual-payload.json"
-    path.write_text(json.dumps(document), encoding="utf-8")
-
-    config = ManualPayloadRuntimeConfiguration.from_file(path)
-
-    assert config.tag_height_m == pytest.approx(0.04)
-    assert config.range_std_m == pytest.approx(0.015)
-    assert config.anchor_positions_by_id["b"].x == pytest.approx(1.0)
-    assert config.payload_to_tag_xy_m == pytest.approx((0.02, -0.01))

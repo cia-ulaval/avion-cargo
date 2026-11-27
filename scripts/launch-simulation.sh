@@ -353,9 +353,16 @@ for entry in "$@"; do
     avion-vtol) require_file AVION_VTOL_CONFIG ;;
     avion-payload) require_file AVION_PAYLOAD_CONFIG ;;
     avion-payload-manual) require_file AVION_MANUAL_PAYLOAD_CONFIG ;;
+    avion-payload-manual-trilateration) require_file AVION_PAYLOAD_MANUAL_TRILATERATION_CONFIG ;;
     avion-payload-manual-ui)
       if [[ ! -f /workspace/avion-cargo/src/payload_manual/ui/package.json ]]; then
         echo "Payload manual UI package.json is missing." >&2
+        exit 2
+      fi
+      ;;
+    avion-payload-manual-trilateration-ui)
+      if [[ ! -f /workspace/avion-cargo/src/payload_manual_trilateration/ui/package.json ]]; then
+        echo "Payload manual trilateration UI package.json is missing." >&2
         exit 2
       fi
       ;;

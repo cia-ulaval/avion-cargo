@@ -4,5 +4,5 @@ services:
       AVION_WORLD: /workspace/avion-cargo/simulation/worlds/payload_manual.sdf
       AVION_SIM_SERVICES: "avion-gazebo avion-payload-manual avion-payload-manual-ui"
       AVION_SIM_STARTUP_DELAY: "3"
-      AVION_MANUAL_PAYLOAD_CONFIG: /workspace/avion-cargo/simulation/config/manual_payload_config.json
+      AVION_MANUAL_PAYLOAD_CONFIG: /workspace/avion-cargo/simulation/config/payload_manual_config.json
       AVION_MANUAL_PAYLOAD_UART_DEVICE: /tmp/payload-anchor

@@ -54,6 +54,10 @@ LAYER_RULES = (
         "shared",
         {"vtol", "payload"},
     ),
+    (
+        "payload_manual_trilateration",
+        {"payload_manual"},
+    ),
 )
 
 

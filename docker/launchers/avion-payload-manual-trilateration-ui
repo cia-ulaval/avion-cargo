@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+set -Eeuo pipefail
+ROOT="${AVION_CARGO_ROOT:-/workspace/avion-cargo}"
+cd "$ROOT/src/payload_manual_trilateration/ui"
+
+if [[ ! -x node_modules/.bin/tauri ]]; then
+  echo "Installing the Payload Manual Trilateration UI dependencies..."
+  npm install --no-audit --no-fund
+fi
+
+exec npm run tauri -- dev

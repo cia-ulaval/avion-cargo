@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+set -eo pipefail
+set +u
+source /opt/ros/jazzy/setup.bash
+set -u
+cd /workspace/avion-cargo
+
+CONFIG="${AVION_AUTOLANDER_CONFIG:-simulation/config/autolanding_config.json}"
+
+exec poetry run precision_landing "$CONFIG" --gz-simulation

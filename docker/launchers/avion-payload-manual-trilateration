@@ -1,0 +1,23 @@
+#!/usr/bin/env bash
+set -Eeuo pipefail
+cd "${AVION_CARGO_ROOT:-/workspace/avion-cargo}"
+
+CONFIG="${AVION_PAYLOAD_MANUAL_TRILATERATION_CONFIG:-}"
+UART_DEVICE="${AVION_PAYLOAD_MANUAL_TRILATERATION_UART_DEVICE:-}"
+if [[ -z "$CONFIG" || ! -f "$CONFIG" ]]; then
+  echo "AVION_PAYLOAD_MANUAL_TRILATERATION_CONFIG must point to an existing trilateration payload JSON configuration." >&2
+  exit 2
+fi
+if [[ -n "$UART_DEVICE" ]]; then
+  echo "Waiting for payload D3K PTY: $UART_DEVICE"
+  for _ in {1..60}; do
+    [[ -e "$UART_DEVICE" ]] && break
+    sleep 1
+  done
+  if [[ ! -e "$UART_DEVICE" ]]; then
+    echo "Payload D3K PTY did not appear: $UART_DEVICE" >&2
+    exit 1
+  fi
+fi
+exec poetry run manual_payload_trilateration \
+  --config "$CONFIG"

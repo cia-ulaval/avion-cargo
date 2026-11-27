@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+set -eo pipefail
+set +u
+source /opt/ros/jazzy/setup.bash
+set -u
+
+AUTOLANDER_IMAGE_TOPIC="${AVION_IMAGE_TOPIC:-/world/iris_runway/model/iris_with_gimbal/model/gimbal/link/pitch_link/sensor/camera/image}"
+
+exec ros2 run ros_gz_bridge parameter_bridge \
+  "${AUTOLANDER_IMAGE_TOPIC}@sensor_msgs/msg/Image[gz.msgs.Image"

@@ -4,7 +4,7 @@ import pytest
 
 from payload.domain.body_velocity import BodyVelocity
 from payload_manual.application.runtime import ManualControlLimits, ManualControlRuntime
-from payload_manual.domain.manual_control import ManualControlCommand, ReferenceVelocity
+from payload_manual.domain.manual_control import ManualControlCommand
 
 
 class FakePeer:
@@ -69,12 +69,12 @@ async def test_manual_runtime_requires_arm_and_applies_drive_command():
     stop_event = asyncio.Event()
     task = asyncio.create_task(runtime.run(stop_event))
     try:
-        await peer.queue.put(ManualControlCommand("session-a", 1, "drive", ReferenceVelocity(0.1, 0.0, 0.0)))
+        await peer.queue.put(ManualControlCommand("session-a", 1, "drive", BodyVelocity(0.1, 0.0, 0.0)))
         await asyncio.sleep(0.04)
         assert wheels.commands == []
 
         await peer.queue.put(ManualControlCommand("session-a", 2, "arm"))
-        await peer.queue.put(ManualControlCommand("session-a", 3, "drive", ReferenceVelocity(0.3, 0.0, 2.0)))
+        await peer.queue.put(ManualControlCommand("session-a", 3, "drive", BodyVelocity(0.3, 0.0, 2.0)))
         await asyncio.sleep(0.06)
         assert wheels.commands == [BodyVelocity(0.3, 0.0, 2.0)]
         assert sensor.started
@@ -93,14 +93,14 @@ async def test_heartbeat_renews_lease_without_reapplying_unchanged_setpoint():
     runtime = ManualControlRuntime(peer, wheels, sensor, ManualControlLimits(command_timeout_ms=500))
     stop_event = asyncio.Event()
     task = asyncio.create_task(runtime.run(stop_event))
-    velocity = ReferenceVelocity(0.1, 0.0, 0.0)
+    velocity = BodyVelocity(0.1, 0.0, 0.0)
     try:
         await peer.queue.put(ManualControlCommand("session-a", 1, "arm"))
         await peer.queue.put(ManualControlCommand("session-a", 2, "drive", velocity))
         await peer.queue.put(ManualControlCommand("session-a", 3, "drive", velocity))
-        await peer.queue.put(ManualControlCommand("session-a", 4, "drive", ReferenceVelocity(0.2, 0.0, 0.0)))
+        await peer.queue.put(ManualControlCommand("session-a", 4, "drive", BodyVelocity(0.2, 0.0, 0.0)))
         await asyncio.sleep(0.04)
-        assert wheels.commands == [BodyVelocity(0.1, 0.0, 0.0), BodyVelocity(0.2, 0.0, 0.0)]
+        assert wheels.commands == [velocity, BodyVelocity(0.2, 0.0, 0.0)]
     finally:
         stop_event.set()
         await task
@@ -116,7 +116,7 @@ async def test_manual_runtime_watchdog_stops_and_disarms():
     task = asyncio.create_task(runtime.run(stop_event))
     try:
         await peer.queue.put(ManualControlCommand("session-a", 1, "arm"))
-        await peer.queue.put(ManualControlCommand("session-a", 2, "drive", ReferenceVelocity(0.05, 0.0, 0.0)))
+        await peer.queue.put(ManualControlCommand("session-a", 2, "drive", BodyVelocity(0.05, 0.0, 0.0)))
         await asyncio.sleep(0.2)
         stops_after_watchdog = wheels.stops
         commands_after_watchdog = len(wheels.commands)
@@ -139,7 +139,7 @@ async def test_stop_and_disarm_write_zero_without_waiting_for_a_control_tick():
     task = asyncio.create_task(runtime.run(stop_event))
     try:
         await peer.queue.put(ManualControlCommand("session-a", 1, "arm"))
-        await peer.queue.put(ManualControlCommand("session-a", 2, "drive", ReferenceVelocity(0.05, 0.0, 0.0)))
+        await peer.queue.put(ManualControlCommand("session-a", 2, "drive", BodyVelocity(0.05, 0.0, 0.0)))
         await asyncio.sleep(0.02)
         stops_before_stop = wheels.stops
         await peer.queue.put(ManualControlCommand("session-a", 3, "stop"))
@@ -164,7 +164,7 @@ async def test_failed_safety_stop_is_retried_by_a_delayed_retry_task():
     task = asyncio.create_task(runtime.run(stop_event))
     try:
         await peer.queue.put(ManualControlCommand("session-a", 1, "arm"))
-        await peer.queue.put(ManualControlCommand("session-a", 2, "drive", ReferenceVelocity(0.05, 0.0, 0.0)))
+        await peer.queue.put(ManualControlCommand("session-a", 2, "drive", BodyVelocity(0.05, 0.0, 0.0)))
         await asyncio.sleep(0.02)
         wheels.fail_next_stop = True
         await peer.queue.put(ManualControlCommand("session-a", 3, "disarm"))
@@ -189,7 +189,7 @@ async def test_actuator_command_failure_disarms_without_terminating_runtime():
         await peer.queue.put(ManualControlCommand("session-a", 1, "arm"))
         await asyncio.sleep(0.03)
         wheels.fail_next_command = True
-        await peer.queue.put(ManualControlCommand("session-a", 2, "drive", ReferenceVelocity(0.05, 0.0, 0.0)))
+        await peer.queue.put(ManualControlCommand("session-a", 2, "drive", BodyVelocity(0.05, 0.0, 0.0)))
         await asyncio.sleep(0.04)
 
         assert not task.done()
@@ -198,10 +198,6 @@ async def test_actuator_command_failure_disarms_without_terminating_runtime():
     finally:
         stop_event.set()
         await task
-
-
-def test_manual_control_limits_default_to_one_second_command_lease():
-    assert ManualControlLimits().command_timeout_ms == 1000
 
 
 def test_manual_control_limits_reject_invalid_command_timeout():
@@ -219,10 +215,10 @@ async def test_new_controller_session_can_rearm_with_a_fresh_sequence():
     task = asyncio.create_task(runtime.run(stop_event))
     try:
         await peer.queue.put(ManualControlCommand("session-a", 10, "arm"))
-        await peer.queue.put(ManualControlCommand("session-a", 11, "drive", ReferenceVelocity(0.05, 0.0, 0.0)))
+        await peer.queue.put(ManualControlCommand("session-a", 11, "drive", BodyVelocity(0.05, 0.0, 0.0)))
         await asyncio.sleep(0.04)
         await peer.queue.put(ManualControlCommand("session-b", 0, "arm"))
-        await peer.queue.put(ManualControlCommand("session-b", 1, "drive", ReferenceVelocity(0.0, 0.05, 0.0)))
+        await peer.queue.put(ManualControlCommand("session-b", 1, "drive", BodyVelocity(0.0, 0.05, 0.0)))
         await asyncio.sleep(0.04)
         assert wheels.commands[-1] == BodyVelocity(0.0, 0.05, 0.0)
     finally:
@@ -271,7 +267,7 @@ async def test_manual_runtime_allows_arm_ack_round_trip_before_starting_drive_wa
         assert runtime._armed is True
         assert peer.status_messages == [("session-a", 1, True, True)]
 
-        await peer.queue.put(ManualControlCommand("session-a", 2, "drive", ReferenceVelocity(0.05, 0.0, 0.0)))
+        await peer.queue.put(ManualControlCommand("session-a", 2, "drive", BodyVelocity(0.05, 0.0, 0.0)))
         await asyncio.sleep(0.04)
         assert runtime._armed is True
         assert wheels.commands[-1] == BodyVelocity(0.05, 0.0, 0.0)

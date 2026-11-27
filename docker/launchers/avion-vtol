@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+set -Eeuo pipefail
+cd /workspace/avion-cargo
+
+CONFIG="${AVION_VTOL_CONFIG:-}"
+if [[ -z "$CONFIG" ]]; then
+  echo "AVION_VTOL_CONFIG must be set by the active simulation Compose file." >&2
+  exit 2
+fi
+if [[ ! -f "$CONFIG" ]]; then
+  echo "VTOL configuration does not exist: $CONFIG" >&2
+  exit 2
+fi
+exec poetry run run_vtol --config "$CONFIG"
