@@ -3,6 +3,8 @@ from __future__ import annotations
 import asyncio
 import queue
 import threading
+import time
+from collections import Counter
 from collections.abc import AsyncIterator, Mapping
 from typing import Any
 
@@ -65,14 +67,19 @@ class D3kbleDistanceSensor(DistanceSensor):
 
     async def events(self) -> AsyncIterator[DistanceEvent]:
         loop = asyncio.get_running_loop()
-        event_queue: asyncio.Queue[DistanceEvent] = asyncio.Queue(maxsize=self._event_queue_size)
+        # Keep stage timestamps with each event so we can separate callback
+        # scheduling delay from time spent waiting in the asyncio queue.
+        event_queue: asyncio.Queue[tuple[DistanceEvent, float, float]] = asyncio.Queue(
+            maxsize=self._event_queue_size
+        )
         stop_worker = threading.Event()
         subscription = self._node.uwb.measurements.subscribe(
             maxsize=self._subscription_size,
             overflow="drop_oldest",
         )
 
-        def offer(event: DistanceEvent) -> None:
+        def offer(event: DistanceEvent, worker_received_at: float) -> None:
+            offered_at = time.monotonic()
             if event_queue.full():
                 self.dropped_events += 1
                 if self._event_overflow == "drop_newest":
@@ -81,7 +88,7 @@ class D3kbleDistanceSensor(DistanceSensor):
                     event_queue.get_nowait()
                 except asyncio.QueueEmpty:
                     pass
-            event_queue.put_nowait(event)
+            event_queue.put_nowait((event, worker_received_at, offered_at))
 
         def range_failed(failure: Any) -> None:
             if stop_worker.is_set():
@@ -94,12 +101,29 @@ class D3kbleDistanceSensor(DistanceSensor):
                 message=f"UWB ranging failed with firmware status {failure.status}",
             )
             try:
-                loop.call_soon_threadsafe(offer, DistanceFailure(anchor_id=anchor_id, reason=reason))
+                loop.call_soon_threadsafe(
+                    offer,
+                    DistanceFailure(
+                        anchor_id=anchor_id,
+                        reason=reason,
+                        device_monotonic_us=getattr(failure, "device_monotonic_us", None),
+                        epoch_us=getattr(failure, "epoch_us", None),
+                        received_at=getattr(failure, "received_at", None),
+                        status=getattr(failure, "status", None),
+                        quality_flags=getattr(failure, "quality_flags", None),
+                    ),
+                    time.monotonic(),
+                )
             except RuntimeError:
                 logger.debug("event loop closed while receiving a UWB range failure")
 
         def pump_measurements() -> None:
             observed_source_drops = 0
+            counts: Counter[str] = Counter()
+            invalid_counts: Counter[str] = Counter()
+            last_sequence: dict[str, int] = {}
+            last_device_us: dict[str, int] = {}
+            last_summary_at = time.monotonic()
             while not stop_worker.is_set():
                 try:
                     measurement = subscription.get(timeout=self._poll_interval)
@@ -116,15 +140,38 @@ class D3kbleDistanceSensor(DistanceSensor):
                 anchor_id = self._anchor_by_target.get(int(measurement.target_id))
                 if anchor_id is None:
                     continue
+                counts[anchor_id] += 1
+                sequence = int(measurement.sample_sequence)
+                sequence_gap = None
+                if anchor_id in last_sequence:
+                    sequence_gap = sequence - last_sequence[anchor_id]
+                last_sequence[anchor_id] = sequence
+                device_us = getattr(measurement, "device_monotonic_us", None)
+                device_delta_us = None
+                if device_us is not None and anchor_id in last_device_us:
+                    device_delta_us = int(device_us) - last_device_us[anchor_id]
+                if device_us is not None:
+                    last_device_us[anchor_id] = int(device_us)
                 if measurement.valid and measurement.distance_m is not None:
                     event: DistanceEvent = DistanceSample(
                         anchor_id=anchor_id,
                         distance_m=float(measurement.distance_m),
                         sequence=int(measurement.sample_sequence),
+                        device_monotonic_us=getattr(measurement, "device_monotonic_us", None),
+                        epoch_us=getattr(measurement, "epoch_us", None),
+                        received_at=getattr(measurement, "received_at", None),
+                        status=getattr(measurement, "status", None),
+                        quality_flags=getattr(measurement, "quality_flags", None),
                     )
                 else:
+                    invalid_counts[anchor_id] += 1
                     event = DistanceFailure(
                         anchor_id=anchor_id,
+                        device_monotonic_us=getattr(measurement, "device_monotonic_us", None),
+                        epoch_us=getattr(measurement, "epoch_us", None),
+                        received_at=getattr(measurement, "received_at", None),
+                        status=getattr(measurement, "status", None),
+                        quality_flags=getattr(measurement, "quality_flags", None),
                         reason=FailureReason(
                             code=f"uwb_measurement_status_{measurement.status}",
                             message=(
@@ -133,16 +180,25 @@ class D3kbleDistanceSensor(DistanceSensor):
                             ),
                         ),
                     )
+                worker_received_at = time.monotonic()
                 try:
-                    loop.call_soon_threadsafe(offer, event)
+                    loop.call_soon_threadsafe(offer, event, worker_received_at)
                 except RuntimeError:
                     return
+
+                stats_now = time.monotonic()
+                if stats_now - last_summary_at >= 1.0:
+                    counts.clear()
+                    invalid_counts.clear()
+                    last_summary_at = stats_now
 
         self._node.on("range_failed", range_failed)
         worker = asyncio.create_task(asyncio.to_thread(pump_measurements))
         try:
             while True:
-                yield await event_queue.get()
+                event, worker_received_at, offered_at = await event_queue.get()
+                consumed_at = time.monotonic()
+                yield event
         finally:
             stop_worker.set()
             self._node.off("range_failed", range_failed)

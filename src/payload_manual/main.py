@@ -23,7 +23,7 @@ from shared.application import run_application
 @click.option(
     "--command-timeout-ms",
     type=click.IntRange(100, 5000),
-    default=300,
+    default=1000,
     show_default=True,
 )
 @logger.catch(reraise=True)
@@ -40,11 +40,6 @@ def main(
         limits=limits,
     )
     try:
-        logger.info(
-            "Manual control for payload {} listening to D3K peer {}",
-            config.payload_id,
-            config.controller_peer_id,
-        )
         asyncio.run(run_application(application))
     except KeyboardInterrupt:
         logger.info("Manual-control application interrupted")

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import math
+import time
 from collections import deque
 from collections.abc import AsyncIterator
 from typing import Any
@@ -9,12 +10,12 @@ from typing import Any
 from d3kble import D3KNode
 from loguru import logger
 
-from payload.domain.body_velocity import BodyVelocity
+from payload_manual.domain.manual_control import ReferenceVelocity
 from payload_manual.domain.manual_control import ManualControlCommand
 from shared.infrastructure.d3kble.router import D3kbleMessageRouter, D3kbleRouteRegistration
 
 PROTOCOL_NAME = "payload-manual-control"
-PROTOCOL_VERSION = 1
+PROTOCOL_VERSION = 2
 _EVENTS_CLOSED = object()
 
 
@@ -75,7 +76,7 @@ def decode_manual_control_message(payload: Any) -> ManualControlCommand:
             if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(value):
                 raise ManualControlProtocolError(f"{name} must be a finite number")
             values.append(float(value))
-        velocity = BodyVelocity(*values)
+        velocity = ReferenceVelocity(*values)
     else:
         if set(payload) != common_fields:
             raise ManualControlProtocolError(f"{command_type} command must not include velocity fields")
@@ -113,6 +114,26 @@ class D3kbleManualControlPeer:
         self._registration: D3kbleRouteRegistration | None = None
         self._consumer_active = False
         self._closed = False
+        self._positioning_frame_sent = False
+        self._positioning_frame_sent_at = 0.0
+        # Keep at most one positioning-related application message in flight.
+        # New range events replace this latest snapshot instead of accumulating
+        # stale position messages in D3K's FIFO BLE transmit queue.
+        self._positioning_ticket = None
+        self._positioning_ticket_kind: str | None = None
+        self._positioning_ticket_sequence: int | None = None
+        self._positioning_ticket_status: tuple[str, int, int] | None = None
+        self._positioning_ticket_sent_at = 0.0
+        self._latest_positioning_snapshot = None
+        self._last_positioning_sequence_acked: int | None = None
+        self._last_positioning_status_acked: tuple[str, int, int] | None = None
+        self._last_positioning_status_acked_at = 0.0
+        self._last_positioning_acked_at = 0.0
+        self._positioning_retry_after = 0.0
+        self._positioning_delivery_failures = 0
+        self.coalesced_positioning_updates = 0
+        self._positioning_calls_since_log = 0
+        self._last_positioning_diagnostic_log_at = 0.0
         self.dropped_commands = 0
         self.invalid_commands = 0
 
@@ -164,6 +185,200 @@ class D3kbleManualControlPeer:
 
         ticket.ack_future.add_done_callback(report_delivery_result)
 
+    async def send_positioning(self, snapshot) -> None:
+        """Send the newest positioning state with single-flight backpressure.
+
+        D3K application messages are reliable and its BLE sender has a FIFO
+        transmit queue. Sending a new position on every timer tick without
+        waiting for the previous application ACK turns a live stream into a
+        minutes-old backlog when BLE throughput drops below the producer rate.
+        Keep only the newest snapshot while one message is in flight.
+        """
+        self._latest_positioning_snapshot = snapshot
+        now = time.monotonic()
+        self._positioning_calls_since_log += 1
+
+        # Retire the previous message only after the receiver has acknowledged
+        # that it has accepted it. Its ticket is the sole positioning message
+        # allowed into the D3K queue at any time.
+        if self._positioning_ticket is not None:
+            ticket = self._positioning_ticket
+            if not ticket.ack_future.done():
+                self.coalesced_positioning_updates += 1
+                if now - self._last_positioning_diagnostic_log_at >= 1.0:
+                    self._positioning_calls_since_log = 0
+                    self._last_positioning_diagnostic_log_at = now
+                return
+
+            kind = self._positioning_ticket_kind
+            sequence = self._positioning_ticket_sequence
+            status_key = self._positioning_ticket_status
+            self._positioning_ticket = None
+            self._positioning_ticket_kind = None
+            self._positioning_ticket_sequence = None
+            self._positioning_ticket_status = None
+            ack_latency_ms = (now - self._positioning_ticket_sent_at) * 1000.0
+            try:
+                ticket.ack_future.result()
+            except Exception as exc:
+                self._positioning_delivery_failures += 1
+                delay = min(5.0, 0.25 * (2 ** min(self._positioning_delivery_failures - 1, 5)))
+                self._positioning_retry_after = now + delay
+                if kind == "frame":
+                    self._positioning_frame_sent = False
+                    self._positioning_frame_sent_at = 0.0
+                logger.warning(
+                    "[positioning-tx] delivery failed: peer={} kind={} sequence={} ack_wait_ms={:.1f} "
+                    "retry_in_s={:.2f} newest_estimate_sequence={} error={}",
+                    self.controller_peer_id,
+                    kind,
+                    sequence,
+                    ack_latency_ms,
+                    delay,
+                    getattr(getattr(snapshot, "tag_estimate", None), "sequence", None),
+                    exc,
+                )
+            else:
+                self._positioning_delivery_failures = 0
+                self._positioning_retry_after = 0.0
+                if kind == "frame":
+                    self._positioning_frame_sent = True
+                    self._positioning_frame_sent_at = now
+                elif kind == "position" and sequence is not None:
+                    self._last_positioning_sequence_acked = sequence
+                    # Rate-limit from enqueue time. If an ACK took longer than
+                    # the target interval, transmit the newest pending state
+                    # immediately rather than adding another 100 ms delay.
+                    self._last_positioning_acked_at = self._positioning_ticket_sent_at
+                elif kind == "status" and status_key is not None:
+                    self._last_positioning_status_acked = status_key
+                    self._last_positioning_status_acked_at = now
+
+        if now < self._positioning_retry_after:
+            return
+
+        snapshot = self._latest_positioning_snapshot
+        # Send the static frame once at startup and then occasionally so a UI
+        # that reconnects can recover its map geometry. Frame refreshes share
+        # the same single-flight gate as positions and status messages.
+        frame_refresh_due = (
+            not self._positioning_frame_sent
+            or now - self._positioning_frame_sent_at >= 30.0
+        )
+        if frame_refresh_due:
+            frame_payload = {
+                "protocol": "payload-manual-position-frame",
+                "version": 1,
+                "type": "reference_frame",
+                "anchors_xy_m": [
+                    {"id": anchor_id, "x": round(x, 3), "y": round(y, 3)}
+                    for anchor_id, x, y in snapshot.anchors_xy_m
+                ],
+                "payload_to_tag_xy_m": [round(value, 3) for value in snapshot.payload_to_tag_xy_m],
+                "tag_height_m": round(snapshot.reference_origin_world_m[2], 3),
+                "origin_world_m": [round(value, 3) for value in snapshot.reference_origin_world_m],
+                "x_axis_world": [round(value, 4) for value in snapshot.reference_x_axis_world],
+                "y_axis_world": [round(value, 4) for value in snapshot.reference_y_axis_world],
+            }
+            self._queue_positioning_message(frame_payload, kind="frame")
+            return
+
+        estimate = snapshot.tag_estimate
+        if estimate is None or snapshot.payload_position is None:
+            status_key = (
+                str(snapshot.status),
+                int(getattr(snapshot, "range_count", 0)),
+                int(getattr(snapshot, "rejected_range_count", 0)),
+            )
+            # Report state changes immediately, with a 1 Hz heartbeat while the
+            # estimator is waiting. Do not queue an endless stream of identical
+            # status messages if the receiver or radio is unavailable.
+            if (
+                status_key != self._last_positioning_status_acked
+                or now - self._last_positioning_status_acked_at >= 1.0
+            ):
+                status_payload = {
+                    "protocol": "payload-manual-position-status",
+                    "version": 1,
+                    "type": "status",
+                    "status": status_key[0],
+                    "range_count": status_key[1],
+                    "rejected_ranges": status_key[2],
+                }
+                self._queue_positioning_message(
+                    status_payload, kind="status", status=status_key
+                )
+            return
+
+        # Do not resend a position until the previous one was acknowledged.
+        # A newer estimate supersedes every intermediate estimate received
+        # while that ACK was pending.
+        if (
+            self._last_positioning_sequence_acked is not None
+            and estimate.sequence <= self._last_positioning_sequence_acked
+        ):
+            return
+        if now - self._last_positioning_acked_at < 0.1:
+            return
+
+        payload = {
+            "protocol": "payload-manual-position",
+            "version": 1,
+            "type": "position",
+            "sequence": estimate.sequence,
+            "position_m": {
+                "x": round(snapshot.payload_position.x, 4),
+                "y": round(snapshot.payload_position.y, 4),
+            },
+            "tag_position_m": {
+                "x": round(estimate.position.x, 4),
+                "y": round(estimate.position.y, 4),
+            },
+            "residual_m": round(estimate.residual_m, 4) if estimate.residual_m is not None else None,
+            "covariance_xy_m2": (
+                [round(value, 6) for value in estimate.covariance_xy_m2]
+                if estimate.covariance_xy_m2 is not None else None
+            ),
+            "device_monotonic_us": estimate.device_monotonic_us,
+            "heading_rad": round(snapshot.heading.angle_rad, 4),
+            "heading_confidence": round(snapshot.heading.confidence, 3),
+            "heading_observations": snapshot.heading.observations,
+            "range_count": int(getattr(snapshot, "range_count", len(estimate.anchor_ids))),
+            "rejected_ranges": int(getattr(snapshot, "rejected_range_count", 0)),
+            "quality": estimate.quality,
+        }
+        self._queue_positioning_message(
+            payload, kind="position", sequence=estimate.sequence
+        )
+
+    def _queue_positioning_message(
+        self,
+        payload: dict[str, Any],
+        *,
+        kind: str,
+        sequence: int | None = None,
+        status: tuple[str, int, int] | None = None,
+    ) -> None:
+        """Queue one positioning message and retain its ACK as a backpressure gate."""
+        try:
+            ticket = self._node.comms.send(self.controller_peer_id, payload)
+        except Exception as exc:
+            self._positioning_delivery_failures += 1
+            delay = min(5.0, 0.25 * (2 ** min(self._positioning_delivery_failures - 1, 5)))
+            self._positioning_retry_after = time.monotonic() + delay
+            logger.warning(
+                "could not queue manual positioning {} message; retrying in {:.2f}s: {}",
+                kind,
+                delay,
+                exc,
+            )
+            return
+        self._positioning_ticket = ticket
+        self._positioning_ticket_kind = kind
+        self._positioning_ticket_sequence = sequence
+        self._positioning_ticket_status = status
+        self._positioning_ticket_sent_at = time.monotonic()
+
     async def events(self) -> AsyncIterator[ManualControlCommand]:
         await self.start()
         if self._consumer_active:
@@ -196,14 +411,17 @@ class D3kbleManualControlPeer:
         loop = self._loop
         if loop is None or loop.is_closed() or self._closed:
             return
+        received_at = time.monotonic()
         try:
-            loop.call_soon_threadsafe(self._enqueue, command)
+            loop.call_soon_threadsafe(self._enqueue, command, received_at)
         except RuntimeError:
             logger.debug("event loop closed while receiving manual-control message")
 
-    def _enqueue(self, command: ManualControlCommand) -> None:
+    def _enqueue(self, command: ManualControlCommand, received_at: float | None = None) -> None:
         if self._available is None or self._closed:
             return
+        if received_at is not None:
+            pass
 
         # Drive messages are setpoints, not a history to replay. Replace an
         # already-pending drive command with the newest value while retaining
@@ -254,7 +472,14 @@ class D3kbleManualControlPeer:
                 self.dropped_commands += 1
             else:
                 self.dropped_commands += 1
-                logger.warning("manual-control mailbox full; dropping command sequence {}", command.sequence)
+                logger.warning(
+                    "[manual-command-queue] mailbox full; dropping command type={} sequence={} "
+                    "pending_depth={} dropped_total={}",
+                    command.command_type,
+                    command.sequence,
+                    len(self._pending),
+                    self.dropped_commands,
+                )
                 return
 
         self._pending.append(command)

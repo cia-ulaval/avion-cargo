@@ -74,12 +74,12 @@
                         <device_id>2</device_id>
                         <pan_id>57034</pan_id>
                         <channel>5</channel>
-                        <role>responder</role>
-                        <targets>18</targets>
+                        <role>idle</role>
+                        <targets></targets>
                         <period_ms>20</period_ms>
                         <timeout_ms>120</timeout_ms>
                         <retries>0</retries>
-                        <auto_start>true</auto_start>
+                        <auto_start>false</auto_start>
                     </uwb>
                     <ble>
                         <mode>hub</mode>
@@ -97,6 +97,159 @@
                 <range_model>
                     <noise_stddev_m>0.015</noise_stddev_m>
                     <node_bias_limit_m>0.03</node_bias_limit_m>
+                    <max_range_m>100.0</max_range_m>
+                    <seed>0</seed>
+                </range_model>
+            </plugin>
+        </model>
+
+        <model name="uwb_anchor_3">
+            <static>true</static>
+            <pose>-0.3 0 0.05 0 0 0</pose>
+            <link name="uwb_antenna">
+                <gravity>false</gravity>
+                <visual name="anchor_visual">
+                    <geometry>
+                        <cylinder>
+                            <radius>0.035</radius>
+                            <length>0.04</length>
+                        </cylinder>
+                    </geometry>
+                    <material>
+                        <ambient>0.1 0.55 0.2 1</ambient>
+                        <diffuse>0.1 0.55 0.2 1</diffuse>
+                    </material>
+                </visual>
+            </link>
+            <plugin filename="libd3k_gazebo_system.so" name="d3k_sim::D3kNodeSystem">
+                <uart>
+                    <pty_path>/tmp/manual-anchor-3</pty_path>
+                    <baud_rate>460800</baud_rate>
+                </uart>
+                <reference_link>uwb_antenna</reference_link>
+                <nvs>
+                    <uwb>
+                        <device_id>3</device_id>
+                        <pan_id>57034</pan_id>
+                        <channel>5</channel>
+                        <role>responder</role>
+                        <targets>18, 19, 20, 21, 22</targets>
+                        <period_ms>20</period_ms>
+                        <timeout_ms>120</timeout_ms>
+                        <retries>0</retries>
+                        <auto_start>true</auto_start>
+                    </uwb>
+                    <ble>
+                        <mode>idle</mode>
+                        <peer_ids></peer_ids>
+                        <auto_start>false</auto_start>
+                    </ble>
+                </nvs>
+                <range_model>
+                    <noise_stddev_m>0.03</noise_stddev_m>
+                    <node_bias_limit_m>0.07</node_bias_limit_m>
+                    <max_range_m>100.0</max_range_m>
+                    <seed>0</seed>
+                </range_model>
+            </plugin>
+        </model>
+
+        <model name="uwb_anchor_4">
+            <static>true</static>
+            <pose>0.3 0 0.05 0 0 0</pose>
+            <link name="uwb_antenna">
+                <gravity>false</gravity>
+                <visual name="anchor_visual">
+                    <geometry>
+                        <cylinder>
+                            <radius>0.035</radius>
+                            <length>0.04</length>
+                        </cylinder>
+                    </geometry>
+                    <material>
+                        <ambient>0.1 0.55 0.2 1</ambient>
+                        <diffuse>0.1 0.55 0.2 1</diffuse>
+                    </material>
+                </visual>
+            </link>
+            <plugin filename="libd3k_gazebo_system.so" name="d3k_sim::D3kNodeSystem">
+                <uart>
+                    <pty_path>/tmp/manual-anchor-4</pty_path>
+                    <baud_rate>460800</baud_rate>
+                </uart>
+                <reference_link>uwb_antenna</reference_link>
+                <nvs>
+                    <uwb>
+                        <device_id>4</device_id>
+                        <pan_id>57034</pan_id>
+                        <channel>5</channel>
+                        <role>responder</role>
+                        <targets>18, 19, 20, 21, 22</targets>
+                        <period_ms>20</period_ms>
+                        <timeout_ms>120</timeout_ms>
+                        <retries>0</retries>
+                        <auto_start>true</auto_start>
+                    </uwb>
+                    <ble>
+                        <mode>idle</mode>
+                        <peer_ids></peer_ids>
+                        <auto_start>false</auto_start>
+                    </ble>
+                </nvs>
+                <range_model>
+                    <noise_stddev_m>0.03</noise_stddev_m>
+                    <node_bias_limit_m>0.07</node_bias_limit_m>
+                    <max_range_m>100.0</max_range_m>
+                    <seed>0</seed>
+                </range_model>
+            </plugin>
+        </model>
+
+        <model name="uwb_anchor_5">
+            <static>true</static>
+            <pose>0.0 0.2 0.08 0 0 0</pose>
+            <link name="uwb_antenna">
+                <gravity>false</gravity>
+                <visual name="anchor_visual">
+                    <geometry>
+                        <cylinder>
+                            <radius>0.035</radius>
+                            <length>0.04</length>
+                        </cylinder>
+                    </geometry>
+                    <material>
+                        <ambient>0.1 0.55 0.2 1</ambient>
+                        <diffuse>0.1 0.55 0.2 1</diffuse>
+                    </material>
+                </visual>
+            </link>
+            <plugin filename="libd3k_gazebo_system.so" name="d3k_sim::D3kNodeSystem">
+                <uart>
+                    <pty_path>/tmp/manual-anchor-5</pty_path>
+                    <baud_rate>460800</baud_rate>
+                </uart>
+                <reference_link>uwb_antenna</reference_link>
+                <nvs>
+                    <uwb>
+                        <device_id>5</device_id>
+                        <pan_id>57034</pan_id>
+                        <channel>5</channel>
+                        <role>responder</role>
+                        <targets>18, 19, 20, 21, 22</targets>
+                        <period_ms>20</period_ms>
+                        <timeout_ms>120</timeout_ms>
+                        <retries>0</retries>
+                        <auto_start>true</auto_start>
+                    </uwb>
+                    <ble>
+                        <mode>idle</mode>
+                        <peer_ids></peer_ids>
+                        <auto_start>false</auto_start>
+                    </ble>
+                </nvs>
+                <range_model>
+                    <noise_stddev_m>0.03</noise_stddev_m>
+                    <node_bias_limit_m>0.07</node_bias_limit_m>
                     <max_range_m>100.0</max_range_m>
                     <seed>0</seed>
                 </range_model>

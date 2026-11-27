@@ -8,6 +8,9 @@ from typing import Any, Callable
 from loguru import logger
 
 from payload.application.omni_wheel_controller import OmniWheelController
+from payload.application.positioning_runtime import PayloadPositioningRuntime
+from payload.domain.positioning.heading_estimator import TranslationHeadingEstimator
+from payload.domain.positioning.nonlinear_least_squares import NonlinearLeastSquaresPositionEstimator
 from payload.domain.wheel_actuator import WheelActuator, WheelActuatorCapabilities
 from payload.infrastructure.d3kble import D3kbleDistanceSensor
 from payload.infrastructure.wheel_actuators import create_wheel_actuator
@@ -141,11 +144,29 @@ def build_manual_control_application(
             tuple(wheel.transform for wheel in config.wheels),
             actuators,
         )
+        positioning_runtime = None
+        if config.anchor_positions_by_id and config.tag_height_m is not None:
+            positioning_estimator = NonlinearLeastSquaresPositionEstimator(
+                config.anchor_positions_by_id,
+                tag_height_m=float(config.tag_height_m),
+                range_std_m=float(config.range_std_m),
+            )
+            positioning_runtime = PayloadPositioningRuntime(
+                positioning_estimator,
+                TranslationHeadingEstimator(),
+                payload_to_tag_xy_m=config.payload_to_tag_xy_m,
+                anchors_xy_m=positioning_estimator.anchors_xy_m,
+                reference_origin_world_m=positioning_estimator.reference_origin_world_m,
+                reference_x_axis_world=positioning_estimator.reference_x_axis_world,
+                reference_y_axis_world=positioning_estimator.reference_y_axis_world,
+            )
+
         runtime = ManualControlRuntime(
             control_peer,
             wheel_controller,
             distance_sensor,
             limits or ManualControlLimits(),
+            positioning_runtime,
         )
         return ManualControlApplication(
             node,

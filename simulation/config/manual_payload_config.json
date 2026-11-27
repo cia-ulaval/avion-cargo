@@ -4,7 +4,9 @@
   "controller_peer_id": 2,
   "uwb": {
     "anchor_id_by_target_id": {
-      "2": "manual-controller-d3k-node"
+      "3": "anchor-3",
+      "4": "anchor-4",
+      "5": "anchor-5"
     }
   },
   "wheels": [
@@ -41,5 +43,30 @@
         "topic": "/model/payload/joint/wheel_2_joint/cmd_vel"
       }
     }
-  ]
+  ],
+  "positioning": {
+    "tag_height_m": 0.081,
+    "payload_to_tag_xy_m": [
+      0.012,
+      -0.006
+    ],
+    "anchors": {
+      "anchor-3": {
+        "x": -0.3,
+        "y": 0.0,
+        "z": 0.05
+      },
+      "anchor-4": {
+        "x": 0.3,
+        "y": 0.0,
+        "z": 0.05
+      },
+      "anchor-5": {
+        "x": 0.0,
+        "y": 0.2,
+        "z": 0.08
+      }
+    },
+    "range_std_m": 0.015
+  }
 }

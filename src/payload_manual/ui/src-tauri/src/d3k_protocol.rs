@@ -22,6 +22,12 @@ pub struct Reply {
     pub events: Vec<Event>,
 }
 
+#[derive(Debug)]
+pub struct SendMessageFailure {
+    pub error: String,
+    pub events: Vec<Event>,
+}
+
 fn crc16(data: &[u8]) -> u16 {
     let mut crc = 0xffffu16;
     for byte in data {
@@ -118,23 +124,27 @@ fn parse(raw: &[u8]) -> Result<(u8, u16, u8, u8, Vec<u8>), String> {
     ))
 }
 
-pub fn command(
+fn command_with_status(
     port: &mut Box<dyn SerialPort>,
     seq: u16,
     opcode: u8,
     payload: &[u8],
-) -> Result<Reply, String> {
+) -> Result<(Reply, Option<String>), SendMessageFailure> {
     let packet = frame(seq, opcode, payload);
-    port.write_all(&packet)
-        .map_err(|e| format!("D3K UART write failed: {e}"))?;
-    port.flush()
-        .map_err(|e| format!("D3K UART flush failed: {e}"))?;
+    port.write_all(&packet).map_err(|e| SendMessageFailure {
+        error: format!("D3K UART write failed: {e}"),
+        events: Vec::new(),
+    })?;
+    port.flush().map_err(|e| SendMessageFailure {
+        error: format!("D3K UART flush failed: {e}"),
+        events: Vec::new(),
+    })?;
 
     let start = Instant::now();
     let timeout = Duration::from_millis(700);
     let mut encoded = Vec::new();
     let mut events = Vec::new();
-    let mut response: Option<Vec<u8>> = None;
+    let mut response: Option<(Vec<u8>, Option<String>)> = None;
     let mut buf = [0u8; 512];
 
     while start.elapsed() < timeout {
@@ -150,12 +160,14 @@ pub fn command(
                                         payload: frame_payload,
                                     });
                                 } else if kind == 2 && rseq == seq && rop == opcode {
-                                    if flags != 0 {
-                                        return Err(format!(
+                                    let error = if flags != 0 {
+                                        Some(format!(
                                             "D3K command 0x{opcode:02X} rejected with status {flags}"
-                                        ));
-                                    }
-                                    response = Some(frame_payload);
+                                        ))
+                                    } else {
+                                        None
+                                    };
+                                    response = Some((frame_payload, error));
                                 }
                             }
                         }
@@ -166,36 +178,70 @@ pub fn command(
                         encoded.clear();
                     }
                 }
-                if let Some(payload) = response.take() {
-                    return Ok(Reply { payload, events });
+                if let Some((payload, error)) = response.take() {
+                    return Ok((Reply { payload, events }, error));
                 }
             }
             Err(ref e) if e.kind() == std::io::ErrorKind::TimedOut => {}
-            Err(e) => return Err(format!("D3K UART read failed: {e}")),
+            Err(e) => {
+                return Err(SendMessageFailure {
+                    error: format!("D3K UART read failed: {e}"),
+                    events,
+                })
+            }
         }
     }
-    Err(format!("Timed out waiting for D3K opcode 0x{opcode:02X}"))
+    Err(SendMessageFailure {
+        error: format!("Timed out waiting for D3K opcode 0x{opcode:02X}"),
+        events,
+    })
 }
 
-pub fn send_message(
+pub fn command(
+    port: &mut Box<dyn SerialPort>,
+    seq: u16,
+    opcode: u8,
+    payload: &[u8],
+) -> Result<Reply, String> {
+    let (reply, error) = command_with_status(port, seq, opcode, payload)
+        .map_err(|failure| failure.error)?;
+    if let Some(error) = error {
+        return Err(error);
+    }
+    Ok(reply)
+}
+
+pub fn send_message_with_events(
     port: &mut Box<dyn SerialPort>,
     seq: u16,
     peer_id: u16,
     message: &[u8],
-) -> Result<(u16, Vec<Event>), String> {
+) -> Result<(u16, Vec<Event>), SendMessageFailure> {
     if message.len() > 496 {
-        return Err("D3K application message exceeds the 496-byte limit".into());
+        return Err(SendMessageFailure {
+            error: "D3K application message exceeds the 496-byte limit".into(),
+            events: Vec::new(),
+        });
     }
     let mut payload = Vec::with_capacity(4 + message.len());
     payload.extend(peer_id.to_le_bytes());
     payload.extend((message.len() as u16).to_le_bytes());
     payload.extend(message);
-    let reply = command(port, seq, OP_SEND_TO_PEER, &payload)?;
+    let (reply, command_error) = command_with_status(port, seq, OP_SEND_TO_PEER, &payload)?;
+    if let Some(error) = command_error {
+        return Err(SendMessageFailure {
+            error,
+            events: reply.events,
+        });
+    }
     if reply.payload.len() != 2 {
-        return Err(format!(
-            "SEND_TO_PEER returned {} bytes; expected 2",
-            reply.payload.len()
-        ));
+        return Err(SendMessageFailure {
+            error: format!(
+                "SEND_TO_PEER returned {} bytes; expected 2",
+                reply.payload.len()
+            ),
+            events: reply.events,
+        });
     }
     Ok((
         u16::from_le_bytes([reply.payload[0], reply.payload[1]]),

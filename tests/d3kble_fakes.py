@@ -171,5 +171,8 @@ def fake_measurement(
         sample_sequence=sample_sequence,
         status=status,
         quality_flags=quality_flags,
+        device_monotonic_us=1234,
+        epoch_us=0,
+        received_at=12.5,
         valid=distance_m is not None and status == 0,
     )
