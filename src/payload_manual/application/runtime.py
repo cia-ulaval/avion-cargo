@@ -71,9 +71,7 @@ class ManualControlRuntime:
                 commands = group.create_task(self._consume_commands(), name="manual-control-commands")
                 watchdog = group.create_task(self._watch_command_lease(), name="manual-control-watchdog")
                 ranging_ready = asyncio.Event()
-                ranging = group.create_task(
-                    self._consume_distance_events(ranging_ready), name="manual-control-uwb"
-                )
+                ranging = group.create_task(self._consume_distance_events(ranging_ready), name="manual-control-uwb")
                 await ranging_ready.wait()
                 # events() has been advanced once and has installed its D3K
                 # subscription before the firmware schedule is started.
@@ -322,9 +320,6 @@ class ManualControlRuntime:
         process_total_ms = 0.0
         process_max_ms = 0.0
         estimate_updates = 0
-        last_device_us: int | None = None
-        last_event_at = time.monotonic()
-        last_reported_estimate_sequence: int | None = None
         try:
             while True:
                 try:
@@ -340,14 +335,6 @@ class ManualControlRuntime:
                 event_type = "sample" if isinstance(event, DistanceSample) else "failure"
                 event_counts[event_type] += 1
                 event_started = time.monotonic()
-                device_delta_us = (
-                    event.device_monotonic_us - last_device_us
-                    if event.device_monotonic_us is not None and last_device_us is not None
-                    else None
-                )
-                if event.device_monotonic_us is not None:
-                    last_device_us = event.device_monotonic_us
-
                 previous_rejected = 0
                 previous_sequence = None
                 if self._positioning is not None:
@@ -359,7 +346,6 @@ class ManualControlRuntime:
                     current = snapshot.tag_estimate
                     if current is not None and current.sequence != previous_sequence:
                         estimate_updates += 1
-                        last_reported_estimate_sequence = current.sequence
                     rejected_now = snapshot.rejected_range_count
                     if rejected_now > previous_rejected:
                         logger.warning(
@@ -392,7 +378,6 @@ class ManualControlRuntime:
                 process_ms = (time.monotonic() - event_started) * 1000.0
                 process_total_ms += process_ms
                 process_max_ms = max(process_max_ms, process_ms)
-                last_event_at = time.monotonic()
                 if isinstance(event, DistanceSample):
                     pass
                 else:

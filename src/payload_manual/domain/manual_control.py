@@ -4,7 +4,6 @@ import math
 from dataclasses import dataclass
 from typing import Literal
 
-
 ManualControlCommandType = Literal["arm", "drive", "stop", "disarm", "status"]
 
 

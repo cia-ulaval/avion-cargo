@@ -48,15 +48,9 @@ class PayloadPositioningRuntime:
         if len(payload_to_tag_xy_m) != 2 or not all(math.isfinite(v) for v in payload_to_tag_xy_m):
             raise ValueError("payload_to_tag_xy_m must contain two finite values")
         self._anchors_xy_m = tuple(anchors_xy_m)
-        self._reference_origin_world_m = _finite_vector(
-            reference_origin_world_m, "reference_origin_world_m"
-        )
-        self._reference_x_axis_world = _finite_vector(
-            reference_x_axis_world, "reference_x_axis_world"
-        )
-        self._reference_y_axis_world = _finite_vector(
-            reference_y_axis_world, "reference_y_axis_world"
-        )
+        self._reference_origin_world_m = _finite_vector(reference_origin_world_m, "reference_origin_world_m")
+        self._reference_x_axis_world = _finite_vector(reference_x_axis_world, "reference_x_axis_world")
+        self._reference_y_axis_world = _finite_vector(reference_y_axis_world, "reference_y_axis_world")
         if not math.isfinite(maximum_heading_position_sigma_m) or maximum_heading_position_sigma_m <= 0:
             raise ValueError("maximum_heading_position_sigma_m must be finite and positive")
         self._maximum_heading_position_sigma_m = maximum_heading_position_sigma_m

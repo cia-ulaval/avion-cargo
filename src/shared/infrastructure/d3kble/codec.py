@@ -200,21 +200,21 @@ def estimate_from_data(data: Any) -> PositionEstimate:
         sequence=_integer(item.get("sequence"), "position_estimate.sequence", minimum=0),
         device_monotonic_us=(
             _integer(item.get("device_monotonic_us"), "position_estimate.device_monotonic_us", minimum=0)
-            if item.get("device_monotonic_us") is not None else None
+            if item.get("device_monotonic_us") is not None
+            else None
         ),
         epoch_us=(
             _integer(item.get("epoch_us"), "position_estimate.epoch_us", minimum=0)
-            if item.get("epoch_us") is not None else None
+            if item.get("epoch_us") is not None
+            else None
         ),
         received_at=(
             _finite(item.get("received_at"), "position_estimate.received_at")
-            if item.get("received_at") is not None else None
+            if item.get("received_at") is not None
+            else None
         ),
         covariance_xy_m2=(
-            tuple(
-                _finite(value, "position_estimate.covariance_xy_m2")
-                for value in item["covariance_xy_m2"]
-            )
+            tuple(_finite(value, "position_estimate.covariance_xy_m2") for value in item["covariance_xy_m2"])
             if covariance is not None
             else None
         ),

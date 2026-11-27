@@ -10,8 +10,7 @@ from typing import Any
 from d3kble import D3KNode
 from loguru import logger
 
-from payload_manual.domain.manual_control import ReferenceVelocity
-from payload_manual.domain.manual_control import ManualControlCommand
+from payload_manual.domain.manual_control import ManualControlCommand, ReferenceVelocity
 from shared.infrastructure.d3kble.router import D3kbleMessageRouter, D3kbleRouteRegistration
 
 PROTOCOL_NAME = "payload-manual-control"
@@ -261,18 +260,14 @@ class D3kbleManualControlPeer:
         # Send the static frame once at startup and then occasionally so a UI
         # that reconnects can recover its map geometry. Frame refreshes share
         # the same single-flight gate as positions and status messages.
-        frame_refresh_due = (
-            not self._positioning_frame_sent
-            or now - self._positioning_frame_sent_at >= 30.0
-        )
+        frame_refresh_due = not self._positioning_frame_sent or now - self._positioning_frame_sent_at >= 30.0
         if frame_refresh_due:
             frame_payload = {
                 "protocol": "payload-manual-position-frame",
                 "version": 1,
                 "type": "reference_frame",
                 "anchors_xy_m": [
-                    {"id": anchor_id, "x": round(x, 3), "y": round(y, 3)}
-                    for anchor_id, x, y in snapshot.anchors_xy_m
+                    {"id": anchor_id, "x": round(x, 3), "y": round(y, 3)} for anchor_id, x, y in snapshot.anchors_xy_m
                 ],
                 "payload_to_tag_xy_m": [round(value, 3) for value in snapshot.payload_to_tag_xy_m],
                 "tag_height_m": round(snapshot.reference_origin_world_m[2], 3),
@@ -293,10 +288,7 @@ class D3kbleManualControlPeer:
             # Report state changes immediately, with a 1 Hz heartbeat while the
             # estimator is waiting. Do not queue an endless stream of identical
             # status messages if the receiver or radio is unavailable.
-            if (
-                status_key != self._last_positioning_status_acked
-                or now - self._last_positioning_status_acked_at >= 1.0
-            ):
+            if status_key != self._last_positioning_status_acked or now - self._last_positioning_status_acked_at >= 1.0:
                 status_payload = {
                     "protocol": "payload-manual-position-status",
                     "version": 1,
@@ -305,9 +297,7 @@ class D3kbleManualControlPeer:
                     "range_count": status_key[1],
                     "rejected_ranges": status_key[2],
                 }
-                self._queue_positioning_message(
-                    status_payload, kind="status", status=status_key
-                )
+                self._queue_positioning_message(status_payload, kind="status", status=status_key)
             return
 
         # Do not resend a position until the previous one was acknowledged.
@@ -337,7 +327,8 @@ class D3kbleManualControlPeer:
             "residual_m": round(estimate.residual_m, 4) if estimate.residual_m is not None else None,
             "covariance_xy_m2": (
                 [round(value, 6) for value in estimate.covariance_xy_m2]
-                if estimate.covariance_xy_m2 is not None else None
+                if estimate.covariance_xy_m2 is not None
+                else None
             ),
             "device_monotonic_us": estimate.device_monotonic_us,
             "heading_rad": round(snapshot.heading.angle_rad, 4),
@@ -347,9 +338,7 @@ class D3kbleManualControlPeer:
             "rejected_ranges": int(getattr(snapshot, "rejected_range_count", 0)),
             "quality": estimate.quality,
         }
-        self._queue_positioning_message(
-            payload, kind="position", sequence=estimate.sequence
-        )
+        self._queue_positioning_message(payload, kind="position", sequence=estimate.sequence)
 
     def _queue_positioning_message(
         self,

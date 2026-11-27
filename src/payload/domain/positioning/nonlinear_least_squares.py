@@ -45,17 +45,9 @@ class NonlinearLeastSquaresPositionEstimator(PositionEstimator):
             raise ValueError("max_residual_m must be finite and positive")
         if not math.isfinite(range_std_m) or range_std_m <= 0:
             raise ValueError("range_std_m must be finite and positive")
-        if (
-            isinstance(max_range_age_us, bool)
-            or not isinstance(max_range_age_us, int)
-            or max_range_age_us <= 0
-        ):
+        if isinstance(max_range_age_us, bool) or not isinstance(max_range_age_us, int) or max_range_age_us <= 0:
             raise ValueError("max_range_age_us must be a positive integer")
-        if (
-            isinstance(range_filter_window, bool)
-            or not isinstance(range_filter_window, int)
-            or range_filter_window < 1
-        ):
+        if isinstance(range_filter_window, bool) or not isinstance(range_filter_window, int) or range_filter_window < 1:
             raise ValueError("range_filter_window must be a positive integer")
         if not math.isfinite(outlier_gate_sigma) or outlier_gate_sigma <= 0:
             raise ValueError("outlier_gate_sigma must be finite and positive")
@@ -105,9 +97,7 @@ class NonlinearLeastSquaresPositionEstimator(PositionEstimator):
         )
         self._anchor_world = anchor_world
         self._anchor_ids = tuple(self._anchors)
-        self._anchor_index_by_id = {
-            anchor_id: index for index, anchor_id in enumerate(self._anchor_ids)
-        }
+        self._anchor_index_by_id = {anchor_id: index for index, anchor_id in enumerate(self._anchor_ids)}
         self._anchor_vertical = float(tag_height_m) - anchor_world[:, 2]
 
         self._tag_height_m = float(tag_height_m)
@@ -122,8 +112,7 @@ class NonlinearLeastSquaresPositionEstimator(PositionEstimator):
         # Each anchor owns an independent filter/history. A new measurement
         # changes only that anchor's range before triggering a fresh solve.
         self._range_history: dict[str, deque[float]] = {
-            anchor_id: deque(maxlen=self._range_filter_window)
-            for anchor_id in self._anchor_ids
+            anchor_id: deque(maxlen=self._range_filter_window) for anchor_id in self._anchor_ids
         }
         self._ranges: dict[str, tuple[float, int, int | None, int | None, float | None]] = {}
         self._estimate: PositionEstimate | None = None
@@ -158,10 +147,7 @@ class NonlinearLeastSquaresPositionEstimator(PositionEstimator):
     @property
     def anchors_xy_m(self) -> tuple[tuple[str, float, float], ...]:
         """Anchor XY positions in the horizontal local reference frame."""
-        return tuple(
-            (anchor_id, float(x), float(y))
-            for anchor_id, (x, y) in zip(self._anchor_ids, self._anchor_xy)
-        )
+        return tuple((anchor_id, float(x), float(y)) for anchor_id, (x, y) in zip(self._anchor_ids, self._anchor_xy))
 
     def world_to_reference_xy(self, position: Position) -> tuple[float, float]:
         relative_xy = np.array([position.x, position.y], dtype=float) - self._origin[:2]
@@ -171,11 +157,7 @@ class NonlinearLeastSquaresPositionEstimator(PositionEstimator):
         )
 
     def _tag_world_position(self, reference_xy: np.ndarray) -> np.ndarray:
-        return (
-            self._origin
-            + reference_xy[0] * self._axis_x
-            + reference_xy[1] * self._axis_y
-        )
+        return self._origin + reference_xy[0] * self._axis_x + reference_xy[1] * self._axis_y
 
     def update(self, event: DistanceEvent) -> PositionEstimate | None:
         if isinstance(event, DistanceFailure):
@@ -287,11 +269,7 @@ class NonlinearLeastSquaresPositionEstimator(PositionEstimator):
         base = anchor_xy[0]
         base_constant = float(base @ base - horizontal_squared[0])
         matrix = 2.0 * (anchor_xy[1:] - base)
-        vector = (
-            np.sum(anchor_xy[1:] ** 2, axis=1)
-            - horizontal_squared[1:]
-            - base_constant
-        )
+        vector = np.sum(anchor_xy[1:] ** 2, axis=1) - horizontal_squared[1:] - base_constant
         try:
             linear_start, *_ = np.linalg.lstsq(matrix, vector, rcond=None)
         except np.linalg.LinAlgError:

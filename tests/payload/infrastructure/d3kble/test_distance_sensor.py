@@ -17,8 +17,7 @@ def test_distance_sensor_bridges_valid_measurements_and_range_failures() -> None
         subscription.publish(fake_measurement())
         sample = await asyncio.wait_for(first, timeout=1)
         assert sample == DistanceSample(
-            "anchor-a", 1.25, 7, device_monotonic_us=1234, epoch_us=0,
-            received_at=12.5, status=0, quality_flags=0
+            "anchor-a", 1.25, 7, device_monotonic_us=1234, epoch_us=0, received_at=12.5, status=0, quality_flags=0
         )
 
         second = asyncio.create_task(anext(events))

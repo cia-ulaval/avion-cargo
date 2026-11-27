@@ -5,6 +5,7 @@ from types import SimpleNamespace
 
 import pytest
 
+from payload.domain.positioning.heading_estimator import HeadingEstimate
 from payload_manual.domain.manual_control import ManualControlCommand, ReferenceVelocity
 from payload_manual.infrastructure.d3kble.manual_control_peer import (
     D3kbleManualControlPeer,
@@ -12,9 +13,8 @@ from payload_manual.infrastructure.d3kble.manual_control_peer import (
     decode_manual_control_message,
     encode_manual_control_message,
 )
-from shared.infrastructure.d3kble.router import D3kbleMessageRouter
 from shared.contracts.geometry import Position, PositionEstimate
-from payload.domain.positioning.heading_estimator import HeadingEstimate
+from shared.infrastructure.d3kble.router import D3kbleMessageRouter
 
 
 class FakeTicket:
@@ -210,9 +210,7 @@ async def test_positioning_telemetry_fits_d3kble_496_byte_envelope():
         "kind": "message",
         "payload": node.comms.sent[1],
     }
-    frame_encoded = json.dumps(
-        frame_envelope, separators=(",", ":"), ensure_ascii=False
-    ).encode("utf-8")
+    frame_encoded = json.dumps(frame_envelope, separators=(",", ":"), ensure_ascii=False).encode("utf-8")
     assert len(frame_encoded) <= 496
     frame_ticket.ack_future.set_result({"accepted": True})
     # The frame ACK releases the single-flight gate; the latest position can

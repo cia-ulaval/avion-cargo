@@ -101,8 +101,7 @@ class TranslationHeadingEstimator:
         previous_velocity = self._previous_velocity
         body_speed = math.hypot(body_velocity.vx_m_s, body_velocity.vy_m_s)
         previous_speed = (
-            math.hypot(previous_velocity.vx_m_s, previous_velocity.vy_m_s)
-            if previous_velocity is not None else 0.0
+            math.hypot(previous_velocity.vx_m_s, previous_velocity.vy_m_s) if previous_velocity is not None else 0.0
         )
         if (
             previous_velocity is None

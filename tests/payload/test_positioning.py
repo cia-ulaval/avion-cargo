@@ -12,7 +12,6 @@ from payload.domain.positioning.nonlinear_least_squares import NonlinearLeastSqu
 from shared.contracts.geometry import Position, PositionEstimate
 from shared.contracts.messages import FailureReason
 
-
 ANCHORS = {
     "anchor-3": Position(-1.0, -0.8, 0.05),
     "anchor-4": Position(1.0, -0.8, 0.05),
@@ -162,7 +161,6 @@ def test_independent_per_anchor_median_filter_rejects_a_range_spike():
     assert recovered.position.y == pytest.approx(expected[1], abs=0.02)
 
 
-
 def test_independent_range_filter_reduces_noise_while_tracking_outside_triangle():
     truth = Position(1.4, 0.25, 0.081)  # outside the anchor triangle
     estimator = NonlinearLeastSquaresPositionEstimator(ANCHORS, tag_height_m=truth.z)
@@ -198,10 +196,9 @@ def test_independent_range_filter_reduces_noise_while_tracking_outside_triangle(
     assert x_jitter < 0.015
     assert y_jitter < 0.015
 
+
 def test_old_cached_anchor_range_is_expired_without_waiting_for_a_sweep():
-    estimator = NonlinearLeastSquaresPositionEstimator(
-        ANCHORS, tag_height_m=0.081, max_range_age_us=100_000
-    )
+    estimator = NonlinearLeastSquaresPositionEstimator(ANCHORS, tag_height_m=0.081, max_range_age_us=100_000)
     initial = _feed_initial(estimator, Position(0.0, 0.0, 0.081))
     assert initial is not None
 
@@ -218,11 +215,8 @@ def test_old_cached_anchor_range_is_expired_without_waiting_for_a_sweep():
     assert estimator.range_count == 1
 
 
-
 def test_single_range_failure_keeps_last_good_ranges_until_they_expire():
-    estimator = NonlinearLeastSquaresPositionEstimator(
-        ANCHORS, tag_height_m=0.081, max_range_age_us=100_000
-    )
+    estimator = NonlinearLeastSquaresPositionEstimator(ANCHORS, tag_height_m=0.081, max_range_age_us=100_000)
     initial = _feed_initial(estimator, Position(0.0, 0.0, 0.081))
     assert initial is not None
 
@@ -251,6 +245,7 @@ def test_single_range_failure_keeps_last_good_ranges_until_they_expire():
     assert expired is None
     assert estimator.latest_estimate is None
     assert estimator.range_count == 0
+
 
 def test_heading_estimator_requires_consistent_translation_and_ignores_pure_yaw():
     estimator = TranslationHeadingEstimator(

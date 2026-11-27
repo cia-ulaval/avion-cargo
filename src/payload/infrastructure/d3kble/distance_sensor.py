@@ -69,9 +69,7 @@ class D3kbleDistanceSensor(DistanceSensor):
         loop = asyncio.get_running_loop()
         # Keep stage timestamps with each event so we can separate callback
         # scheduling delay from time spent waiting in the asyncio queue.
-        event_queue: asyncio.Queue[tuple[DistanceEvent, float, float]] = asyncio.Queue(
-            maxsize=self._event_queue_size
-        )
+        event_queue: asyncio.Queue[tuple[DistanceEvent, float, float]] = asyncio.Queue(maxsize=self._event_queue_size)
         stop_worker = threading.Event()
         subscription = self._node.uwb.measurements.subscribe(
             maxsize=self._subscription_size,
@@ -142,14 +140,8 @@ class D3kbleDistanceSensor(DistanceSensor):
                     continue
                 counts[anchor_id] += 1
                 sequence = int(measurement.sample_sequence)
-                sequence_gap = None
-                if anchor_id in last_sequence:
-                    sequence_gap = sequence - last_sequence[anchor_id]
                 last_sequence[anchor_id] = sequence
                 device_us = getattr(measurement, "device_monotonic_us", None)
-                device_delta_us = None
-                if device_us is not None and anchor_id in last_device_us:
-                    device_delta_us = int(device_us) - last_device_us[anchor_id]
                 if device_us is not None:
                     last_device_us[anchor_id] = int(device_us)
                 if measurement.valid and measurement.distance_m is not None:
@@ -196,8 +188,7 @@ class D3kbleDistanceSensor(DistanceSensor):
         worker = asyncio.create_task(asyncio.to_thread(pump_measurements))
         try:
             while True:
-                event, worker_received_at, offered_at = await event_queue.get()
-                consumed_at = time.monotonic()
+                event, _, _ = await event_queue.get()
                 yield event
         finally:
             stop_worker.set()

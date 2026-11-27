@@ -55,9 +55,13 @@ class ManualPayloadRuntimeConfiguration(PayloadRuntimeConfigurationValidation):
                 raise ValueError(f"positioning.anchors.{anchor_id} requires finite numeric x, y, z")
             anchors[anchor_id] = Position(*(float(value) for value in values))
         offset = positioning.get("payload_to_tag_xy_m", [0.0, 0.0])
-        if not isinstance(offset, list) or len(offset) != 2 or any(
-            isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(value)
-            for value in offset
+        if (
+            not isinstance(offset, list)
+            or len(offset) != 2
+            or any(
+                isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(value)
+                for value in offset
+            )
         ):
             raise ValueError("positioning.payload_to_tag_xy_m must be a two-number array")
         config = cls(
