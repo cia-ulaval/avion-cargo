@@ -440,7 +440,10 @@
             <visual name="front_left_wheel_visual">
                 <pose>-0.1555225 -0.0555 0.1038702 0 0 0</pose>
                 <geometry>
-                    <mesh><uri>meshes/front_left_wheel.obj</uri><scale>0.1 0.1 0.1</scale></mesh>
+                    <mesh>
+                        <uri>meshes/front_left_wheel.obj</uri>
+                        <scale>0.1 0.1 0.1</scale>
+                    </mesh>
                 </geometry>
             </visual>
         </link>
@@ -470,7 +473,10 @@
             <visual name="front_right_wheel_visual">
                 <pose>-0.1555225 0.0554999 0.1038702 0 0 0</pose>
                 <geometry>
-                    <mesh><uri>meshes/front_right_wheel.obj</uri><scale>0.1 0.1 0.1</scale></mesh>
+                    <mesh>
+                        <uri>meshes/front_right_wheel.obj</uri>
+                        <scale>0.1 0.1 0.1</scale>
+                    </mesh>
                 </geometry>
             </visual>
         </link>
@@ -500,7 +506,10 @@
             <visual name="back_left_wheel_visual">
                 <pose>0.1369271 -0.1348937 0.1012611 0 0 0</pose>
                 <geometry>
-                    <mesh><uri>meshes/back_left_wheel.obj</uri><scale>0.1 0.1 0.1</scale></mesh>
+                    <mesh>
+                        <uri>meshes/back_left_wheel.obj</uri>
+                        <scale>0.1 0.1 0.1</scale>
+                    </mesh>
                 </geometry>
             </visual>
         </link>
@@ -530,7 +539,10 @@
             <visual name="back_right_wheel_visual">
                 <pose>0.1369271 0.135106 0.1012611 0 0 0</pose>
                 <geometry>
-                    <mesh><uri>meshes/back_right_wheel.obj</uri><scale>0.1 0.1 0.1</scale></mesh>
+                    <mesh>
+                        <uri>meshes/back_right_wheel.obj</uri>
+                        <scale>0.1 0.1 0.1</scale>
+                    </mesh>
                 </geometry>
             </visual>
         </link>
@@ -541,13 +553,23 @@
             <inertial>
                 <mass>0.001</mass>
                 <inertia>
-                    <ixx>1.6e-7</ixx><iyy>1.6e-7</iyy><izz>1.6e-7</izz>
-                    <ixy>0</ixy><ixz>0</ixz><iyz>0</iyz>
+                    <ixx>1.6e-7</ixx>
+                    <iyy>1.6e-7</iyy>
+                    <izz>1.6e-7</izz>
+                    <ixy>0</ixy>
+                    <ixz>0</ixz>
+                    <iyz>0</iyz>
                 </inertia>
             </inertial>
             <visual name="antenna_marker">
-                <geometry><sphere><radius>0.012</radius></sphere></geometry>
-                <material><diffuse>0.1 0.3 0.9 1</diffuse></material>
+                <geometry>
+                    <sphere>
+                        <radius>0.012</radius>
+                    </sphere>
+                </geometry>
+                <material>
+                    <diffuse>0.1 0.3 0.9 1</diffuse>
+                </material>
             </visual>
         </link>
 
@@ -557,13 +579,23 @@
             <inertial>
                 <mass>0.001</mass>
                 <inertia>
-                    <ixx>1.6e-7</ixx><iyy>1.6e-7</iyy><izz>1.6e-7</izz>
-                    <ixy>0</ixy><ixz>0</ixz><iyz>0</iyz>
+                    <ixx>1.6e-7</ixx>
+                    <iyy>1.6e-7</iyy>
+                    <izz>1.6e-7</izz>
+                    <ixy>0</ixy>
+                    <ixz>0</ixz>
+                    <iyz>0</iyz>
                 </inertia>
             </inertial>
             <visual name="antenna_marker">
-                <geometry><sphere><radius>0.012</radius></sphere></geometry>
-                <material><diffuse>0.95 0.45 0.05 1</diffuse></material>
+                <geometry>
+                    <sphere>
+                        <radius>0.012</radius>
+                    </sphere>
+                </geometry>
+                <material>
+                    <diffuse>0.95 0.45 0.05 1</diffuse>
+                </material>
             </visual>
         </link>
 
@@ -573,13 +605,23 @@
             <inertial>
                 <mass>0.001</mass>
                 <inertia>
-                    <ixx>1.6e-7</ixx><iyy>1.6e-7</iyy><izz>1.6e-7</izz>
-                    <ixy>0</ixy><ixz>0</ixz><iyz>0</iyz>
+                    <ixx>1.6e-7</ixx>
+                    <iyy>1.6e-7</iyy>
+                    <izz>1.6e-7</izz>
+                    <ixy>0</ixy>
+                    <ixz>0</ixz>
+                    <iyz>0</iyz>
                 </inertia>
             </inertial>
             <visual name="antenna_marker">
-                <geometry><sphere><radius>0.012</radius></sphere></geometry>
-                <material><diffuse>0.1 0.8 0.2 1</diffuse></material>
+                <geometry>
+                    <sphere>
+                        <radius>0.012</radius>
+                    </sphere>
+                </geometry>
+                <material>
+                    <diffuse>0.1 0.8 0.2 1</diffuse>
+                </material>
             </visual>
         </link>
 

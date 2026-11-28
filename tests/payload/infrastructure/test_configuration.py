@@ -32,6 +32,7 @@ def test_payload_runtime_configuration_parses_target_to_anchor_mapping(tmp_path)
         encoding="utf-8",
     )
     config = PayloadRuntimeConfiguration.from_file(path)
+    assert config.plane_peer_id == 10
     assert config.uwb_target_ids == (200, 201)
     assert config.anchor_id_by_target_id[201] == "front-right"
 

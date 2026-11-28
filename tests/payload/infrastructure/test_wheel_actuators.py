@@ -94,7 +94,14 @@ async def test_mx1616_actuator_sets_direction_and_pwm_duty():
     assert all(output.closed for output in outputs)
 
 
-def test_factory_builds_both_driver_types():
+def test_factory_builds_both_driver_types(monkeypatch):
+    from payload.infrastructure import wheel_actuators
+
+    monkeypatch.setattr(
+        wheel_actuators,
+        "_gazebo_transport_publisher",
+        lambda _topic: (lambda *_: None),
+    )
     capabilities = WheelActuatorCapabilities(0.5)
     gazebo = create_wheel_actuator(
         GazeboMotorDriverConfiguration("gazebo", "/wheel/cmd_vel"),
@@ -110,3 +117,66 @@ def test_factory_builds_both_driver_types():
         output_factory=FakePWMOutput,
     )
     assert isinstance(mx1616, MX1616WheelActuator)
+
+
+@pytest.mark.asyncio
+async def test_gazebo_actuators_reuse_persistent_transport_publishers(monkeypatch):
+    import sys
+    import types
+
+    from payload.infrastructure import wheel_actuators
+
+    class FakeDouble:
+        def __init__(self):
+            self.data = 0.0
+
+    class FakePublisher:
+        def __init__(self, topic):
+            self.topic = topic
+            self.values = []
+
+        def publish(self, message):
+            self.values.append(message.data)
+            return True
+
+    class FakeNode:
+        instances = []
+
+        def __init__(self):
+            self.advertised = {}
+            self.instances.append(self)
+
+        def advertise(self, topic, message_type):
+            assert message_type is FakeDouble
+            publisher = FakePublisher(topic)
+            self.advertised[topic] = publisher
+            return publisher
+
+    gz_module = types.ModuleType("gz")
+    gz_module.__path__ = []
+    msgs_module = types.ModuleType("gz.msgs10")
+    msgs_module.__path__ = []
+    double_module = types.ModuleType("gz.msgs10.double_pb2")
+    double_module.Double = FakeDouble
+    transport_module = types.ModuleType("gz.transport13")
+    transport_module.Node = FakeNode
+    monkeypatch.setitem(sys.modules, "gz", gz_module)
+    monkeypatch.setitem(sys.modules, "gz.msgs10", msgs_module)
+    monkeypatch.setitem(sys.modules, "gz.msgs10.double_pb2", double_module)
+    monkeypatch.setitem(sys.modules, "gz.transport13", transport_module)
+    monkeypatch.setattr(wheel_actuators, "_gazebo_transport", None)
+
+    topics = ("/wheel/0/cmd_vel", "/wheel/1/cmd_vel", "/wheel/2/cmd_vel")
+    actuators = [GazeboWheelActuator(topic, 0.04, WheelActuatorCapabilities(0.5)) for topic in topics]
+
+    await actuators[0].set_surface_velocity(0.2)
+    await actuators[1].set_surface_velocity(-0.1)
+    await actuators[2].set_surface_velocity(0.05)
+    await actuators[0].set_surface_velocity(0.1)
+
+    assert len(FakeNode.instances) == 1
+    node = FakeNode.instances[0]
+    assert set(node.advertised) == set(topics)
+    assert node.advertised[topics[0]].values == [pytest.approx(5.0), pytest.approx(2.5)]
+    assert node.advertised[topics[1]].values == [pytest.approx(-2.5)]
+    assert node.advertised[topics[2]].values == [pytest.approx(1.25)]

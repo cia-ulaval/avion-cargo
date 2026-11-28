@@ -1,26 +1,26 @@
-<?xml version="1.0" ?>
+<?xml version="1.0"?>
 <sdf version="1.9">
-  <model name="paradise_field">
-    <static>true</static>
+    <model name="paradise_field">
+        <static>true</static>
 
-    <link name="map_link">
-      <collision name="paradise_field">
-        <geometry>
-          <mesh>
-            <uri>meshes/paradise_field.obj</uri>
-            <scale>10 10 10</scale>
-          </mesh>
-        </geometry>
-      </collision>
-      <visual name="paradise_field">
-        <geometry>
-          <mesh>
-            <uri>meshes/paradise_field.obj</uri>
-            <scale>100 100 100</scale>
-          </mesh>
-        </geometry>
-        <cast_shadows>false</cast_shadows>
-      </visual>
-    </link>
-  </model>
+        <link name="map_link">
+            <collision name="paradise_field">
+                <geometry>
+                    <mesh>
+                        <uri>meshes/paradise_field.obj</uri>
+                        <scale>10 10 10</scale>
+                    </mesh>
+                </geometry>
+            </collision>
+            <visual name="paradise_field">
+                <geometry>
+                    <mesh>
+                        <uri>meshes/paradise_field.obj</uri>
+                        <scale>100 100 100</scale>
+                    </mesh>
+                </geometry>
+                <cast_shadows>false</cast_shadows>
+            </visual>
+        </link>
+    </model>
 </sdf>
