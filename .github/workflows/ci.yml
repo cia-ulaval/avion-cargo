@@ -6,17 +6,14 @@ on:
     branches: [main]
   workflow_dispatch:
 
-# Lecture seule : la CI n'a besoin de rien écrire dans le dépôt.
 permissions:
   contents: read
 
-# Un nouveau push sur la même PR annule l'exécution précédente.
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 env:
-  # Même version que celle qui a généré poetry.lock.
   POETRY_VERSION: "2.5.1"
   PYTHON_VERSION: "3.12"
 
@@ -30,7 +27,6 @@ jobs:
         with:
           persist-credentials: false
 
-      # Poetry doit être installé avant setup-python pour que le cache fonctionne.
       - name: Installer Poetry
         run: pipx install "poetry==${POETRY_VERSION}"
 
@@ -40,7 +36,6 @@ jobs:
           python-version: ${{ env.PYTHON_VERSION }}
           cache: poetry
 
-      # Évite que Poetry crée l'environnement avec un autre Python que celui de setup-python.
       - name: Utiliser le Python de setup-python
         run: poetry env use "${{ steps.setup-python.outputs.python-path }}"
 
@@ -50,7 +45,6 @@ jobs:
       - name: Installer les outils de formatage
         run: poetry install --only dev --no-root
 
-      # Même script que `poetry run fmt-check` : isort, black, flake8 et ruff.
       - name: Vérifier le formatage
         run: poetry run bash scripts/code-format-checking.sh
 
@@ -75,14 +69,13 @@ jobs:
       - name: Utiliser le Python de setup-python
         run: poetry env use "${{ steps.setup-python.outputs.python-path }}"
 
-      # Bibliothèques système que demande OpenCV (mêmes paquets que le Dockerfile du projet).
       - name: Installer les bibliothèques système
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends libgl1 libglib2.0-0
 
       - name: Installer les dépendances
-        run: poetry install --with dev
+        run: poetry install --with dev,faruco
 
       - name: Lancer les tests
         run: poetry run pytest
