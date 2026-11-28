@@ -1,0 +1,82 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+env:
+  POETRY_VERSION: "2.5.1"
+  PYTHON_VERSION: "3.12"
+
+jobs:
+  format:
+    name: Format et verrou des dépendances
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Installer Poetry
+        run: pipx install "poetry==${POETRY_VERSION}"
+
+      - uses: actions/setup-python@v7
+        id: setup-python
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: poetry
+
+      - name: Utiliser le Python de setup-python
+        run: poetry env use "${{ steps.setup-python.outputs.python-path }}"
+
+      - name: Vérifier que poetry.lock correspond à pyproject.toml
+        run: poetry check --lock
+
+      - name: Installer les outils de formatage
+        run: poetry install --only dev --no-root
+
+      - name: Vérifier le formatage
+        run: poetry run bash scripts/code-format-checking.sh
+
+  tests:
+    name: Tests
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+          lfs: true
+
+      - name: Installer Poetry
+        run: pipx install "poetry==${POETRY_VERSION}"
+
+      - uses: actions/setup-python@v7
+        id: setup-python
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: poetry
+
+      - name: Utiliser le Python de setup-python
+        run: poetry env use "${{ steps.setup-python.outputs.python-path }}"
+
+      - name: Installer les bibliothèques système
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends libgl1 libglib2.0-0 libopencv-dev
+
+      - name: Installer les dépendances
+        run: poetry install --with dev,faruco
+
+      - name: Lancer les tests
+        run: poetry run pytest
