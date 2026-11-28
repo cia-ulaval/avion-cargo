@@ -72,7 +72,7 @@ jobs:
       - name: Installer les bibliothèques système
         run: |
           sudo apt-get update
-          sudo apt-get install -y --no-install-recommends libgl1 libglib2.0-0
+          sudo apt-get install -y --no-install-recommends libgl1 libglib2.0-0 libopencv-dev
 
       - name: Installer les dépendances
         run: poetry install --with dev,faruco
