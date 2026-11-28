@@ -3,7 +3,7 @@ name = "payload-manual-controller"
 version = "0.1.0"
 description = "D3K BLE manual controller for the cargo payload"
 authors = ["CIA"]
-edition = "2021"
+edition = "2026"
 
 [lib]
 name = "payload_manual_controller_lib"
