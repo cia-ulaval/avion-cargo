@@ -371,6 +371,23 @@ cat > /usr/local/bin/avion-payload-manual-ui <<'SCRIPT'
 set -Eeuo pipefail
 cd /workspace/avion-cargo/src/payload_manual/ui
 
+if [[ -z "${DISPLAY:-}" ]] || ! timeout 5 xdpyinfo >/dev/null 2>&1; then
+  echo "Cannot access the X11 display (${DISPLAY:-unset})." >&2
+  echo "Run bash scripts/prepare-x11.sh from the host graphical session and check the container's XAUTHORITY mount and permissions." >&2
+  exit 2
+fi
+
+# WebKitGTK can render a blank window with the NVIDIA/PRIME environment used
+# for Gazebo. This small 2D interface uses Mesa software rendering by default.
+# Set AVION_MANUAL_UI_SOFTWARE_RENDERING=0 to use the inherited GPU settings.
+if [[ "${AVION_MANUAL_UI_SOFTWARE_RENDERING:-1}" == 1 ]]; then
+  export LIBGL_ALWAYS_SOFTWARE=1
+  export __GLX_VENDOR_LIBRARY_NAME=mesa
+  export __EGL_VENDOR_LIBRARY_FILENAMES=/usr/share/glvnd/egl_vendor.d/50_mesa.json
+  export __NV_PRIME_RENDER_OFFLOAD=0
+  export WEBKIT_DISABLE_DMABUF_RENDERER=1
+fi
+
 if [[ ! -x node_modules/.bin/tauri ]]; then
   echo "Installing the Payload Manual Control UI dependencies..."
   npm install --no-audit --no-fund
